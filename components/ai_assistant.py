@@ -94,12 +94,14 @@ PREMIUM_CSS = """
     border-color: rgba(164, 16, 52, 0.7);
 }
 
-/* Hide the actual Streamlit button */
-#new-chat-hidden {
-    position: absolute;
-    left: -9999px;
-    opacity: 0;
-    pointer-events: none;
+/* Hide the Streamlit New Chat button completely */
+.element-container:has(button[kind="secondary"]),
+div[data-testid="stButton"]:has(button[kind="secondary"]) {
+    display: none !important;
+    height: 0 !important;
+    overflow: hidden !important;
+    position: absolute !important;
+    left: -9999px !important;
 }
 
 /* Scrollable chat container */
@@ -547,16 +549,14 @@ def render(data: dict):
     else:
         avatar_src = "https://ui-avatars.com/api/?name=AI+Naveen&background=A41034&color=fff&size=56"
 
-    # Hidden Streamlit button for New Chat functionality
-    st.markdown('<div id="new-chat-hidden">', unsafe_allow_html=True)
-    if st.button("New Chat", key="new_chat_btn"):
+    # Hidden Streamlit button for New Chat functionality (CSS hides it)
+    if st.button("New Chat", key="new_chat_btn", type="secondary"):
         st.session_state.chat_history = []
         st.session_state.chat_summary = ""
         st.session_state.summary_tick = 0
         st.session_state.pending_chip = None
         st.session_state.pending_response = None
         st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
 
     # Header with avatar, title, and New Chat button all in one box
     st.markdown(
@@ -569,7 +569,7 @@ def render(data: dict):
             <h2 style="margin:0; color:#fff; border:none;">AI Naveen</h2>
             <div class="greeting">Ask about enrollment, yield, NTR, and trends.</div>
           </div>
-          <button class="new-chat-btn" onclick="document.querySelector('#new-chat-hidden button').click()">
+          <button class="new-chat-btn" onclick="document.querySelector('button[kind=secondary]').click()">
             ✨ New Chat
           </button>
         </div>

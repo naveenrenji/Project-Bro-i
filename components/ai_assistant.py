@@ -76,35 +76,28 @@ PREMIUM_CSS = """
     background: rgba(255,255,255,0.05);
 }
 
-/* New Chat button inside header */
-.new-chat-btn {
-    background: rgba(164, 16, 52, 0.25);
-    border: 1px solid rgba(164, 16, 52, 0.5);
-    color: #fff;
-    padding: 8px 16px;
-    border-radius: 8px;
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.15s ease;
-    margin-left: auto;
+/* New Chat button - positioned to align with header */
+.new-chat-row {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: -60px;
+    margin-bottom: 16px;
+    padding-right: 18px;
+    position: relative;
+    z-index: 10;
 }
-.new-chat-btn:hover {
-    background: rgba(164, 16, 52, 0.4);
-    border-color: rgba(164, 16, 52, 0.7);
+.new-chat-row button {
+    background: rgba(164, 16, 52, 0.25) !important;
+    border: 1px solid rgba(164, 16, 52, 0.5) !important;
+    color: #fff !important;
+    padding: 8px 16px !important;
+    border-radius: 8px !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
 }
-
-/* Hide the Streamlit New Chat button visually but keep it clickable */
-.element-container:has(button[kind="secondary"]) {
-    position: absolute !important;
-    opacity: 0 !important;
-    pointer-events: none !important;
-    height: 1px !important;
-    width: 1px !important;
-    overflow: hidden !important;
-}
-.element-container:has(button[kind="secondary"]) button {
-    pointer-events: auto !important;
+.new-chat-row button:hover {
+    background: rgba(164, 16, 52, 0.4) !important;
+    border-color: rgba(164, 16, 52, 0.7) !important;
 }
 
 /* Scrollable chat container */
@@ -552,16 +545,7 @@ def render(data: dict):
     else:
         avatar_src = "https://ui-avatars.com/api/?name=AI+Naveen&background=A41034&color=fff&size=56"
 
-    # Hidden Streamlit button for New Chat functionality (CSS hides it)
-    if st.button("New Chat", key="new_chat_btn", type="secondary"):
-        st.session_state.chat_history = []
-        st.session_state.chat_summary = ""
-        st.session_state.summary_tick = 0
-        st.session_state.pending_chip = None
-        st.session_state.pending_response = None
-        st.rerun()
-
-    # Header with avatar, title, and New Chat button all in one box
+    # Header with avatar and title
     st.markdown(
         f"""
         <div class="ai-header">
@@ -572,13 +556,21 @@ def render(data: dict):
             <h2 style="margin:0; color:#fff; border:none;">AI Naveen</h2>
             <div class="greeting">Ask about enrollment, yield, NTR, and trends.</div>
           </div>
-          <button class="new-chat-btn" onclick="document.querySelector('button[kind=secondary]').click()">
-            ✨ New Chat
-          </button>
         </div>
         """,
         unsafe_allow_html=True,
     )
+    
+    # New Chat button - positioned to overlap with header (appears inside it visually)
+    st.markdown('<div class="new-chat-row">', unsafe_allow_html=True)
+    if st.button("✨ New Chat", key="new_chat_btn"):
+        st.session_state.chat_history = []
+        st.session_state.chat_summary = ""
+        st.session_state.summary_tick = 0
+        st.session_state.pending_chip = None
+        st.session_state.pending_response = None
+        st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
     
     # Check if we need to process a pending response
     if "pending_response" not in st.session_state:

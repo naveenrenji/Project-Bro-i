@@ -98,8 +98,7 @@ st.markdown(f"""
         margin: 0 !important;
         padding: 0 !important;
     }}
-    div.element-container > div[data-testid="stVerticalBlock"]:has(.navs-widget-marker),
-    div[data-testid="stVerticalBlock"]:has(.navs-widget-marker) {{
+    div[data-testid="stVerticalBlock"]:has(> div.element-container .navs-widget-marker) {{
         position: fixed !important;
         right: 24px;
         bottom: 24px;
@@ -121,15 +120,13 @@ st.markdown(f"""
         font-size: 13px;
         color: #FAFAFA;
     }}
-    div.element-container > div[data-testid="stVerticalBlock"]:has(.navs-widget-marker) > div,
-    div[data-testid="stVerticalBlock"]:has(.navs-widget-marker) > div {{
+    div[data-testid="stVerticalBlock"]:has(> div.element-container .navs-widget-marker) > div {{
         background: #121726;
         border-radius: 12px;
         box-shadow: 0 12px 30px rgba(0,0,0,0.45);
         padding: 12px;
     }}
-    div.element-container > div[data-testid="stVerticalBlock"]:has(.navs-widget-marker) button,
-    div[data-testid="stVerticalBlock"]:has(.navs-widget-marker) button {{
+    div[data-testid="stVerticalBlock"]:has(> div.element-container .navs-widget-marker) button {{
         border-radius: 999px !important;
         background: #1A1F2E !important;
         color: #FAFAFA !important;

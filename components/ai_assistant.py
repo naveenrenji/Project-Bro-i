@@ -94,14 +94,17 @@ PREMIUM_CSS = """
     border-color: rgba(164, 16, 52, 0.7);
 }
 
-/* Hide the Streamlit New Chat button completely */
-.element-container:has(button[kind="secondary"]),
-div[data-testid="stButton"]:has(button[kind="secondary"]) {
-    display: none !important;
-    height: 0 !important;
-    overflow: hidden !important;
+/* Hide the Streamlit New Chat button visually but keep it clickable */
+.element-container:has(button[kind="secondary"]) {
     position: absolute !important;
-    left: -9999px !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    height: 1px !important;
+    width: 1px !important;
+    overflow: hidden !important;
+}
+.element-container:has(button[kind="secondary"]) button {
+    pointer-events: auto !important;
 }
 
 /* Scrollable chat container */

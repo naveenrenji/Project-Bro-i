@@ -64,16 +64,27 @@ PREMIUM_CSS = """
     }
 }
 
-/* Header section */
+/* Header section - STICKY */
+.ai-header-wrapper {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: linear-gradient(135deg, rgba(26, 31, 46, 0.98) 0%, rgba(14, 17, 23, 0.98) 100%);
+    margin: -24px -24px 16px -24px;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--ai-border-subtle);
+    backdrop-filter: blur(12px);
+}
+
 .ai-header {
-    background: linear-gradient(90deg, rgba(164, 16, 52, 0.12) 0%, rgba(164, 16, 52, 0.02) 70%, transparent 100%);
-    padding: 12px 14px;
+    background: linear-gradient(90deg, rgba(164, 16, 52, 0.15) 0%, rgba(164, 16, 52, 0.02) 70%, transparent 100%);
+    padding: 14px 18px;
     border: 1px solid var(--ai-border-subtle);
     border-radius: var(--ai-radius-md);
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: var(--ai-gap-sm);
+    gap: var(--ai-gap-md);
 }
 
 .ai-header-left {
@@ -102,6 +113,80 @@ PREMIUM_CSS = """
     font-size: 12px;
     color: var(--ai-text-muted);
     margin-top: 2px;
+}
+
+/* New Chat button in header */
+.new-chat-btn {
+    background: rgba(164, 16, 52, 0.2);
+    border: 1px solid rgba(164, 16, 52, 0.4);
+    color: #fff;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+.new-chat-btn:hover {
+    background: rgba(164, 16, 52, 0.35);
+    border-color: rgba(164, 16, 52, 0.6);
+}
+
+/* Suggested questions - pill style */
+.suggestion-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+.suggestion-pill {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.85);
+    padding: 8px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.suggestion-pill:hover {
+    background: rgba(164, 16, 52, 0.2);
+    border-color: rgba(164, 16, 52, 0.4);
+    color: #fff;
+}
+
+/* Style the New Chat button to match header */
+.new-chat-streamlit-btn button {
+    background: rgba(164, 16, 52, 0.2) !important;
+    border: 1px solid rgba(164, 16, 52, 0.4) !important;
+    color: #fff !important;
+    padding: 8px 16px !important;
+    border-radius: 8px !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+}
+.new-chat-streamlit-btn button:hover {
+    background: rgba(164, 16, 52, 0.35) !important;
+    border-color: rgba(164, 16, 52, 0.6) !important;
+}
+
+/* Suggestion chips row styling */
+.suggestion-row {
+    margin-bottom: 8px;
+}
+.suggestion-row button {
+    background: rgba(255, 255, 255, 0.06) !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    color: rgba(255, 255, 255, 0.85) !important;
+    border-radius: 20px !important;
+    font-size: 12px !important;
+    padding: 6px 12px !important;
+}
+.suggestion-row button:hover {
+    background: rgba(164, 16, 52, 0.2) !important;
+    border-color: rgba(164, 16, 52, 0.4) !important;
+    color: #fff !important;
 }
 
 /* Avatar with animation */
@@ -843,59 +928,45 @@ def render(data: dict):
     if "pending_chip" not in st.session_state:
         st.session_state.pending_chip = None
 
-    # Header (keep it simple)
-    header_col1, header_col2 = st.columns([6, 2])
-    with header_col1:
-        if avatar_base64:
-            avatar_src = f"data:image/png;base64,{avatar_base64}"
-        else:
-            avatar_src = "https://ui-avatars.com/api/?name=AI+Naveen&background=A41034&color=fff&size=48"
+    # Avatar source
+    if avatar_base64:
+        avatar_src = f"data:image/png;base64,{avatar_base64}"
+    else:
+        avatar_src = "https://ui-avatars.com/api/?name=AI+Naveen&background=A41034&color=fff&size=48"
 
+    # Sticky header with avatar, title, and New Chat button
+    header_col1, header_col2 = st.columns([5, 1])
+    
+    with header_col1:
         st.markdown(
             f"""
-            <div class="ai-header">
-              <div class="ai-header-left">
-                <div class="avatar-container">
-                  <img src="{avatar_src}" alt="AI Naveen"/>
-                  <div class="avatar-ring"></div>
-                </div>
-                <div class="ai-header-content">
-                  <h2 style="margin:0; color:#fff; border:none;">AI Naveen</h2>
-                  <div class="greeting">Ask about enrollment, yield, NTR, and trends.</div>
+            <div class="ai-header-wrapper">
+              <div class="ai-header">
+                <div class="ai-header-left">
+                  <div class="avatar-container">
+                    <img src="{avatar_src}" alt="AI Naveen"/>
+                    <div class="avatar-ring"></div>
+                  </div>
+                  <div class="ai-header-content">
+                    <h2 style="margin:0; color:#fff; border:none;">AI Naveen</h2>
+                    <div class="greeting">Ask about enrollment, yield, NTR, and trends.</div>
+                  </div>
                 </div>
               </div>
             </div>
             """,
             unsafe_allow_html=True,
         )
+    
     with header_col2:
-        if st.button("New Chat", key="new_chat_btn", type="secondary", width="stretch"):
+        st.markdown('<div class="new-chat-streamlit-btn">', unsafe_allow_html=True)
+        if st.button("✨ New Chat", key="new_chat_btn"):
             st.session_state.chat_history = []
             st.session_state.chat_summary = ""
             st.session_state.summary_tick = 0
             st.session_state.pending_chip = None
             st.rerun()
-    
-    # Suggested questions (shown right above the chat box)
-    st.markdown('<div class="section-label">Suggested questions</div>', unsafe_allow_html=True)
-    chips = suggestion_chips[:4]
-    if len(chips) >= 2:
-        row1 = st.columns(2)
-        for i, chip in enumerate(chips[:2]):
-            with row1[i]:
-                if st.button(chip, key=f"chip_{i}", width="stretch"):
-                    st.session_state.pending_chip = chip
-                    st.rerun()
-    if len(chips) > 2:
-        row2 = st.columns(2)
-        for j, chip in enumerate(chips[2:4]):
-            idx = j + 2
-            with row2[j]:
-                if st.button(chip, key=f"chip_{idx}", width="stretch"):
-                    st.session_state.pending_chip = chip
-                    st.rerun()
-
-    st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
     
     # Chat messages area
     chat_container = st.container()
@@ -919,12 +990,24 @@ def render(data: dict):
         st.session_state.pending_chip = None
         process_message(prompt, data, api_key, avatar_path, fun_quotes)
     
+    # Suggested questions (pill-style, right above chat input)
+    if not st.session_state.chat_history:
+        st.markdown('<div class="section-label" style="margin-top: 16px;">Quick questions</div>', unsafe_allow_html=True)
+        chips = suggestion_chips[:4]
+        st.markdown('<div class="suggestion-row">', unsafe_allow_html=True)
+        chip_cols = st.columns(len(chips)) if chips else []
+        for i, chip in enumerate(chips):
+            with chip_cols[i]:
+                # Truncate long chips for display
+                display_text = chip if len(chip) <= 35 else chip[:32] + "..."
+                if st.button(display_text, key=f"chip_{i}", help=chip):
+                    st.session_state.pending_chip = chip
+                    st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+    
     # Chat input
     if prompt := st.chat_input("Ask about enrollment, yield, NTR, or trends..."): 
         process_message(prompt, data, api_key, avatar_path, fun_quotes)
-
-    # Close unified glass container + scope wrapper
-    st.markdown("</div></div>", unsafe_allow_html=True)
 
 
 def process_message(prompt: str, data: dict, api_key: str, avatar_path: str, fun_quotes: List[str]):

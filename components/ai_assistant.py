@@ -433,6 +433,12 @@ def render_floating_widget(data: dict, page_hint: str = ""):
     if not api_key:
         return
 
+    avatar_base64 = get_avatar_base64()
+    if avatar_base64:
+        avatar_src = f"data:image/png;base64,{avatar_base64}"
+    else:
+        avatar_src = "https://ui-avatars.com/api/?name=AI+Naveen&background=A41034&color=fff&size=56"
+
     # Always minimize by default when landing on a new page/tab
     last_page = st.session_state.get("navs_widget_last_page")
     if last_page != page_hint:
@@ -454,8 +460,12 @@ def render_floating_widget(data: dict, page_hint: str = ""):
         header_cols = st.columns([1, 0.12])
         with header_cols[0]:
             st.markdown(
-                "<div class='navs-panel-header'>Ask Navs</div>"
-                "<div class='navs-panel-subtitle'>Naveen • AI & BI Engineering Manager</div>",
+                f"""
+                <div class='navs-panel-title'>
+                  <img src="{avatar_src}" class="navs-title-avatar" alt="Naveen"/>
+                  <span>Ask Navs</span>
+                </div>
+                """,
                 unsafe_allow_html=True,
             )
         with header_cols[1]:
@@ -464,7 +474,7 @@ def render_floating_widget(data: dict, page_hint: str = ""):
                 st.rerun()
 
         # Messages panel
-        panel = st.container(height=280)
+        panel = st.container(height=360)
         with panel:
             if not st.session_state.navs_global_history:
                 st.markdown(
@@ -518,7 +528,7 @@ def render_floating_widget(data: dict, page_hint: str = ""):
 
         # Input area
         with st.form("navs_widget_form", clear_on_submit=True):
-            cols = st.columns([1, 0.28])
+            cols = st.columns([1, 0.38])
             with cols[0]:
                 user_input = st.text_input(
                     "Message Naveen",
@@ -527,7 +537,7 @@ def render_floating_widget(data: dict, page_hint: str = ""):
                     placeholder="Message Naveen…",
                 )
             with cols[1]:
-                sent = st.form_submit_button("Send")
+                sent = st.form_submit_button("Send", use_container_width=True)
         if sent and user_input:
             st.session_state.navs_global_history.append({"role": "user", "content": user_input})
             st.session_state.navs_global_pending = user_input
@@ -879,7 +889,7 @@ def render(data: dict):
           </div>
           <div style="flex: 1;">
             <h2 style="margin:0; color:#fff; border:none;">Ask Navs</h2>
-            <div class="greeting">Naveen • AI & BI Engineering Manager at Stevens. Ask about enrollment, yield, NTR, and trends.</div>
+            <div class="greeting">Naveen • Ask about enrollment, yield, NTR, and trends.</div>
           </div>
         </div>
         """,

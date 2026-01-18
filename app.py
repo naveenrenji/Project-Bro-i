@@ -144,16 +144,22 @@ st.markdown(f"""
         box-shadow: 0 12px 30px rgba(0,0,0,0.45);
         padding: 12px;
     }}
-    .navs-panel-header {{
+    .navs-panel-title {{
+        display: flex;
+        align-items: center;
+        gap: 8px;
         font-weight: 700;
         font-size: 14px;
         color: #FAFAFA;
-        margin-bottom: 2px;
-    }}
-    .navs-panel-subtitle {{
-        font-size: 11px;
-        color: rgba(255,255,255,0.6);
         margin-bottom: 10px;
+    }}
+    .navs-title-avatar {{
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        border: 1px solid rgba(164, 16, 52, 0.55);
+        object-fit: contain;
+        background: rgba(255,255,255,0.05);
     }}
     div[data-testid="stVerticalBlock"]:has(> div.element-container .navs-panel-marker) [data-testid="stVerticalBlockBorderWrapper"] {{
         border: none !important;
@@ -176,6 +182,9 @@ st.markdown(f"""
         background: rgba(255,255,255,0.08) !important;
         color: #FAFAFA !important;
         border: 1px solid rgba(255,255,255,0.12) !important;
+        font-size: 12px !important;
+        padding: 6px 10px !important;
+        min-width: 72px !important;
         animation: none !important;
         box-shadow: none !important;
     }}

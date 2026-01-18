@@ -426,12 +426,8 @@ def render(data: dict):
         census_summary
     )
     
-    # Info box about YoY methodology
-    st.info("All data from **Slate**. Enrollments are based on **YoY Status** column. This matches the automatedv6 report.")
-    
     # Multi-metric trend chart
     st.markdown("### 3-Year Enrollment Funnel Trends")
-    st.caption("Applications, admits, and enrollments across years")
     render_multi_metric_trends(summary_stats)
     
     # Two columns - YoY table and enrollment breakdown

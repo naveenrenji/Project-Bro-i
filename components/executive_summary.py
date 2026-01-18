@@ -15,7 +15,7 @@ from utils.constants import (
 
 def render_refresh_info(last_refresh: datetime, time_until_refresh: timedelta):
     """Display last refresh time."""
-    st.caption(f"Last updated: {last_refresh.strftime('%B %d, %Y at %I:%M %p')}")
+    pass  # Data source info removed
 
 
 def render_ai_insights_section(data: dict):
@@ -107,7 +107,6 @@ def render_kpi_row(summary_stats: dict):
     previous = summary_stats['overall'][2025]
     
     st.markdown("#### Enrollment Funnel (Spring 2026)")
-    st.caption("All data from Slate - enrollments based on Date of Enrollment")
     
     col1, col2, col3, col4 = st.columns(4)
     
@@ -157,7 +156,6 @@ def render_enrollment_breakdown(summary_stats: dict):
         return
 
     st.markdown("#### Enrollment Breakdown (Spring 2026)")
-    st.caption("New enrollments from Slate; continuing/returning from census.")
 
     col1, col2, col3, col4 = st.columns(4)
 

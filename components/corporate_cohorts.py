@@ -241,11 +241,6 @@ def render_cohort_from_census(census_df: pd.DataFrame):
 def render(data: dict):
     """Main render function for the Corporate Cohorts page."""
     st.markdown("## Corporate Cohorts")
-    st.markdown("Analyze corporate partner enrollments and sponsorship data from census.")
-    
-    st.markdown("---")
-    
-    st.info("All data from **Census**. Corporate cohorts identified via 'Census_1_CORPORATE_COHORT'.")
     
     census_df = data.get('census', {}).get('raw_df')
     if census_df is None or census_df.empty:

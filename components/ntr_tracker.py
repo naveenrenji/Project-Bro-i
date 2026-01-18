@@ -276,8 +276,6 @@ def render(data: dict):
 
     ntr_summary, category_breakdown, breakdown_df = calculate_ntr_from_census(census_df)
 
-    st.markdown("---")
-    st.caption("NTR calculated from census credits and student status (New vs Current).")
 
     # Summary cards + progress
     render_ntr_summary_cards(ntr_summary)

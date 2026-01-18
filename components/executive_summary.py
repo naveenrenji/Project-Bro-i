@@ -13,128 +13,16 @@ from utils.constants import (
 )
 
 
-# AI Insights Section CSS
-AI_INSIGHTS_CSS = """
-<style>
-.ai-insights-box {
-    background: linear-gradient(135deg, rgba(26, 31, 46, 0.95) 0%, rgba(14, 17, 23, 0.98) 100%);
-    border: 1px solid rgba(164, 16, 52, 0.3);
-    border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 24px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-}
-
-.ai-insights-header {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 16px;
-}
-
-.ai-insights-header .icon {
-    font-size: 24px;
-}
-
-.ai-insights-header h3 {
-    margin: 0;
-    font-size: 16px;
-    font-weight: 600;
-    color: #fff;
-}
-
-.ai-summary-text {
-    font-size: 14px;
-    line-height: 1.6;
-    color: rgba(255, 255, 255, 0.85);
-    padding: 12px 16px;
-    background: rgba(255, 255, 255, 0.03);
-    border-radius: 8px;
-    border-left: 3px solid #A41034;
-    margin-bottom: 16px;
-}
-
-.ai-insight-cards {
-    display: flex;
-    gap: 12px;
-    margin-bottom: 16px;
-}
-
-.ai-insight-card {
-    flex: 1;
-    background: rgba(255, 255, 255, 0.03);
-    border-radius: 8px;
-    padding: 12px;
-    border-left: 3px solid;
-}
-
-.ai-insight-card .card-icon {
-    font-size: 16px;
-    margin-bottom: 4px;
-}
-
-.ai-insight-card .card-type {
-    font-size: 9px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: rgba(255, 255, 255, 0.5);
-}
-
-.ai-insight-card .card-metric {
-    font-size: 18px;
-    font-weight: 700;
-    margin: 4px 0;
-}
-
-.ai-insight-card .card-message {
-    font-size: 11px;
-    color: rgba(255, 255, 255, 0.6);
-    line-height: 1.4;
-}
-
-.ai-cta-button {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    background: rgba(164, 16, 52, 0.2);
-    border: 1px solid rgba(164, 16, 52, 0.4);
-    border-radius: 6px;
-    padding: 8px 16px;
-    font-size: 12px;
-    color: rgba(255, 255, 255, 0.9);
-    text-decoration: none;
-    transition: all 0.2s ease;
-}
-
-.ai-cta-button:hover {
-    background: rgba(164, 16, 52, 0.3);
-    color: #fff;
-}
-</style>
-"""
-
-
 def render_refresh_info(last_refresh: datetime, time_until_refresh: timedelta):
-    """Display last refresh time and countdown."""
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.caption(f"Last updated: {last_refresh.strftime('%B %d, %Y at %I:%M %p')}")
-    
-    with col2:
-        hours = int(time_until_refresh.total_seconds() // 3600)
-        minutes = int((time_until_refresh.total_seconds() % 3600) // 60)
-        st.caption(f"Next refresh in: {hours}h {minutes}m")
+    """Display last refresh time."""
+    st.caption(f"Last updated: {last_refresh.strftime('%B %d, %Y at %I:%M %p')}")
 
 
 def render_ai_insights_section(data: dict):
-    """Render the AI-generated insights section at the top of Executive Summary."""
+    """Render the AI-generated insights summary at the top of Executive Summary."""
     from components.ai_insights import (
         get_cached_insights, get_data_hash
     )
-    
-    # Inject CSS
-    st.markdown(AI_INSIGHTS_CSS, unsafe_allow_html=True)
     
     api_key = st.secrets.get("gemini_api_key", "")
     
@@ -184,36 +72,10 @@ def render_ai_insights_section(data: dict):
     
     summary_text = " ".join(summary_parts[:3])
     
-    # Render the insights box
-    st.markdown('<div class="ai-insights-box">', unsafe_allow_html=True)
-    
-    # Header
-    st.markdown("""
-    <div class="ai-insights-header">
-        <span class="icon">🤖</span>
-        <h3>AI Insights</h3>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Summary text
-    st.markdown(f'<div class="ai-summary-text">{summary_text}</div>', unsafe_allow_html=True)
-    
-    # Insight cards
-    if insights:
-        cols = st.columns(3)
-        for i, insight in enumerate(insights[:3]):
-            with cols[i]:
-                st.markdown(f"""
-                <div class="ai-insight-card" style="border-left-color: {insight.color};">
-                    <div class="card-icon">{insight.icon}</div>
-                    <div class="card-type">{insight.type}</div>
-                    <div class="card-metric" style="color: {insight.color};">{insight.metric}</div>
-                    <div class="card-message">{insight.message}</div>
-                </div>
-                """, unsafe_allow_html=True)
-    
-    st.markdown('</div>', unsafe_allow_html=True)
-    
+    # Render plain-text summary only (no cards/boxes)
+    st.markdown("### AI Insights")
+    st.write(summary_text)
+
     # CTA is rendered by the Executive Summary wrapper page in `app.py` to preserve session state.
 
 
@@ -527,9 +389,7 @@ def render(data: dict):
         if time_until.total_seconds() < 0:
             time_until = timedelta(seconds=0)
         render_refresh_info(data['last_refresh'], time_until)
-    
-    st.markdown("---")
-    
+
     # AI Insights Section at the top
     render_ai_insights_section(data)
     

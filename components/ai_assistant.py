@@ -319,12 +319,19 @@ def build_context(data: dict) -> str:
     previous = summary_stats['overall'][2025]
     breakdown = summary_stats.get('enrollment_breakdown')
 
-    # Program stats (top programs by enrollments)
+    # Program stats (include more detail for richer AI context)
     program_stats = calculate_program_stats(apps_data.get('current'), apps_data.get('previous'))
     top_programs = []
+    all_programs = []
     if program_stats is not None and not program_stats.empty:
         top_programs = program_stats.nlargest(10, 'Enrollments 2026')[
             ['Program', 'Enrollments 2026', 'Yield Rate 2026']
+        ].to_dict('records')
+        # Include a larger list for deeper AI context (cap to avoid huge prompts)
+        max_programs = 60
+        subset = program_stats.head(max_programs)
+        all_programs = subset[
+            ['Program', 'Applications 2026', 'Admits 2026', 'Enrollments 2026', 'Admit Rate 2026', 'Yield Rate 2026', 'Apps YoY %']
         ].to_dict('records')
 
     # Funnel by category (Slate)
@@ -358,7 +365,13 @@ def build_context(data: dict) -> str:
             )
             cohort_top = cohort_summary.to_dict('records')
 
-    # NTR summary
+    # Census category counts (for broader context)
+    census_by_category = {}
+    if census_df is not None and not census_df.empty:
+        if 'Student_Category' in census_df.columns:
+            census_by_category = census_df['Student_Category'].value_counts().to_dict()
+
+    # NTR summary + breakdown (from census)
     ntr_summary = data.get('ntr_summary')
     ntr_text = "NTR data not available."
     if ntr_summary:
@@ -369,6 +382,25 @@ def build_context(data: dict) -> str:
             f"New NTR: {format_currency(ntr_summary.new_ntr)}; "
             f"Current NTR: {format_currency(ntr_summary.current_ntr)}."
         )
+    ntr_breakdown_text = ""
+    if census_df is not None and not census_df.empty:
+        try:
+            from ntr_calculator import calculate_ntr_from_census
+            _, _, breakdown_df = calculate_ntr_from_census(census_df)
+            if breakdown_df is not None and not breakdown_df.empty:
+                lines = []
+                for _, row in breakdown_df.iterrows():
+                    if row.get('Category') == 'Grand Total':
+                        continue
+                    lines.append(
+                        f"- {row.get('Category')} / {row.get('Degree Type')}: "
+                        f"Students {row.get('Total Students')}, Credits {row.get('Total Credits')}, "
+                        f"NTR {format_currency(row.get('Total NTR'))}"
+                    )
+                if lines:
+                    ntr_breakdown_text = "NTR by Category/Degree:\n" + "\n".join(lines)
+        except Exception:
+            ntr_breakdown_text = ""
 
     enrollment_text = "Enrollment breakdown not available."
     if breakdown:
@@ -394,6 +426,8 @@ def build_context(data: dict) -> str:
         enrollment_text,
         ntr_text,
     ]
+    if ntr_breakdown_text:
+        context.append(ntr_breakdown_text)
 
     if by_school:
         context.append("By School (Funnel Metrics, 2026):")
@@ -425,6 +459,11 @@ def build_context(data: dict) -> str:
                     f"Yield {m.yield_rate:.0f}%"
                 )
 
+    if census_by_category:
+        context.append("Census Student Category Counts (2026):")
+        for category, count in census_by_category.items():
+            context.append(f"- {category}: {count}")
+
     if funnel_by_category:
         context.append("Funnel by Category (Slate, top 10 by enrollments):")
         for item in funnel_by_category:
@@ -439,6 +478,16 @@ def build_context(data: dict) -> str:
             context.append(
                 f"- {item['Program']}: {item['Enrollments 2026']} enrollments, "
                 f"Yield {item['Yield Rate 2026']:.0f}%"
+            )
+
+    if all_programs:
+        context.append("Program Stats (2026, capped list):")
+        for item in all_programs:
+            context.append(
+                f"- {item['Program']}: Apps {item['Applications 2026']}, "
+                f"Admits {item['Admits 2026']}, Enrolls {item['Enrollments 2026']}, "
+                f"Admit {item['Admit Rate 2026']:.0f}%, Yield {item['Yield Rate 2026']:.0f}%, "
+                f"Apps YoY {item['Apps YoY %']:.0f}%"
             )
 
     if cohort_top:

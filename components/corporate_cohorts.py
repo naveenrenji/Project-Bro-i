@@ -290,6 +290,4 @@ def render(data: dict):
     
     st.markdown("### All Corporate Cohorts")
     render_corporate_table(corporate_stats)
-    
-    st.markdown("---")
-    render_cohort_from_census(census_df)
+

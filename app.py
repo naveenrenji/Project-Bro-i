@@ -5,6 +5,7 @@ Main application entry point with navigation and page routing.
 
 import streamlit as st
 import sys
+import base64
 from pathlib import Path
 from datetime import datetime, timedelta
 
@@ -35,12 +36,57 @@ st.set_page_config(
 # Global UI tokens/classes
 inject_global_styles()
 
+# Embed logo for header (safe fallback if missing)
+logo_path = Path(__file__).parent / "Stevens-CPE-logo-RGB_Linear-4C-BLK-bg.png"
+logo_b64 = ""
+try:
+    if logo_path.exists():
+        logo_b64 = base64.b64encode(logo_path.read_bytes()).decode("ascii")
+except Exception:
+    logo_b64 = ""
+
 # Custom CSS for Stevens branding
+logo_css = f"""
+    header[data-testid="stHeader"] {{
+        position: relative;
+        min-height: 44px;
+    }}
+    header[data-testid="stHeader"]::before {{
+        content: "";
+        position: absolute;
+        left: 16px;
+        top: 50%;
+        transform: translateY(-50%);
+        background-image: url('data:image/png;base64,{logo_b64}');
+        background-repeat: no-repeat;
+        background-position: center;
+        background-size: contain;
+        width: clamp(140px, 15vw, 200px);
+        height: clamp(28px, 4vw, 44px);
+        z-index: 2;
+        pointer-events: none;
+    }}
+    /* Fallback in case nav renders outside header */
+    [data-testid="stNavigation"]::before,
+    [data-testid="stNavigation"] nav::before {{
+        content: "";
+        display: inline-block;
+        background-image: url('data:image/png;base64,{logo_b64}');
+        background-repeat: no-repeat;
+        background-position: center;
+        background-size: contain;
+        width: clamp(140px, 15vw, 200px);
+        height: clamp(28px, 4vw, 44px);
+        margin-right: 8px;
+    }}
+"""
+
 st.markdown(f"""
 <style>
     /* Main container */
     .main .block-container {{
-        padding-top: 2rem;
+        padding-top: 0;
+        margin-top: -1rem;
         padding-bottom: 2rem;
         max-width: 1400px;
     }}
@@ -83,6 +129,58 @@ st.markdown(f"""
         margin-bottom: 0;
     }}
     
+    /* Top navigation bar + header shell */
+    header[data-testid="stHeader"] {{
+        background: #242a3b;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    }}
+    [data-testid="stNavigation"],
+    [data-testid="stNavigation"] > div,
+    [data-testid="stNavigation"] nav {{
+        background: #242a3b;
+    }}
+    [data-testid="stNavigation"] {{
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 8px;
+        padding: 6px 10px;
+        margin-bottom: 0;
+    }}
+    /* Make room for logo in header */
+    [data-testid="stNavigation"] {{
+        padding-left: clamp(120px, 14vw, 190px);
+    }}
+    /* Inline logo aligned with nav items */
+    [data-testid="stNavigation"] nav {{
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }}
+    [data-testid="stNavigation"] nav::before {{
+        content: "";
+        display: inline-block;
+        background-image: url('data:image/png;base64,{logo_b64}');
+        background-repeat: no-repeat;
+        background-position: center;
+        background-size: contain;
+        width: clamp(140px, 15vw, 200px);
+        height: clamp(28px, 4vw, 44px);
+    }}
+
+    /* Nav label sizing */
+    [data-testid="stNavigation"] * {{
+        font-size: 0.95rem;
+    }}
+
+    /* Hide heading anchor links (chain icon) */
+    h1 a, h2 a, h3 a, h4 a {{
+        display: none !important;
+    }}
+    .stMarkdown a[href^="#"] {{
+        display: none !important;
+    }}
+
+    {logo_css}
+
     /* Navigation buttons */
     [data-testid="stSidebar"] .stButton > button {{
         width: 100%;
@@ -240,8 +338,6 @@ def render_sidebar():
                 <div style="background: {BACKGROUND_CARD}; padding: 12px; border-radius: 4px; margin-bottom: 10px;">
                     <div style="font-size: 11px; color: {STEVENS_GRAY_LIGHT};">Last Refresh</div>
                     <div style="font-size: 13px; color: {STEVENS_WHITE};">{last_refresh.strftime('%I:%M %p')}</div>
-                    <div style="font-size: 11px; color: {STEVENS_GRAY_LIGHT}; margin-top: 8px;">Next Refresh</div>
-                    <div style="font-size: 13px; color: {STEVENS_WHITE};">{hours}h {minutes}m</div>
                 </div>
             """, unsafe_allow_html=True)
         except Exception:
@@ -361,11 +457,15 @@ def main():
     # Store AI page object for in-app CTA (kept in session state for this session only).
     st.session_state["_page_ai_ref"] = p_ai
 
-    pages = {
-        "": [p_exec, p_funnel, p_ntr],
-        "More": [p_prog, p_cohorts, p_yoy],
-        "AI": [p_ai],
-    }
+    pages = [
+        p_exec,
+        p_funnel,
+        p_ntr,
+        p_prog,
+        p_cohorts,
+        p_yoy,
+        p_ai,
+    ]
 
     # Sidebar (status/actions)
     render_sidebar()

@@ -76,19 +76,12 @@ st.markdown("""
 
 st.markdown(f"""
 <style>
-    /* Main container - aggressive gap removal */
+    /* Main container */
     .main .block-container {{
-        padding-top: 0 !important;
-        margin-top: -2rem !important;
+        padding-top: 0;
+        margin-top: -1rem;
         padding-bottom: 2rem;
         max-width: 1400px;
-    }}
-    .stApp [data-testid="stAppViewContainer"] {{
-        padding-top: 0 !important;
-    }}
-    /* Remove any stray separators/borders */
-    .stApp hr, .main hr {{
-        display: none !important;
     }}
 
     /* Mobile responsiveness */
@@ -152,7 +145,10 @@ st.markdown(f"""
         gap: 12px;
     }}
 
-    /* Nav label sizing - handled in earlier CSS block */
+    /* Nav label sizing */
+    [data-testid="stNavigation"] * {{
+        font-size: 0.95rem;
+    }}
 
     /* Hide heading anchor links (chain icon) */
     h1 a, h2 a, h3 a, h4 a {{
@@ -168,32 +164,6 @@ st.markdown(f"""
         margin-top: 0 !important;
     }}
     .stApp > header + div {{
-        padding-top: 0 !important;
-    }}
-    /* Hide empty/placeholder elements that create gray bars */
-    .stApp [data-testid="stDecoration"],
-    .stApp [data-testid="stToolbar"],
-    .element-container:empty,
-    [data-testid="stStatusWidget"],
-    [data-testid="stHeader"]::before,
-    [data-testid="stHeader"]::after {{
-        display: none !important;
-    }}
-    /* Remove any horizontal rules globally */
-    hr {{
-        display: none !important;
-    }}
-    /* Remove top border/decoration from main content area */
-    .main::before,
-    .main::after,
-    [data-testid="stAppViewContainer"]::before,
-    [data-testid="stAppViewContainer"]::after {{
-        display: none !important;
-        content: none !important;
-    }}
-    /* Reduce top spacing on first element after header */
-    .main > div > div:first-child {{
-        margin-top: 0 !important;
         padding-top: 0 !important;
     }}
 
@@ -386,14 +356,14 @@ def page_executive_summary():
     from components import executive_summary
     executive_summary.render(_get_data())
 
-    # In-app CTA to AI Naveen that preserves Streamlit session state (no full page reload).
+    # In-app CTA to Ask Navs that preserves Streamlit session state (no full page reload).
     # This must live in the router layer where we have access to the StreamlitPage objects.
     if "_page_ai_ref" in st.session_state and st.session_state["_page_ai_ref"] is not None:
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
             st.page_link(
                 st.session_state["_page_ai_ref"],
-                label="💬 Ask AI Naveen for deeper analysis",
+                label="💬 Ask Navs for deeper analysis",
                 width="stretch",
             )
 
@@ -423,7 +393,7 @@ def page_historical_yoy():
     historical_yoy.render(_get_data())
 
 
-def page_ai_naveen():
+def page_ask_navs():
     from components import ai_assistant
     ai_assistant.render(_get_data())
 
@@ -469,7 +439,7 @@ def main():
     p_prog = st.Page(page_program_intelligence, title="Program Intelligence")
     p_cohorts = st.Page(page_corporate_cohorts, title="Corporate Cohorts")
     p_yoy = st.Page(page_historical_yoy, title="Historical & YoY")
-    p_ai = st.Page(page_ai_naveen, title="AI Naveen")
+    p_ai = st.Page(page_ask_navs, title="Ask Navs")
     # Store AI page object for in-app CTA (kept in session state for this session only).
     st.session_state["_page_ai_ref"] = p_ai
 

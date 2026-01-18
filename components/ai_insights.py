@@ -1,6 +1,6 @@
 """
 Shared AI Insights module for the CPE Funnel Dashboard.
-Provides reusable insight generation for Executive Summary and AI Naveen.
+Provides reusable insight generation for Executive Summary and Ask Navs.
 """
 
 from dataclasses import dataclass

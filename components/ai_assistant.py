@@ -1,5 +1,5 @@
 """
-AI Naveen - Premium AI Business Intelligence Assistant
+Ask Navs - Premium AI Business Intelligence Assistant
 Combines premium UI with robust chat features including summarization and fallbacks.
 """
 
@@ -485,7 +485,7 @@ def get_avatar_base64() -> str:
 
 
 def render(data: dict):
-    """Render the premium AI Naveen chat interface."""
+    """Render the premium Ask Navs chat interface."""
     
     # Inject premium CSS (applies glass effect to the page container)
     st.markdown(PREMIUM_CSS, unsafe_allow_html=True)
@@ -550,10 +550,10 @@ def render(data: dict):
         f"""
         <div class="ai-header">
           <div class="avatar-container">
-            <img src="{avatar_src}" alt="AI Naveen"/>
+            <img src="{avatar_src}" alt="Ask Navs"/>
           </div>
           <div style="flex: 1;">
-            <h2 style="margin:0; color:#fff; border:none;">AI Naveen</h2>
+            <h2 style="margin:0; color:#fff; border:none;">Ask Navs</h2>
             <div class="greeting">Ask about enrollment, yield, NTR, and trends.</div>
           </div>
         </div>

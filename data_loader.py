@@ -28,7 +28,27 @@ def get_config():
         'slate_url': st.secrets.get('slate_url', ''),
         'data_folder': st.secrets.get('data_folder', ''),
         'census_folder': st.secrets.get('census_folder', ''),
+        # Optional snapshot folder checked before local paths (useful for Streamlit Cloud).
+        'snapshot_folder': st.secrets.get('snapshot_folder', ''),
     }
+
+
+def _get_snapshot_folder() -> str:
+    """Resolve snapshot folder (default: <repo>/data/snapshots)."""
+    config = get_config()
+    snapshot_folder = config.get('snapshot_folder')
+    if snapshot_folder:
+        return snapshot_folder
+    return str(Path(__file__).parent / "data" / "snapshots")
+
+
+def _find_snapshot_file(snapshot_folder: str, candidates: List[str]) -> Optional[str]:
+    """Return the first existing snapshot file from candidates."""
+    for name in candidates:
+        path = os.path.join(snapshot_folder, name)
+        if os.path.exists(path):
+            return path
+    return None
 
 
 def _hash_bytes(b: Optional[bytes]) -> str:
@@ -474,6 +494,51 @@ def load_census_data(
     if uploaded_bytes:
         return _load_census_from_bytes(uploaded_bytes, uploaded_name or "uploaded_census.csv", semester=semester)
 
+    # If snapshot census exists, prefer it (useful for Streamlit Cloud).
+    snapshot_folder = _get_snapshot_folder()
+    snapshot_census = _find_snapshot_file(snapshot_folder, ["census_latest.csv"])
+    if snapshot_census:
+        try:
+            df = pd.read_csv(snapshot_census, low_memory=False)
+        except Exception as e:
+            print(f"[CENSUS] Error loading snapshot census file: {e}")
+            return {}
+
+        # Filter for semester + online + graduate
+        df = df[df['Census_1_SEMESTER'] == semester].copy()
+        df = df[df['Census_1_STUDENT_LOCATION_DETAILED'].isin(['Online', 'Online Noodle'])].copy()
+        df = df[df['Census_1_DEGREE_TYPE'].isin(['Masters', 'Graduate Certificate', 'Non-Degree'])].copy()
+
+        if df.empty:
+            return {}
+
+        # Numeric conversions
+        df['Census_1_BEACON_FLAG'] = pd.to_numeric(df['Census_1_BEACON_FLAG'], errors='coerce').fillna(0)
+        credit_col = 'Census_1_CENSUS3_TOTAL_NUMBER_OF_CREDIT_HOURS'
+        if credit_col not in df.columns:
+            credit_col = 'Census_1_NUMBER_OF_CREDITS'
+        df[credit_col] = pd.to_numeric(df[credit_col], errors='coerce').fillna(0)
+
+        # Category mapping
+        df['Student_Category'] = df.apply(_categorize_census_row, axis=1)
+
+        # Status counts
+        new_count = int((df['Census_1_STUDENT_STATUS'] == 'New').sum())
+        continuing_count = int((df['Census_1_STUDENT_STATUS'] == 'Continuing').sum())
+        returning_count = int((df['Census_1_STUDENT_STATUS'] == 'Returning').sum())
+
+        return {
+            'file': snapshot_census,
+            'total': int(df['Census_1_STUDENT_ID'].nunique()) if 'Census_1_STUDENT_ID' in df.columns else len(df),
+            'new': new_count,
+            'continuing': continuing_count,
+            'returning': returning_count,
+            'by_category': df['Student_Category'].value_counts().to_dict(),
+            'total_credits': float(df[credit_col].sum()),
+            'credit_column': credit_col,
+            'raw_df': df
+        }
+
     config = get_config()
     census_folder = config.get('census_folder', '')
     census_file = find_latest_census_file(census_folder)
@@ -693,6 +758,7 @@ def load_applications_data(
     """
     config = get_config()
     data_folder = config['data_folder']
+    snapshot_folder = _get_snapshot_folder()
     
     result = {
         'current': None,
@@ -714,6 +780,23 @@ def load_applications_data(
             print(f"[UPLOAD] Loaded {len(raw_df)} rows from {uploaded_name}")
         except Exception as e:
             print(f"[UPLOAD] Could not load applications upload: {e}")
+
+    # Try snapshot files (app sync-friendly)
+    if raw_df is None:
+        snapshot_file = _find_snapshot_file(
+            snapshot_folder,
+            ["apps_latest.xlsx", "apps_latest.xls", "apps_latest.csv", "slate_latest.csv"],
+        )
+        if snapshot_file:
+            try:
+                if snapshot_file.lower().endswith((".xlsx", ".xls")):
+                    raw_df = pd.read_excel(snapshot_file)
+                else:
+                    raw_df = pd.read_csv(snapshot_file)
+                data_source = f"SNAPSHOT:{os.path.basename(snapshot_file)}"
+                print(f"[SNAPSHOT] Loaded {len(raw_df)} rows from {snapshot_file}")
+            except Exception as e:
+                print(f"[SNAPSHOT] Could not load snapshot file: {e}")
 
     # Try to load from local file (more reliable for Date of Enrollment)
     if raw_df is None:

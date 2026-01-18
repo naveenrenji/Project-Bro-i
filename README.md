@@ -45,6 +45,27 @@ A comprehensive, password-protected Streamlit dashboard for tracking the full en
 4. Add secrets in the Streamlit Cloud dashboard:
    - Go to App Settings → Secrets
    - Add the same secrets as in secrets.toml
+5. Ensure `runtime.txt` is present to pin Python 3.11 for Streamlit Cloud
+
+### Snapshot-Based Deploys (No External Files Needed)
+
+To avoid relying on local file paths in Streamlit Cloud, you can snapshot the
+latest data into the repo and let the app read from `data/snapshots/`.
+
+1. Make sure `.streamlit/secrets.toml` has:
+   ```toml
+   slate_url = "your_slate_api_url"
+   census_folder = "/path/to/census/files"
+   data_folder = "/path/to/data/folder"
+   ```
+2. Run the one-command refresh + deploy:
+   ```bash
+   ./scripts/refresh_and_push.sh
+   ```
+This pulls the latest data, commits it with a timestamp, and pushes to GitHub.
+Streamlit Cloud will auto-redeploy on push.
+
+Note: keep the repo private if you are committing data snapshots.
 
 ## Data Sources
 

@@ -125,20 +125,23 @@ PREMIUM_CSS = """
     color: #fff;
 }
 
-/* New Chat button styling */
-button[data-testid="baseButton-secondary"] {
-    background: rgba(164, 16, 52, 0.25) !important;
-    border: 1px solid rgba(164, 16, 52, 0.5) !important;
-    color: #fff !important;
-    border-radius: 8px !important;
-    font-size: 13px !important;
-    font-weight: 500 !important;
-    float: right;
-    margin-bottom: 12px;
+/* New Chat button in header */
+.new-chat-btn-inline {
+    background: rgba(164, 16, 52, 0.25);
+    border: 1px solid rgba(164, 16, 52, 0.5);
+    color: #fff;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    margin-left: auto;
 }
-button[data-testid="baseButton-secondary"]:hover {
-    background: rgba(164, 16, 52, 0.4) !important;
-    border-color: rgba(164, 16, 52, 0.7) !important;
+.new-chat-btn-inline:hover {
+    background: rgba(164, 16, 52, 0.4);
+    border-color: rgba(164, 16, 52, 0.7);
 }
 
 /* Suggestion buttons - pill style */
@@ -161,22 +164,41 @@ button[data-testid="baseButton-secondary"]:hover {
 [data-testid="stVerticalBlockBorderWrapper"] {
     border: 1px solid rgba(255, 255, 255, 0.08) !important;
     border-radius: 12px !important;
-    background: rgba(0, 0, 0, 0.2) !important;
+    background: rgba(0, 0, 0, 0.15) !important;
 }
 
-/* Avatar with animation */
+/* Fix chat input red border */
+[data-testid="stChatInput"] {
+    border-color: rgba(255, 255, 255, 0.15) !important;
+}
+[data-testid="stChatInput"]:focus-within {
+    border-color: rgba(255, 255, 255, 0.3) !important;
+    box-shadow: none !important;
+}
+[data-testid="stChatInput"] textarea {
+    caret-color: #fff !important;
+}
+
+/* Hide the Streamlit New Chat button (we use HTML button) */
+.element-container:has(button[data-testid="baseButton-secondary"]) {
+    display: none !important;
+}
+
+/* Avatar - larger size, no cropping */
 .avatar-container {
     position: relative;
-    width: 44px;
-    height: 44px;
+    width: 56px;
+    height: 56px;
+    flex-shrink: 0;
 }
 
 .avatar-container img {
-    width: 44px;
-    height: 44px;
+    width: 56px;
+    height: 56px;
     border-radius: 50%;
     border: 2px solid rgba(164, 16, 52, 0.5);
-    object-fit: cover;
+    object-fit: contain;
+    background: rgba(255,255,255,0.05);
 }
 
 .avatar-ring {
@@ -907,15 +929,16 @@ def render(data: dict):
     if avatar_base64:
         avatar_src = f"data:image/png;base64,{avatar_base64}"
     else:
-        avatar_src = "https://ui-avatars.com/api/?name=AI+Naveen&background=A41034&color=fff&size=48"
+        avatar_src = "https://ui-avatars.com/api/?name=AI+Naveen&background=A41034&color=fff&size=56"
 
     # Header with avatar, title, and New Chat button (all in one HTML block)
-    new_chat_clicked = st.button("✨ New Chat", key="new_chat_btn", type="secondary")
-    if new_chat_clicked:
+    # Hidden Streamlit button for functionality
+    if st.button("✨ New Chat", key="new_chat_btn", type="secondary"):
         st.session_state.chat_history = []
         st.session_state.chat_summary = ""
         st.session_state.summary_tick = 0
         st.session_state.pending_chip = None
+        st.session_state.pending_response = None
         st.rerun()
     
     st.markdown(
@@ -930,33 +953,64 @@ def render(data: dict):
               <div class="greeting">Ask about enrollment, yield, NTR, and trends.</div>
             </div>
           </div>
+          <button class="new-chat-btn-inline" onclick="document.querySelector('button[data-testid=baseButton-secondary]').click()">
+            ✨ New Chat
+          </button>
         </div>
         """,
         unsafe_allow_html=True,
     )
     
+    # Check if we need to process a pending response
+    if "pending_response" not in st.session_state:
+        st.session_state.pending_response = None
+    
     # Scrollable chat area with fixed height
-    chat_container = st.container(height=400)
+    chat_container = st.container(height=420)
     
     with chat_container:
         if not st.session_state.chat_history:
-            # Empty state with suggestions
+            # Empty state
             st.markdown(
-                "<div style='color: rgba(255,255,255,0.6); font-size: 13px; margin-bottom: 12px;'>Start a conversation by typing below or clicking a suggestion.</div>",
+                "<div style='color: rgba(255,255,255,0.5); font-size: 13px; padding: 20px 0;'>Start a conversation by typing below or clicking a suggestion.</div>",
                 unsafe_allow_html=True,
             )
         else:
-            # Display chat history
+            # Display all chat history
             for msg in st.session_state.chat_history:
                 avatar = avatar_path if msg["role"] == "assistant" else None
                 with st.chat_message(msg["role"], avatar=avatar):
                     st.markdown(msg["content"])
-    
-    # Handle pending chip click
-    if st.session_state.pending_chip:
-        prompt = st.session_state.pending_chip
-        st.session_state.pending_chip = None
-        process_message(prompt, data, api_key, avatar_path, fun_quotes)
+            
+            # Show thinking indicator if we're waiting for a response
+            if st.session_state.pending_response:
+                with st.chat_message("assistant", avatar=avatar_path):
+                    with st.spinner(random.choice(fun_quotes)):
+                        # Generate response
+                        prompt = st.session_state.pending_response
+                        context = build_context(data)
+                        if st.session_state.chat_summary:
+                            context += "\n\nChat Summary:\n" + st.session_state.chat_summary
+                        
+                        try:
+                            response = query_gemini(prompt, context, api_key)
+                        except Exception as e:
+                            if "429" in str(e) or "Too Many Requests" in str(e):
+                                response = fallback_response(prompt, data)
+                            else:
+                                response = f"Error: {e}"
+                        
+                        response = clean_markdown(response)
+                        st.session_state.chat_history.append({"role": "assistant", "content": response})
+                        st.session_state.pending_response = None
+                        
+                        # Summarize periodically
+                        if len(st.session_state.chat_history) >= 6 and st.session_state.summary_tick % 2 == 0:
+                            summary = summarize_chat(st.session_state.chat_history, api_key)
+                            if summary:
+                                st.session_state.chat_summary = summary
+                        st.session_state.summary_tick += 1
+                        st.rerun()
     
     # Suggested questions (only when chat is empty)
     if not st.session_state.chat_history:
@@ -968,70 +1022,23 @@ def render(data: dict):
                 with chip_cols[col_idx]:
                     display_text = chip if len(chip) <= 40 else chip[:37] + "..."
                     if st.button(display_text, key=f"chip_{i}", use_container_width=True):
-                        st.session_state.pending_chip = chip
+                        # Add user message and set pending response
+                        st.session_state.chat_history.append({"role": "user", "content": chip})
+                        st.session_state.pending_response = chip
                         st.rerun()
     
     # Chat input
-    if prompt := st.chat_input("Ask about enrollment, yield, NTR, or trends..."): 
-        process_message(prompt, data, api_key, avatar_path, fun_quotes)
+    if prompt := st.chat_input("Ask about enrollment, yield, NTR, or trends..."):
+        # Rate limiting
+        last_call = st.session_state.get("last_ai_call", 0)
+        now = time.time()
+        if now - last_call < 3:
+            st.toast("Please wait a moment between questions.")
+        else:
+            st.session_state.last_ai_call = now
+            # Add user message and set pending response
+            st.session_state.chat_history.append({"role": "user", "content": prompt})
+            st.session_state.pending_response = prompt
+            st.rerun()
 
 
-def process_message(prompt: str, data: dict, api_key: str, avatar_path: str, fun_quotes: List[str]):
-    """Process a user message and generate AI response with summarization."""
-    
-    # Rate limiting
-    last_call = st.session_state.get("last_ai_call")
-    now = time.time()
-    if last_call and (now - last_call) < 5:
-        st.warning("Please wait a few seconds between questions to avoid rate limits.")
-        return
-    st.session_state.last_ai_call = now
-    
-    # Add user message
-    st.session_state.chat_history.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
-        st.markdown(prompt)
-    
-    # Pick a random fun quote for the spinner
-    thinking_quote = random.choice(fun_quotes)
-    
-    # Create assistant placeholder for typing effect
-    with st.chat_message("assistant", avatar=avatar_path):
-        placeholder = st.empty()
-        with st.spinner(thinking_quote):
-            # Periodic chat summarization (every 2 turns when history >= 6)
-            if len(st.session_state.chat_history) >= 6 and st.session_state.summary_tick % 2 == 0:
-                summary = summarize_chat(st.session_state.chat_history, api_key)
-                if summary:
-                    st.session_state.chat_summary = summary
-            st.session_state.summary_tick += 1
-
-            # Build context with chat summary if available
-            context = build_context(data)
-            if st.session_state.chat_summary:
-                context = (
-                    context
-                    + "\n\nChat Summary (use this for continuity):\n"
-                    + st.session_state.chat_summary
-                )
-            
-            try:
-                response = query_gemini(prompt, context, api_key)
-            except Exception as e:
-                if "429" in str(e) or "Too Many Requests" in str(e):
-                    response = fallback_response(prompt, data)
-                else:
-                    response = f"Error contacting AI service: {e}"
-
-        # Clean markdown
-        response = clean_markdown(response)
-
-        # Typing effect
-        typed = ""
-        for chunk in response.split(" "):
-            typed += chunk + " "
-            placeholder.markdown(typed.strip())
-            time.sleep(0.02)
-
-    st.session_state.chat_history.append({"role": "assistant", "content": response})
-    st.rerun()

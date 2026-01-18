@@ -50,6 +50,20 @@ PREMIUM_CSS = """
     margin: 0 auto !important;
 }
 
+/* Hide empty element containers that create gray bars */
+.ai-naveen-scope .element-container:has(> div:empty),
+.element-container:has(> .ai-naveen-scope:empty),
+.element-container:has(> .ai-glass:empty) {
+    display: none !important;
+}
+.stMarkdown:empty,
+.element-container > div:empty {
+    display: none !important;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
 .ai-glass {
     background: linear-gradient(135deg, rgba(26, 31, 46, 0.92) 0%, rgba(14, 17, 23, 0.96) 100%);
     border: 1px solid var(--ai-border-accent);

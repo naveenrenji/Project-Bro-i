@@ -45,7 +45,7 @@ st.markdown("""
 <style>
     /* Make header taller */
     header[data-testid="stHeader"] {
-        min-height: 80px !important;
+        min-height: 120px !important;
         padding: 12px 0 !important;
     }
     /* Make navigation elements larger */
@@ -66,9 +66,9 @@ st.markdown("""
     [data-testid="stSidebarHeader"] img,
     .stLogo img,
     header img {
-        height: 50px !important;
+        height: 100px !important;
         width: auto !important;
-        max-height: 50px !important;
+        max-height: 100px !important;
     }
 </style>
 """, unsafe_allow_html=True)

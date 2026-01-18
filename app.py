@@ -92,6 +92,38 @@ st.markdown(f"""
         max-width: 1400px;
     }}
 
+    /* Ask Navs floating widget */
+    div[data-testid="stVerticalBlock"]:has(.navs-widget-marker) {{
+        position: fixed !important;
+        right: 24px;
+        bottom: 24px;
+        z-index: 9999;
+        width: 360px;
+        max-width: 92vw;
+        background: transparent;
+        padding: 0;
+        margin: 0;
+    }}
+    .navs-panel-header {{
+        background: #1A1F2E;
+        border: 1px solid rgba(255,255,255,0.12);
+        border-bottom: none;
+        border-radius: 12px 12px 0 0;
+        padding: 10px 12px;
+        font-weight: 600;
+        font-size: 13px;
+        color: #FAFAFA;
+    }}
+    div[data-testid="stVerticalBlock"]:has(.navs-widget-marker) > div {{
+        background: #121726;
+        border-radius: 12px;
+        box-shadow: 0 12px 30px rgba(0,0,0,0.45);
+        padding: 12px;
+    }}
+    div[data-testid="stVerticalBlock"]:has(.navs-widget-marker) button {{
+        border-radius: 999px !important;
+    }}
+
     /* Mobile responsiveness */
     @media (max-width: 768px) {{
         .main .block-container {{
@@ -467,6 +499,15 @@ def main():
     # Native multipage navigation (top)
     current = st.navigation(pages, position="top", expanded=False)
     current.run()
+
+    # Floating Ask Navs widget on every page
+    try:
+        from components import ai_assistant
+        page_hint = getattr(current, "title", "") or ""
+        ai_assistant.render_floating_widget(_get_data(), page_hint=page_hint)
+    except Exception:
+        # Never block page render if widget fails
+        pass
 
 
 if __name__ == "__main__":

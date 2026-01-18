@@ -102,20 +102,23 @@ def query_gemini_light(prompt: str, api_key: str) -> str:
     return (getattr(response, "text", "") or "").strip()
 
 
-def plan_data_needs(question: str, data: dict, api_key: str) -> List[str]:
+def plan_data_needs(question: str, data: dict, api_key: str, page_hint: str = "") -> List[str]:
     """Stage 1: pick which data categories are needed for this question."""
     cache = st.session_state.setdefault("planner_cache", {})
-    key = _normalize_question(question)
+    key = _normalize_question(f"{page_hint}::{question}")
     if key in cache:
         return cache[key]
 
     brief = _brief_summary_for_planner(data)
     categories_list = "\n".join([f"- {k}: {v}" for k, v in DATA_CATEGORIES.items()])
+    page_line = f"Current page context: {page_hint}" if page_hint else "Current page context: not specified"
     planner_prompt = f"""
 You are a routing assistant for an analytics chatbot.
 
 User question:
 {question}
+
+{page_line}
 
 Available dashboard data (brief):
 {brief}
@@ -377,11 +380,13 @@ def build_category_funnel_context(data: dict) -> str:
     return "\n".join(lines)
 
 
-def build_selective_context(data: dict, categories: List[str]) -> str:
+def build_selective_context(data: dict, categories: List[str], page_hint: str = "") -> str:
     """Stage 2: build context from only selected categories."""
     summary_stats = _get_summary_stats(data)
 
     parts: List[str] = [_build_guardrails_context()]
+    if page_hint:
+        parts.append(f"Current page: {page_hint}")
     # Always include a tiny summary to anchor the model
     parts.append(f"Brief: {_brief_summary_for_planner(data)}")
 
@@ -405,6 +410,107 @@ def build_selective_context(data: dict, categories: List[str]) -> str:
         parts.append(build_category_funnel_context(data))
 
     return "\n\n".join([p for p in parts if p])
+
+
+def _init_global_chat_state():
+    if "navs_widget_open" not in st.session_state:
+        st.session_state.navs_widget_open = False
+    if "navs_global_history" not in st.session_state:
+        st.session_state.navs_global_history = []
+    if "navs_global_summary" not in st.session_state:
+        st.session_state.navs_global_summary = ""
+    if "navs_global_pending" not in st.session_state:
+        st.session_state.navs_global_pending = None
+    if "navs_global_tick" not in st.session_state:
+        st.session_state.navs_global_tick = 0
+    if "navs_planner_cache" not in st.session_state:
+        st.session_state.navs_planner_cache = {}
+
+
+def render_floating_widget(data: dict, page_hint: str = ""):
+    """Floating Ask Navs widget shown on every page."""
+    _init_global_chat_state()
+
+    api_key = st.secrets.get("gemini_api_key", "")
+    if not api_key:
+        return
+
+    # Widget container (positioned via CSS from app.py)
+    widget = st.container()
+    with widget:
+        st.markdown('<div class="navs-widget-marker"></div>', unsafe_allow_html=True)
+
+        # Toggle bubble
+        if st.button("💬", key="navs_toggle"):
+            st.session_state.navs_widget_open = not st.session_state.navs_widget_open
+            st.rerun()
+
+        if not st.session_state.navs_widget_open:
+            return
+
+        st.markdown('<div class="navs-panel-header">Ask Navs</div>', unsafe_allow_html=True)
+
+        # Messages panel
+        panel = st.container(height=280)
+        with panel:
+            if not st.session_state.navs_global_history:
+                st.markdown(
+                    "<div style='color: rgba(255,255,255,0.7); font-size: 12px;'>"
+                    "Ask me about this page. I can break down trends, yield, and headcount."
+                    "</div>",
+                    unsafe_allow_html=True,
+                )
+            for msg in st.session_state.navs_global_history:
+                role = msg.get("role", "assistant")
+                with st.chat_message(role):
+                    st.markdown(msg.get("content", ""))
+
+            # Pending response
+            if st.session_state.navs_global_pending:
+                prompt = st.session_state.navs_global_pending
+                with st.chat_message("assistant"):
+                    with st.spinner("Thinking..."):
+                        categories = plan_data_needs(
+                            prompt,
+                            data,
+                            api_key,
+                            page_hint=page_hint,
+                        )
+                        context = build_selective_context(
+                            data,
+                            categories,
+                            page_hint=page_hint,
+                        )
+                        if st.session_state.navs_global_summary:
+                            context += "\n\nChat Summary:\n" + st.session_state.navs_global_summary
+                        try:
+                            response = query_gemini(prompt, context, api_key)
+                        except Exception as e:
+                            if "429" in str(e) or "Too Many Requests" in str(e):
+                                response = fallback_response(prompt, data)
+                            else:
+                                response = f"Error: {e}"
+
+                        response = clean_markdown(response)
+                        st.session_state.navs_global_history.append({"role": "assistant", "content": response})
+                        st.session_state.navs_global_pending = None
+
+                        # periodic summarization
+                        if len(st.session_state.navs_global_history) >= 6 and st.session_state.navs_global_tick % 2 == 0:
+                            summary = summarize_chat(st.session_state.navs_global_history, api_key)
+                            if summary:
+                                st.session_state.navs_global_summary = summary
+                        st.session_state.navs_global_tick += 1
+                        st.rerun()
+
+        # Input area
+        with st.form("navs_widget_form", clear_on_submit=True):
+            user_input = st.text_input("Ask Navs…", key="navs_widget_input")
+            sent = st.form_submit_button("Send")
+        if sent and user_input:
+            st.session_state.navs_global_history.append({"role": "user", "content": user_input})
+            st.session_state.navs_global_pending = user_input
+            st.rerun()
 
 
 # Premium CSS Styles - Clean and minimal
@@ -545,7 +651,9 @@ def build_context(data: dict) -> str:
 def query_gemini(question: str, context: str, api_key: str) -> str:
     """Send question to Gemini API with context. Retries on 429."""
     prompt = (
-        "You are Naveen, the AI and BI Engineering Manager for Stevens CPE. "
+        "You are Ask Navs, the AI and BI Engineering Manager for Stevens CPE. "
+        "Personality: medium frat/bro vibe—casual, friendly, short sentences, light slang. "
+        "Stay respectful and professional. No insults, no harassment, no explicit content. "
         "Tone: fun but realistic, avoid hype, and keep a grounded, practical voice. "
         "Use only the provided context. "
         "Do not infer or fabricate numbers or dollar amounts not present. "
@@ -795,8 +903,17 @@ def render(data: dict):
                     with st.spinner(random.choice(fun_quotes)):
                         # Generate response
                         prompt = st.session_state.pending_response
-                        needed_categories = plan_data_needs(prompt, data, api_key)
-                        context = build_selective_context(data, needed_categories)
+                        needed_categories = plan_data_needs(
+                            prompt,
+                            data,
+                            api_key,
+                            page_hint="Ask Navs Page",
+                        )
+                        context = build_selective_context(
+                            data,
+                            needed_categories,
+                            page_hint="Ask Navs Page",
+                        )
                         if st.session_state.chat_summary:
                             context += "\n\nChat Summary:\n" + st.session_state.chat_summary
                         

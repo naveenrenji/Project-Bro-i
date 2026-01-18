@@ -126,36 +126,13 @@ def render_kpi_row(summary_stats: dict):
         render_kpi_card("Yield Rate", format_percent(current.yield_rate))
 
 
-def render_offers_row(summary_stats: dict):
-    """Render offers accepted and additional metrics."""
-    current = summary_stats['overall'][2026]
-    previous = summary_stats['overall'][2025]
-    
-    st.markdown("#### Additional Metrics")
-    
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        delta, direction = format_delta(current.offers_accepted, previous.offers_accepted)
-        render_kpi_card("Offers Accepted", format_number(current.offers_accepted), delta, direction)
-    
-    with col2:
-        render_kpi_card("Admit Rate", format_percent(current.admit_rate))
-    
-    with col3:
-        render_kpi_card("Offer Rate", format_percent(current.offer_rate))
-    
-    with col4:
-        render_kpi_card("Conversion Rate", format_percent(current.overall_conversion))
-
-
 def render_enrollment_breakdown(summary_stats: dict):
     """Render enrollment breakdown using Slate new + Census continuing/returning."""
     breakdown = summary_stats.get('enrollment_breakdown')
     if not breakdown:
         return
 
-    st.markdown("#### Enrollment Breakdown (Spring 2026)")
+    st.markdown("#### Headcount Breakdown (Spring 2026)")
 
     col1, col2, col3, col4 = st.columns(4)
 
@@ -410,9 +387,6 @@ def render(data: dict):
     render_kpi_row(summary_stats)
     
     st.markdown("<br>", unsafe_allow_html=True)
-    
-    # Additional metrics
-    render_offers_row(summary_stats)
 
     st.markdown("<br>", unsafe_allow_html=True)
 

@@ -4,6 +4,7 @@ Combines premium UI with robust chat features including summarization and fallba
 """
 
 from typing import Dict, List, Optional
+import re
 import time
 import random
 import streamlit as st
@@ -19,6 +20,391 @@ from components.ai_insights import (
 
 
 GEMINI_MODEL = "gemini-3-flash-preview"
+
+
+# -----------------------------
+# Two-stage context selection
+# -----------------------------
+
+DATA_CATEGORIES: Dict[str, str] = {
+    "summary": "Overall funnel metrics (apps, admits, enrollments, yield) + enrollment breakdown + NTR headline",
+    "yoy": "Year-over-year deltas for funnel metrics",
+    "programs": "Program-level stats (apps/admits/enrollments/yield by program, top programs)",
+    "ntr": "NTR breakdown by category and degree (from census)",
+    "cohorts": "Corporate cohort enrollments (from census)",
+    "by_school": "Breakdown by school (apps/admits/enrollments/yield)",
+    "by_degree": "Breakdown by degree type (apps/admits/enrollments/yield)",
+    "by_category": "Breakdown by application category + funnel by category (top categories)",
+}
+
+DEFAULT_CATEGORIES: List[str] = ["summary"]
+
+
+def _normalize_question(q: str) -> str:
+    return re.sub(r"\s+", " ", (q or "").strip().lower())
+
+
+def _safe_int(x, default: int = 0) -> int:
+    try:
+        return int(x)
+    except Exception:
+        return default
+
+
+def _brief_summary_for_planner(data: dict) -> str:
+    """Tiny summary (low tokens) so planner knows what's available."""
+    apps_data = data.get("applications", {})
+    census_data = data.get("census", {})
+    current_df = apps_data.get("current")
+    prev_df = apps_data.get("previous")
+    two_df = apps_data.get("two_years_ago")
+
+    summary_stats = None
+    try:
+        if current_df is not None and not getattr(current_df, "empty", True):
+            summary_stats = calculate_summary_stats(current_df, prev_df, two_df, census_data)
+    except Exception:
+        summary_stats = None
+
+    ntr_summary = data.get("ntr_summary")
+    ntr_part = "NTR: unavailable"
+    if ntr_summary is not None:
+        try:
+            ntr_part = f"NTR: {ntr_summary.percentage_of_goal:.0f}% of goal"
+        except Exception:
+            ntr_part = "NTR: available"
+
+    program_count = 0
+    try:
+        ps = calculate_program_stats(current_df, prev_df)
+        if ps is not None and not ps.empty:
+            program_count = len(ps)
+    except Exception:
+        program_count = 0
+
+    if not summary_stats:
+        return f"{ntr_part}; Programs tracked: {program_count}"
+
+    current = summary_stats["overall"][2026]
+    return (
+        f"Apps {getattr(current, 'applications', '—')}, "
+        f"Admits {getattr(current, 'admits', '—')}, "
+        f"Enrolls {getattr(current, 'enrollments', '—')}, "
+        f"Yield {getattr(current, 'yield_rate', 0):.0f}%; "
+        f"{ntr_part}; Programs tracked: {program_count}"
+    )
+
+
+def query_gemini_light(prompt: str, api_key: str) -> str:
+    """Small/cheap call used for planning; keep output short via instructions."""
+    client = genai.Client(api_key=api_key)
+    response = client.models.generate_content(model=GEMINI_MODEL, contents=prompt)
+    return (getattr(response, "text", "") or "").strip()
+
+
+def plan_data_needs(question: str, data: dict, api_key: str) -> List[str]:
+    """Stage 1: pick which data categories are needed for this question."""
+    cache = st.session_state.setdefault("planner_cache", {})
+    key = _normalize_question(question)
+    if key in cache:
+        return cache[key]
+
+    brief = _brief_summary_for_planner(data)
+    categories_list = "\n".join([f"- {k}: {v}" for k, v in DATA_CATEGORIES.items()])
+    planner_prompt = f"""
+You are a routing assistant for an analytics chatbot.
+
+User question:
+{question}
+
+Available dashboard data (brief):
+{brief}
+
+Available data categories:
+{categories_list}
+
+Return ONLY a comma-separated list of category keys needed to answer well.
+Rules:
+- Always include summary unless the question is purely about programs.
+- Use ONLY keys from the list above.
+- Keep the list short (1-4 keys).
+Example: summary,programs,yoy
+"""
+
+    raw = query_gemini_light(planner_prompt, api_key)
+    raw_keys = re.split(r"[,\n]+", raw)
+    chosen: List[str] = []
+    allowed = set(DATA_CATEGORIES.keys())
+    for k in raw_keys:
+        kk = _normalize_question(k)
+        if kk in allowed and kk not in chosen:
+            chosen.append(kk)
+
+    if not chosen:
+        chosen = DEFAULT_CATEGORIES.copy()
+
+    cache[key] = chosen
+    return chosen
+
+
+def _build_guardrails_context() -> str:
+    return "\n".join(
+        [
+            "CPE Graduate Online Dashboard Context (Spring 2026).",
+            "Data limits: There is no program-level NTR or cohort-level NTR in this context.",
+            "Do not infer or fabricate dollar amounts by program or cohort.",
+        ]
+    )
+
+
+def _get_summary_stats(data: dict) -> Optional[dict]:
+    apps_data = data.get("applications", {})
+    census_data = data.get("census", {})
+    current_df = apps_data.get("current")
+    prev_df = apps_data.get("previous")
+    two_df = apps_data.get("two_years_ago")
+    if current_df is None or getattr(current_df, "empty", True):
+        return None
+    try:
+        return calculate_summary_stats(current_df, prev_df, two_df, census_data)
+    except Exception:
+        return None
+
+
+def build_summary_context(data: dict, summary_stats: Optional[dict]) -> str:
+    if not summary_stats:
+        return "Summary: unavailable (applications data missing)."
+    current = summary_stats["overall"][2026]
+    breakdown = summary_stats.get("enrollment_breakdown")
+    ntr_summary = data.get("ntr_summary")
+
+    lines = [
+        "Summary:",
+        f"- Applications: {format_number(current.applications)}",
+        f"- Admits: {format_number(current.admits)}",
+        f"- Offers accepted: {format_number(current.offers_accepted)}",
+        f"- Enrollments (Slate New): {format_number(current.enrollments)}",
+        f"- Yield rate: {format_percent(current.yield_rate)}",
+    ]
+
+    if breakdown:
+        lines.append(
+            "- Enrollment breakdown:"
+            f" New (Slate) {format_number(breakdown.slate_new)},"
+            f" Continuing (Census) {format_number(breakdown.continuing)},"
+            f" Returning (Census) {format_number(breakdown.returning)},"
+            f" Total {format_number(breakdown.total)}"
+        )
+
+    if ntr_summary is not None:
+        try:
+            lines.append(f"- NTR progress: {ntr_summary.percentage_of_goal:.0f}% of goal")
+        except Exception:
+            lines.append("- NTR: available")
+
+    return "\n".join(lines)
+
+
+def build_yoy_context(summary_stats: Optional[dict]) -> str:
+    if not summary_stats:
+        return "YoY: unavailable."
+    yoy = summary_stats["yoy"]["2026_vs_2025"]
+    return "\n".join(
+        [
+            "YoY (2026 vs 2025):",
+            f"- Applications change: {format_percent(yoy.apps_change)}",
+            f"- Admits change: {format_percent(yoy.admits_change)}",
+            f"- Enrollments change: {format_percent(yoy.enrollments_change)}",
+        ]
+    )
+
+
+def build_programs_context(data: dict) -> str:
+    apps_data = data.get("applications", {})
+    current_df = apps_data.get("current")
+    prev_df = apps_data.get("previous")
+    program_stats = None
+    try:
+        program_stats = calculate_program_stats(current_df, prev_df)
+    except Exception:
+        program_stats = None
+
+    if program_stats is None or getattr(program_stats, "empty", True):
+        return "Programs: unavailable."
+
+    # Keep this tight: top 12 by enrollments + top 8 by yield (min enrollments)
+    lines = [f"Programs (tracked: {len(program_stats)}):"]
+    top_enroll = program_stats.nlargest(12, "Enrollments 2026")[["Program", "Enrollments 2026", "Yield Rate 2026"]]
+    lines.append("- Top by enrollments:")
+    for _, row in top_enroll.iterrows():
+        lines.append(
+            f"  - {row['Program']}: {int(row['Enrollments 2026'])} enrollments, Yield {row['Yield Rate 2026']:.0f}%"
+        )
+
+    # Filter to avoid tiny-denominator yield noise if column exists
+    try:
+        filtered = program_stats[program_stats["Enrollments 2026"] >= 5]
+    except Exception:
+        filtered = program_stats
+    top_yield = filtered.nlargest(8, "Yield Rate 2026")[["Program", "Enrollments 2026", "Yield Rate 2026"]]
+    lines.append("- Top by yield (min 5 enrollments when available):")
+    for _, row in top_yield.iterrows():
+        lines.append(
+            f"  - {row['Program']}: Yield {row['Yield Rate 2026']:.0f}%, {int(row['Enrollments 2026'])} enrollments"
+        )
+
+    return "\n".join(lines)
+
+
+def build_ntr_context(data: dict) -> str:
+    ntr_summary = data.get("ntr_summary")
+    census_df = data.get("census", {}).get("raw_df")
+
+    lines = ["NTR:"]
+    if ntr_summary is None:
+        lines.append("- NTR summary unavailable.")
+    else:
+        try:
+            lines.append(f"- Total NTR: {format_currency(ntr_summary.total_ntr)}")
+            lines.append(f"- Goal: {format_currency(ntr_summary.ntr_goal)}")
+            lines.append(f"- Progress: {format_percent(ntr_summary.percentage_of_goal)}")
+            lines.append(f"- New NTR: {format_currency(ntr_summary.new_ntr)}")
+            lines.append(f"- Current NTR: {format_currency(ntr_summary.current_ntr)}")
+        except Exception:
+            lines.append("- NTR summary available (formatting failed).")
+
+    if census_df is None or getattr(census_df, "empty", True):
+        return "\n".join(lines)
+
+    try:
+        from ntr_calculator import calculate_ntr_from_census
+
+        _, _, breakdown_df = calculate_ntr_from_census(census_df)
+        if breakdown_df is None or breakdown_df.empty:
+            return "\n".join(lines)
+
+        # Cap rows to keep context bounded
+        rows = []
+        for _, row in breakdown_df.iterrows():
+            if row.get("Category") == "Grand Total":
+                continue
+            rows.append(row)
+            if len(rows) >= 20:
+                break
+
+        lines.append("- NTR by Category/Degree (capped):")
+        for row in rows:
+            lines.append(
+                f"  - {row.get('Category')} / {row.get('Degree Type')}: "
+                f"Students {row.get('Total Students')}, Credits {row.get('Total Credits')}, "
+                f"NTR {format_currency(row.get('Total NTR'))}"
+            )
+    except Exception:
+        # Silent fail; NTR summary still useful
+        pass
+
+    return "\n".join(lines)
+
+
+def build_cohorts_context(data: dict) -> str:
+    census_df = data.get("census", {}).get("raw_df")
+    if census_df is None or getattr(census_df, "empty", True):
+        return "Corporate cohorts: unavailable."
+    if "Census_1_CORPORATE_COHORT" not in census_df.columns:
+        return "Corporate cohorts: column not available in census."
+
+    cohort_df = census_df[
+        census_df["Census_1_CORPORATE_COHORT"].notna() & (census_df["Census_1_CORPORATE_COHORT"] != "")
+    ].copy()
+    if cohort_df.empty:
+        return "Corporate cohorts: none found."
+
+    summary = (
+        cohort_df.groupby("Census_1_CORPORATE_COHORT")
+        .agg(Enrollments=("Census_1_STUDENT_ID", "nunique"))
+        .reset_index()
+        .sort_values("Enrollments", ascending=False)
+        .head(10)
+    )
+
+    lines = ["Corporate cohorts (top 10 by enrollments):"]
+    for _, row in summary.iterrows():
+        lines.append(f"- {row['Census_1_CORPORATE_COHORT']}: {int(row['Enrollments'])} enrollments")
+    return "\n".join(lines)
+
+
+def build_breakdowns_context(summary_stats: Optional[dict], key: str, title: str) -> str:
+    if not summary_stats:
+        return f"{title}: unavailable."
+    block = summary_stats.get(key, {})
+    if not block:
+        return f"{title}: unavailable."
+
+    lines = [f"{title} (2026):"]
+    count = 0
+    for name, metrics in block.items():
+        m = metrics.get(2026) if hasattr(metrics, "get") else None
+        if not m:
+            continue
+        lines.append(
+            f"- {name}: Apps {m.applications}, Admits {m.admits}, Enrolls {m.enrollments}, Yield {m.yield_rate:.0f}%"
+        )
+        count += 1
+        if count >= 15:
+            break
+    return "\n".join(lines)
+
+
+def build_category_funnel_context(data: dict) -> str:
+    apps_data = data.get("applications", {})
+    current_df = apps_data.get("current")
+    if current_df is None or getattr(current_df, "empty", True):
+        return "Funnel by category: unavailable."
+    try:
+        df = get_funnel_by_category(current_df)
+    except Exception:
+        df = None
+    if df is None or getattr(df, "empty", True):
+        return "Funnel by category: unavailable."
+
+    df = df.sort_values("Enrollments", ascending=False).head(12)
+    lines = ["Funnel by category (top 12 by enrollments):"]
+    for _, row in df.iterrows():
+        lines.append(
+            f"- {row['Category']}: Apps {int(row['Applications'])}, Admits {int(row['Admits'])}, "
+            f"Enrolls {int(row['Enrollments'])}, Yield {row['Yield Rate']:.0f}%"
+        )
+    return "\n".join(lines)
+
+
+def build_selective_context(data: dict, categories: List[str]) -> str:
+    """Stage 2: build context from only selected categories."""
+    summary_stats = _get_summary_stats(data)
+
+    parts: List[str] = [_build_guardrails_context()]
+    # Always include a tiny summary to anchor the model
+    parts.append(f"Brief: {_brief_summary_for_planner(data)}")
+
+    cat_set = set(categories or [])
+    if "summary" in cat_set:
+        parts.append(build_summary_context(data, summary_stats))
+    if "yoy" in cat_set:
+        parts.append(build_yoy_context(summary_stats))
+    if "programs" in cat_set:
+        parts.append(build_programs_context(data))
+    if "ntr" in cat_set:
+        parts.append(build_ntr_context(data))
+    if "cohorts" in cat_set:
+        parts.append(build_cohorts_context(data))
+    if "by_school" in cat_set:
+        parts.append(build_breakdowns_context(summary_stats, "by_school", "By school"))
+    if "by_degree" in cat_set:
+        parts.append(build_breakdowns_context(summary_stats, "by_degree", "By degree type"))
+    if "by_category" in cat_set:
+        parts.append(build_breakdowns_context(summary_stats, "by_category", "By application category"))
+        parts.append(build_category_funnel_context(data))
+
+    return "\n\n".join([p for p in parts if p])
 
 
 # Premium CSS Styles - Clean and minimal
@@ -152,198 +538,8 @@ div[data-testid="stButton"] > button:hover {
 
 
 def build_context(data: dict) -> str:
-    """Build a comprehensive context string from dashboard data."""
-    apps_data = data.get('applications', {})
-    census_data = data.get('census', {})
-
-    summary_stats = calculate_summary_stats(
-        apps_data.get('current'),
-        apps_data.get('previous'),
-        apps_data.get('two_years_ago'),
-        census_data
-    )
-
-    current = summary_stats['overall'][2026]
-    previous = summary_stats['overall'][2025]
-    breakdown = summary_stats.get('enrollment_breakdown')
-
-    # Program stats (include more detail for richer AI context)
-    program_stats = calculate_program_stats(apps_data.get('current'), apps_data.get('previous'))
-    top_programs = []
-    all_programs = []
-    if program_stats is not None and not program_stats.empty:
-        top_programs = program_stats.nlargest(10, 'Enrollments 2026')[
-            ['Program', 'Enrollments 2026', 'Yield Rate 2026']
-        ].to_dict('records')
-        # Include a larger list for deeper AI context (cap to avoid huge prompts)
-        max_programs = 60
-        subset = program_stats.head(max_programs)
-        all_programs = subset[
-            ['Program', 'Applications 2026', 'Admits 2026', 'Enrollments 2026', 'Admit Rate 2026', 'Yield Rate 2026', 'Apps YoY %']
-        ].to_dict('records')
-
-    # Funnel by category (Slate)
-    funnel_by_category = []
-    if apps_data.get('current') is not None and not apps_data.get('current').empty:
-        funnel_by_category_df = get_funnel_by_category(apps_data.get('current'))
-        if funnel_by_category_df is not None and not funnel_by_category_df.empty:
-            funnel_by_category = funnel_by_category_df.sort_values(
-                'Enrollments', ascending=False
-            ).head(10).to_dict('records')
-
-    # By school / by degree / by category breakdown
-    by_school = summary_stats.get('by_school', {})
-    by_degree = summary_stats.get('by_degree', {})
-    by_category = summary_stats.get('by_category', {})
-
-    # Corporate cohorts from census
-    cohort_top = []
-    census_df = census_data.get('raw_df')
-    if census_df is not None and not census_df.empty and 'Census_1_CORPORATE_COHORT' in census_df.columns:
-        cohort_df = census_df[
-            census_df['Census_1_CORPORATE_COHORT'].notna() & (census_df['Census_1_CORPORATE_COHORT'] != '')
-        ].copy()
-        if not cohort_df.empty:
-            cohort_summary = (
-                cohort_df.groupby('Census_1_CORPORATE_COHORT')
-                .agg(Enrollments=('Census_1_STUDENT_ID', 'nunique'))
-                .reset_index()
-                .sort_values('Enrollments', ascending=False)
-                .head(5)
-            )
-            cohort_top = cohort_summary.to_dict('records')
-
-    # Census category counts (for broader context)
-    census_by_category = {}
-    if census_df is not None and not census_df.empty:
-        if 'Student_Category' in census_df.columns:
-            census_by_category = census_df['Student_Category'].value_counts().to_dict()
-
-    # NTR summary + breakdown (from census)
-    ntr_summary = data.get('ntr_summary')
-    ntr_text = "NTR data not available."
-    if ntr_summary:
-        ntr_text = (
-            f"Total NTR: {format_currency(ntr_summary.total_ntr)}; "
-            f"NTR Goal: {format_currency(ntr_summary.ntr_goal)}; "
-            f"Progress: {format_percent(ntr_summary.percentage_of_goal)}; "
-            f"New NTR: {format_currency(ntr_summary.new_ntr)}; "
-            f"Current NTR: {format_currency(ntr_summary.current_ntr)}."
-        )
-    ntr_breakdown_text = ""
-    if census_df is not None and not census_df.empty:
-        try:
-            from ntr_calculator import calculate_ntr_from_census
-            _, _, breakdown_df = calculate_ntr_from_census(census_df)
-            if breakdown_df is not None and not breakdown_df.empty:
-                lines = []
-                for _, row in breakdown_df.iterrows():
-                    if row.get('Category') == 'Grand Total':
-                        continue
-                    lines.append(
-                        f"- {row.get('Category')} / {row.get('Degree Type')}: "
-                        f"Students {row.get('Total Students')}, Credits {row.get('Total Credits')}, "
-                        f"NTR {format_currency(row.get('Total NTR'))}"
-                    )
-                if lines:
-                    ntr_breakdown_text = "NTR by Category/Degree:\n" + "\n".join(lines)
-        except Exception:
-            ntr_breakdown_text = ""
-
-    enrollment_text = "Enrollment breakdown not available."
-    if breakdown:
-        enrollment_text = (
-            f"Enrollment Breakdown - New (Slate): {format_number(breakdown.slate_new)}, "
-            f"Continuing (Census): {format_number(breakdown.continuing)}, "
-            f"Returning (Census): {format_number(breakdown.returning)}, "
-            f"Total: {format_number(breakdown.total)}."
-        )
-
-    context = [
-        "CPE Graduate Online Dashboard Context (Spring 2026):",
-        "Data limits: There is no program-level NTR or cohort-level NTR in this context.",
-        "Do not infer or fabricate dollar amounts by program or cohort.",
-        f"Applications: {format_number(current.applications)}",
-        f"Admits: {format_number(current.admits)}",
-        f"Offers Accepted: {format_number(current.offers_accepted)}",
-        f"Enrollments (Slate New): {format_number(current.enrollments)}",
-        f"Yield Rate: {format_percent(current.yield_rate)}",
-        f"YoY Apps Change: {format_percent(summary_stats['yoy']['2026_vs_2025'].apps_change)}",
-        f"YoY Admits Change: {format_percent(summary_stats['yoy']['2026_vs_2025'].admits_change)}",
-        f"YoY Enrollments Change: {format_percent(summary_stats['yoy']['2026_vs_2025'].enrollments_change)}",
-        enrollment_text,
-        ntr_text,
-    ]
-    if ntr_breakdown_text:
-        context.append(ntr_breakdown_text)
-
-    if by_school:
-        context.append("By School (Funnel Metrics, 2026):")
-        for school, metrics in by_school.items():
-            m = metrics.get(2026)
-            if m:
-                context.append(
-                    f"- {school}: Apps {m.applications}, Admits {m.admits}, Enrolls {m.enrollments}, "
-                    f"Yield {m.yield_rate:.0f}%"
-                )
-
-    if by_degree:
-        context.append("By Degree Type (Funnel Metrics, 2026):")
-        for degree, metrics in by_degree.items():
-            m = metrics.get(2026)
-            if m:
-                context.append(
-                    f"- {degree}: Apps {m.applications}, Admits {m.admits}, Enrolls {m.enrollments}, "
-                    f"Yield {m.yield_rate:.0f}%"
-                )
-
-    if by_category:
-        context.append("By Application Category (Funnel Metrics, 2026):")
-        for category, metrics in by_category.items():
-            m = metrics.get(2026)
-            if m and category:
-                context.append(
-                    f"- {category}: Apps {m.applications}, Admits {m.admits}, Enrolls {m.enrollments}, "
-                    f"Yield {m.yield_rate:.0f}%"
-                )
-
-    if census_by_category:
-        context.append("Census Student Category Counts (2026):")
-        for category, count in census_by_category.items():
-            context.append(f"- {category}: {count}")
-
-    if funnel_by_category:
-        context.append("Funnel by Category (Slate, top 10 by enrollments):")
-        for item in funnel_by_category:
-            context.append(
-                f"- {item['Category']}: Apps {item['Applications']}, Admits {item['Admits']}, "
-                f"Enrolls {item['Enrollments']}, Yield {item['Yield Rate']:.0f}%"
-            )
-
-    if top_programs:
-        context.append("Top Programs by Enrollments (2026):")
-        for item in top_programs:
-            context.append(
-                f"- {item['Program']}: {item['Enrollments 2026']} enrollments, "
-                f"Yield {item['Yield Rate 2026']:.0f}%"
-            )
-
-    if all_programs:
-        context.append("Program Stats (2026, capped list):")
-        for item in all_programs:
-            context.append(
-                f"- {item['Program']}: Apps {item['Applications 2026']}, "
-                f"Admits {item['Admits 2026']}, Enrolls {item['Enrollments 2026']}, "
-                f"Admit {item['Admit Rate 2026']:.0f}%, Yield {item['Yield Rate 2026']:.0f}%, "
-                f"Apps YoY {item['Apps YoY %']:.0f}%"
-            )
-
-    if cohort_top:
-        context.append("Top Corporate Cohorts (Census):")
-        for item in cohort_top:
-            context.append(f"- {item['Census_1_CORPORATE_COHORT']}: {item['Enrollments']} enrollments")
-
-    return "\n".join(context)
+    """Backwards-compatible: build 'full' context using modular builders."""
+    return build_selective_context(data, list(DATA_CATEGORIES.keys()))
 
 
 def query_gemini(question: str, context: str, api_key: str) -> str:
@@ -599,7 +795,8 @@ def render(data: dict):
                     with st.spinner(random.choice(fun_quotes)):
                         # Generate response
                         prompt = st.session_state.pending_response
-                        context = build_context(data)
+                        needed_categories = plan_data_needs(prompt, data, api_key)
+                        context = build_selective_context(data, needed_categories)
                         if st.session_state.chat_summary:
                             context += "\n\nChat Summary:\n" + st.session_state.chat_summary
                         

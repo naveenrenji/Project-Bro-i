@@ -21,51 +21,29 @@ from components.ai_insights import (
 GEMINI_MODEL = "gemini-3-flash-preview"
 
 
-# Premium CSS Styles - Simplified for Streamlit compatibility
+# Premium CSS Styles - Clean and minimal
 PREMIUM_CSS = """
 <style>
-/* -------- Design tokens -------- */
-:root {
-    --ai-radius-sm: 10px;
-    --ai-radius-md: 12px;
-    --ai-radius-lg: 16px;
-    --ai-border-subtle: rgba(255, 255, 255, 0.10);
-    --ai-border-accent: rgba(164, 16, 52, 0.35);
-    --ai-text-muted: rgba(255, 255, 255, 0.72);
-}
-
 /* -------- Glass effect on main content area -------- */
 .main .block-container {
     background: linear-gradient(135deg, rgba(26, 31, 46, 0.95) 0%, rgba(14, 17, 23, 0.98) 100%);
-    border: 1px solid var(--ai-border-accent);
-    border-radius: var(--ai-radius-lg);
+    border: 1px solid rgba(164, 16, 52, 0.35);
+    border-radius: 16px;
     padding: 20px !important;
     box-shadow: 0 10px 36px rgba(0, 0, 0, 0.45);
     max-width: 1000px;
     margin: 0 auto;
 }
 
-/* -------- Header (static, not sticky) -------- */
+/* -------- Header -------- */
 .ai-header {
     background: linear-gradient(90deg, rgba(164, 16, 52, 0.15) 0%, rgba(164, 16, 52, 0.02) 70%, transparent 100%);
     padding: 14px 18px;
-    border: 1px solid var(--ai-border-subtle);
-    border-radius: var(--ai-radius-md);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 12px;
     display: flex;
     align-items: center;
-    gap: 12px;
-    margin-bottom: 16px;
-}
-
-.ai-header-left {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex: 1;
-}
-
-.ai-header-content {
-    flex: 1;
+    gap: 14px;
 }
 
 .ai-header h2 {
@@ -73,130 +51,16 @@ PREMIUM_CSS = """
     font-size: 18px;
     font-weight: 600;
     color: #fff;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
 .ai-header .greeting {
     font-size: 12px;
-    color: var(--ai-text-muted);
+    color: rgba(255, 255, 255, 0.72);
     margin-top: 2px;
 }
 
-/* New Chat button in header */
-.new-chat-btn {
-    background: rgba(164, 16, 52, 0.2);
-    border: 1px solid rgba(164, 16, 52, 0.4);
-    color: #fff;
-    padding: 8px 16px;
-    border-radius: 8px;
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    white-space: nowrap;
-}
-.new-chat-btn:hover {
-    background: rgba(164, 16, 52, 0.35);
-    border-color: rgba(164, 16, 52, 0.6);
-}
-
-/* Suggested questions - pill style */
-.suggestion-pills {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-bottom: 12px;
-}
-.suggestion-pill {
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    color: rgba(255, 255, 255, 0.85);
-    padding: 8px 14px;
-    border-radius: 20px;
-    font-size: 13px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-.suggestion-pill:hover {
-    background: rgba(164, 16, 52, 0.2);
-    border-color: rgba(164, 16, 52, 0.4);
-    color: #fff;
-}
-
-/* New Chat button in header */
-.new-chat-btn-inline {
-    background: rgba(164, 16, 52, 0.25);
-    border: 1px solid rgba(164, 16, 52, 0.5);
-    color: #fff;
-    padding: 8px 16px;
-    border-radius: 8px;
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    white-space: nowrap;
-    margin-left: auto;
-}
-.new-chat-btn-inline:hover {
-    background: rgba(164, 16, 52, 0.4);
-    border-color: rgba(164, 16, 52, 0.7);
-}
-
-/* Suggestion buttons - pill style */
-.stButton button {
-    background: rgba(255, 255, 255, 0.05) !important;
-    border: 1px solid rgba(255, 255, 255, 0.12) !important;
-    color: rgba(255, 255, 255, 0.85) !important;
-    border-radius: 8px !important;
-    font-size: 12px !important;
-    padding: 8px 12px !important;
-    text-align: left !important;
-}
-.stButton button:hover {
-    background: rgba(164, 16, 52, 0.2) !important;
-    border-color: rgba(164, 16, 52, 0.4) !important;
-    color: #fff !important;
-}
-
-/* Scrollable chat container styling */
-[data-testid="stVerticalBlockBorderWrapper"] {
-    border: 1px solid rgba(255, 255, 255, 0.08) !important;
-    border-radius: 12px !important;
-    background: rgba(0, 0, 0, 0.15) !important;
-}
-
-/* Fix chat input red border */
-[data-testid="stChatInput"] {
-    border-color: rgba(255, 255, 255, 0.15) !important;
-}
-[data-testid="stChatInput"]:focus-within {
-    border-color: rgba(255, 255, 255, 0.3) !important;
-    box-shadow: none !important;
-}
-[data-testid="stChatInput"] textarea {
-    caret-color: #fff !important;
-}
-
-/* Hide the Streamlit New Chat button visually (keep it for JS click) */
-button[data-testid="baseButton-secondary"] {
-    position: absolute !important;
-    left: -9999px !important;
-    opacity: 0 !important;
-    pointer-events: none !important;
-}
-/* Also hide its container */
-.stButton:has(button[data-testid="baseButton-secondary"]) {
-    height: 0 !important;
-    overflow: hidden !important;
-    margin: 0 !important;
-    padding: 0 !important;
-}
-
-/* Avatar - larger size, no cropping */
+/* Avatar - no cropping */
 .avatar-container {
-    position: relative;
     width: 56px;
     height: 56px;
     flex-shrink: 0;
@@ -211,177 +75,66 @@ button[data-testid="baseButton-secondary"] {
     background: rgba(255,255,255,0.05);
 }
 
-.avatar-ring {
-    position: absolute;
-    top: -4px;
-    left: -4px;
-    width: 52px;
-    height: 52px;
-    border-radius: 50%;
-    border: 2px solid transparent;
-    border-top-color: #A41034;
-    animation: none;
+/* New Chat button styling */
+.new-chat-btn-col button {
+    background: rgba(164, 16, 52, 0.25) !important;
+    border: 1px solid rgba(164, 16, 52, 0.5) !important;
+    color: #fff !important;
+    border-radius: 8px !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    padding: 8px 14px !important;
+}
+.new-chat-btn-col button:hover {
+    background: rgba(164, 16, 52, 0.4) !important;
+    border-color: rgba(164, 16, 52, 0.7) !important;
 }
 
-.avatar-ring.thinking {
-    animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
-/* Insight cards */
-.insight-card {
-    background: var(--ai-surface-2);
-    border: 1px solid var(--ai-border-subtle);
-    border-radius: var(--ai-radius-md);
-    padding: 12px;
-    border-left: 3px solid;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-/* Insights header (custom accordion affordance) */
-.ai-accordion {
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.10);
-    border-radius: 12px;
-    padding: 10px 12px;
-}
-.ai-accordion-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    cursor: pointer;
-}
-.ai-accordion-title {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-weight: 650;
-    color: rgba(255,255,255,0.92);
-}
-.ai-accordion-summary {
-    font-size: 12px;
-    color: rgba(255,255,255,0.70);
-    margin-top: 2px;
-}
-.ai-accordion-chevron {
-    font-size: 14px;
-    color: rgba(255,255,255,0.75);
-}
-
-.insight-card:hover {
-    background: rgba(255, 255, 255, 0.06);
-    transform: translateY(-2px);
-}
-
-/* Section labels */
-.section-label {
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    color: rgba(255, 255, 255, 0.75);
-    margin-bottom: 8px;
-}
-
-/* Empty state */
-.empty-state {
-    text-align: left;
-    padding: 10px 2px 14px 2px;
-    color: var(--ai-text-muted);
-}
-
-.empty-state .icon {
-    font-size: 48px;
-    margin-bottom: 16px;
-    opacity: 0.5;
-}
-
-.empty-state p {
-    font-size: 14px;
-    margin: 0;
-    color: var(--ai-text);
-}
-
-/* Status badge */
-.status-badge {
-    display: inline-block;
-    font-size: 11px;
-    background: rgba(34, 197, 94, 0.2);
-    color: #22c55e;
-    padding: 2px 8px;
-    border-radius: 12px;
-    margin-left: 8px;
-}
-
-/* Buttons + focus (accessibility) */
-button:focus-visible,
-[role="button"]:focus-visible,
-input:focus-visible,
-textarea:focus-visible {
-    outline: 3px solid rgba(164, 16, 52, 0.65) !important;
-    outline-offset: 2px !important;
-    border-radius: 10px;
-}
-
-/* Quick-question chips style */
-div[data-testid="stButton"] > button {
-    min-height: 44px;
-}
-
-/* Make buttons/chips feel clickable (hover/active) */
-div[data-testid="stButton"] > button {
-    border: 1px solid rgba(255, 255, 255, 0.14) !important;
-    background: rgba(255, 255, 255, 0.04) !important;
-    color: rgba(255, 255, 255, 0.92) !important;
+/* Scrollable chat container */
+[data-testid="stVerticalBlockBorderWrapper"] {
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
     border-radius: 12px !important;
-    transition: transform 120ms ease, background 120ms ease, border-color 120ms ease;
-}
-div[data-testid="stButton"] > button:hover {
-    background: rgba(164, 16, 52, 0.18) !important;
-    border-color: rgba(164, 16, 52, 0.35) !important;
-    transform: translateY(-1px);
-}
-div[data-testid="stButton"] > button:active {
-    transform: translateY(0px);
+    background: rgba(0, 0, 0, 0.15) !important;
 }
 
-@media (max-width: 768px) {
-    div[data-testid="stButton"] > button {
-        min-height: 48px;
-        font-size: 0.95rem;
-    }
+/* Chat input styling */
+[data-testid="stChatInput"] {
+    border-color: rgba(255, 255, 255, 0.15) !important;
 }
-
-/* Chat input width alignment */
-div[data-testid="stChatInput"] {
-    max-width: 1200px;
-    margin-left: auto;
-    margin-right: auto;
+[data-testid="stChatInput"]:focus-within {
+    border-color: rgba(255, 255, 255, 0.3) !important;
+    box-shadow: none !important;
 }
-
-/* Composer polish */
 div[data-testid="stChatInput"] textarea {
     border-radius: 14px !important;
     border: 1px solid rgba(255, 255, 255, 0.14) !important;
     background: rgba(255, 255, 255, 0.03) !important;
-}
-div[data-testid="stChatInput"] textarea:focus {
-    border-color: rgba(164, 16, 52, 0.45) !important;
-}
-div[data-testid="stChatInput"] button[aria-label="Send message"] {
-    border-radius: 12px !important;
+    caret-color: #fff !important;
 }
 
+/* Suggestion buttons */
+div[data-testid="stButton"] > button {
+    min-height: 44px;
+    border: 1px solid rgba(255, 255, 255, 0.14) !important;
+    background: rgba(255, 255, 255, 0.04) !important;
+    color: rgba(255, 255, 255, 0.92) !important;
+    border-radius: 10px !important;
+    transition: all 120ms ease;
+}
+div[data-testid="stButton"] > button:hover {
+    background: rgba(164, 16, 52, 0.18) !important;
+    border-color: rgba(164, 16, 52, 0.35) !important;
+}
+
+/* Mobile adjustments */
 @media (max-width: 768px) {
-    div[data-testid="stChatInput"] {
-        max-width: 100%;
+    .main .block-container {
+        padding: 16px !important;
+        margin: 0 8px;
     }
-    .avatar-ring {
-        display: none;
+    div[data-testid="stButton"] > button {
+        min-height: 48px;
+        font-size: 0.95rem;
     }
 }
 </style>
@@ -721,165 +474,6 @@ def get_avatar_base64() -> str:
     return ""
 
 
-def _get_summary_stats_for_ui(data: dict) -> Optional[dict]:
-    """Compute summary stats for AI Naveen UI. Returns None if data missing."""
-    apps_data = data.get("applications", {})
-    census_data = data.get("census", {})
-    current_df = apps_data.get("current")
-    prev_df = apps_data.get("previous")
-    two_df = apps_data.get("two_years_ago")
-    if current_df is None or getattr(current_df, "empty", True):
-        return None
-    try:
-        return calculate_summary_stats(current_df, prev_df, two_df, census_data)
-    except Exception:
-        return None
-
-
-def render_kpi_bar(data: dict):
-    """Render compact KPI summary bar (NTR | Apps | Admits | Enrolls)."""
-    summary_stats = _get_summary_stats_for_ui(data)
-    ntr_summary = data.get("ntr_summary")
-    if summary_stats is None:
-        return
-
-    current = summary_stats["overall"][2026]
-    yoy = summary_stats["yoy"]["2026_vs_2025"]
-
-    # KPIs: NTR progress + key funnel counts with YoY deltas
-    ntr_progress = ""
-    if ntr_summary is not None:
-        ntr_progress = f"{ntr_summary.percentage_of_goal:.0f}% of goal"
-
-    kpis = [
-        ("NTR", ntr_progress or "—", ""),
-        ("Applications", format_number(current.applications), f"{yoy.apps_change:+.0f}% YoY"),
-        ("Admits", format_number(current.admits), f"{yoy.admits_change:+.0f}% YoY"),
-        ("Enrollments", format_number(current.enrollments), f"{yoy.enrollments_change:+.0f}% YoY"),
-    ]
-
-    cols = st.columns(4)
-    for i, (label, value, delta) in enumerate(kpis):
-        with cols[i]:
-            st.markdown(
-                f"""
-                <div style="
-                    background: rgba(255,255,255,0.04);
-                    border: 1px solid rgba(255,255,255,0.10);
-                    border-radius: 12px;
-                    padding: 12px 12px;
-                    height: 86px;
-                ">
-                    <div style="font-size:10px; letter-spacing: 1px; text-transform: uppercase; color: rgba(255,255,255,0.70);">
-                        {label}
-                    </div>
-                    <div style="font-size:20px; font-weight: 700; color: rgba(255,255,255,0.95); margin-top: 6px;">
-                        {value}
-                    </div>
-                    <div style="font-size:11px; color: rgba(255,255,255,0.65); margin-top: 4px;">
-                        {delta}
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-
-
-def _get_insights_summary_text(data: dict) -> str:
-    """Build concise summary text for the Insights header."""
-    summary_stats = _get_summary_stats_for_ui(data)
-    if summary_stats is None:
-        return "Insights unavailable"
-    current = summary_stats["overall"][2026]
-    yoy = summary_stats["yoy"]["2026_vs_2025"]
-    ntr_summary = data.get("ntr_summary")
-    ntr_part = ""
-    if ntr_summary is not None:
-        ntr_part = f"NTR {ntr_summary.percentage_of_goal:.0f}%"
-    return " • ".join(
-        [p for p in [ntr_part, f"Yield {current.yield_rate:.0f}%", f"Apps {yoy.apps_change:+.0f}% YoY"] if p]
-    )
-
-
-def render_empty_state(data: dict, suggestion_chips: List[str]):
-    """Rich empty state: headline + mini KPIs + example prompts."""
-    summary_stats = _get_summary_stats_for_ui(data)
-    ntr_summary = data.get("ntr_summary")
-
-    headline = "Ask about your data"
-    sub = "Enrollment, yield, NTR, trends — I’ll cite drivers and deltas."
-
-    st.markdown(
-        f"""
-        <div class="empty-state">
-          <div style="font-size: 18px; font-weight: 750; color: rgba(255,255,255,0.95);">{headline}</div>
-          <div style="margin-top: 6px; font-size: 13px; color: rgba(255,255,255,0.75); line-height: 1.5;">{sub}</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    if summary_stats is not None:
-        current = summary_stats["overall"][2026]
-        yoy = summary_stats["yoy"]["2026_vs_2025"]
-        ntr_part = "—"
-        if ntr_summary is not None:
-            ntr_part = f"{ntr_summary.percentage_of_goal:.0f}% of goal"
-
-        cols = st.columns(3)
-        mini = [
-            ("NTR", ntr_part, ""),
-            ("Enrollments", format_number(current.enrollments), f"{yoy.enrollments_change:+.0f}% YoY"),
-            ("Yield", f"{current.yield_rate:.0f}%", ""),
-        ]
-        for i, (label, value, delta) in enumerate(mini):
-            with cols[i]:
-                st.markdown(
-                    f"""
-                    <div style="
-                        background: rgba(255,255,255,0.04);
-                        border: 1px solid rgba(255,255,255,0.10);
-                        border-radius: 12px;
-                        padding: 12px;
-                        height: 84px;
-                    ">
-                        <div style="font-size:10px; letter-spacing: 1px; text-transform: uppercase; color: rgba(255,255,255,0.72);">
-                            {label}
-                        </div>
-                        <div style="font-size:20px; font-weight: 800; color: rgba(255,255,255,0.95); margin-top: 6px;">
-                            {value}
-                        </div>
-                        <div style="font-size:11px; color: rgba(255,255,255,0.65); margin-top: 4px;">
-                            {delta}
-                        </div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
-
-    st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
-    st.markdown('<div class="section-label">Start here</div>', unsafe_allow_html=True)
-
-    # 2x2 prompt grid (reuses chips)
-    prompts = suggestion_chips[:4]
-    if prompts:
-        if len(prompts) >= 2:
-            row1 = st.columns(2)
-            for i, p in enumerate(prompts[:2]):
-                with row1[i]:
-                    if st.button(p, key=f"empty_prompt_{i}", width="stretch", type="primary"):
-                        st.session_state.pending_chip = p
-                        st.rerun()
-        if len(prompts) > 2:
-            row2 = st.columns(2)
-            for j, p in enumerate(prompts[2:4]):
-                idx = j + 2
-                with row2[j]:
-                    if st.button(p, key=f"empty_prompt_{idx}", width="stretch"):
-                        st.session_state.pending_chip = p
-                        st.rerun()
-
-
 def render(data: dict):
     """Render the premium AI Naveen chat interface."""
     
@@ -941,35 +535,35 @@ def render(data: dict):
     else:
         avatar_src = "https://ui-avatars.com/api/?name=AI+Naveen&background=A41034&color=fff&size=56"
 
-    # Header with avatar, title, and New Chat button (all in one HTML block)
-    # Hidden Streamlit button for functionality
-    if st.button("✨ New Chat", key="new_chat_btn", type="secondary"):
-        st.session_state.chat_history = []
-        st.session_state.chat_summary = ""
-        st.session_state.summary_tick = 0
-        st.session_state.pending_chip = None
-        st.session_state.pending_response = None
-        st.rerun()
+    # Header row with avatar/title and New Chat button
+    header_col, btn_col = st.columns([5, 1])
     
-    st.markdown(
-        f"""
-        <div class="ai-header">
-          <div class="ai-header-left">
-            <div class="avatar-container">
-              <img src="{avatar_src}" alt="AI Naveen"/>
+    with header_col:
+        st.markdown(
+            f"""
+            <div class="ai-header">
+              <div class="avatar-container">
+                <img src="{avatar_src}" alt="AI Naveen"/>
+              </div>
+              <div>
+                <h2 style="margin:0; color:#fff; border:none;">AI Naveen</h2>
+                <div class="greeting">Ask about enrollment, yield, NTR, and trends.</div>
+              </div>
             </div>
-            <div class="ai-header-content">
-              <h2 style="margin:0; color:#fff; border:none;">AI Naveen</h2>
-              <div class="greeting">Ask about enrollment, yield, NTR, and trends.</div>
-            </div>
-          </div>
-          <button class="new-chat-btn-inline" onclick="document.querySelector('button[data-testid=baseButton-secondary]').click()">
-            ✨ New Chat
-          </button>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+            """,
+            unsafe_allow_html=True,
+        )
+    
+    with btn_col:
+        st.markdown('<div class="new-chat-btn-col">', unsafe_allow_html=True)
+        if st.button("✨ New", key="new_chat_btn", use_container_width=True):
+            st.session_state.chat_history = []
+            st.session_state.chat_summary = ""
+            st.session_state.summary_tick = 0
+            st.session_state.pending_chip = None
+            st.session_state.pending_response = None
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
     
     # Check if we need to process a pending response
     if "pending_response" not in st.session_state:

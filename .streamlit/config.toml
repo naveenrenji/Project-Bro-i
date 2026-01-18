@@ -7,6 +7,15 @@ secondaryBackgroundColor = "#1A1F2E"
 textColor = "#FAFAFA"
 font = "sans serif"
 
+[theme.sidebar]
+# Explicit sidebar colors to avoid empty theme values in Streamlit's UI layer
+backgroundColor = "#0E1117"
+secondaryBackgroundColor = "#1A1F2E"
+textColor = "#FAFAFA"
+skeletonBackgroundColor = "#1A1F2E"
+widgetBackgroundColor = "#121726"
+widgetBorderColor = "#2A3345"
+
 [server]
 headless = true
 # With XSRF protection enabled, CORS must be enabled; Streamlit will override anyway.

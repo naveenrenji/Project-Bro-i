@@ -92,8 +92,13 @@ st.markdown(f"""
         max-width: 1400px;
     }}
 
-    /* Ask Navs floating widget */
-    div[data-testid="stVerticalBlock"]:has(.navs-widget-marker) {{
+    /* Ask Navs floating widget (isolate to the widget container only) */
+    div.element-container:has(.navs-widget-marker) {{
+        height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }}
+    div.element-container > div[data-testid="stVerticalBlock"]:has(.navs-widget-marker) {{
         position: fixed !important;
         right: 24px;
         bottom: 24px;
@@ -114,13 +119,13 @@ st.markdown(f"""
         font-size: 13px;
         color: #FAFAFA;
     }}
-    div[data-testid="stVerticalBlock"]:has(.navs-widget-marker) > div {{
+    div.element-container > div[data-testid="stVerticalBlock"]:has(.navs-widget-marker) > div {{
         background: #121726;
         border-radius: 12px;
         box-shadow: 0 12px 30px rgba(0,0,0,0.45);
         padding: 12px;
     }}
-    div[data-testid="stVerticalBlock"]:has(.navs-widget-marker) button {{
+    div.element-container > div[data-testid="stVerticalBlock"]:has(.navs-widget-marker) button {{
         border-radius: 999px !important;
     }}
 

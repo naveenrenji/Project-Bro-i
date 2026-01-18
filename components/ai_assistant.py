@@ -423,8 +423,6 @@ def _init_global_chat_state():
         st.session_state.navs_global_pending = None
     if "navs_global_tick" not in st.session_state:
         st.session_state.navs_global_tick = 0
-    if "navs_planner_cache" not in st.session_state:
-        st.session_state.navs_planner_cache = {}
 
 
 def render_floating_widget(data: dict, page_hint: str = ""):

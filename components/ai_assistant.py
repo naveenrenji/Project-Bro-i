@@ -442,17 +442,26 @@ def render_floating_widget(data: dict, page_hint: str = ""):
     # Widget container (positioned via CSS from app.py)
     widget = st.container()
     with widget:
-        st.markdown('<div class="navs-widget-marker"></div>', unsafe_allow_html=True)
-
-        # Toggle bubble
-        if st.button("💬", key="navs_toggle"):
-            st.session_state.navs_widget_open = not st.session_state.navs_widget_open
-            st.rerun()
-
         if not st.session_state.navs_widget_open:
+            st.markdown('<div class="navs-bubble-marker"></div>', unsafe_allow_html=True)
+            if st.button("💬", key="navs_toggle", help="Ask Navs"):
+                st.session_state.navs_widget_open = True
+                st.rerun()
             return
 
-        st.markdown('<div class="navs-panel-header">Naveen</div>', unsafe_allow_html=True)
+        st.markdown('<div class="navs-panel-marker"></div>', unsafe_allow_html=True)
+
+        header_cols = st.columns([1, 0.12])
+        with header_cols[0]:
+            st.markdown(
+                "<div class='navs-panel-header'>Ask Navs</div>"
+                "<div class='navs-panel-subtitle'>Naveen • AI & BI Engineering Manager</div>",
+                unsafe_allow_html=True,
+            )
+        with header_cols[1]:
+            if st.button("✕", key="navs_close"):
+                st.session_state.navs_widget_open = False
+                st.rerun()
 
         # Messages panel
         panel = st.container(height=280)
@@ -509,8 +518,16 @@ def render_floating_widget(data: dict, page_hint: str = ""):
 
         # Input area
         with st.form("navs_widget_form", clear_on_submit=True):
-            user_input = st.text_input("Ask Naveen…", key="navs_widget_input")
-            sent = st.form_submit_button("Send")
+            cols = st.columns([1, 0.28])
+            with cols[0]:
+                user_input = st.text_input(
+                    "Message Naveen",
+                    key="navs_widget_input",
+                    label_visibility="collapsed",
+                    placeholder="Message Naveen…",
+                )
+            with cols[1]:
+                sent = st.form_submit_button("Send")
         if sent and user_input:
             st.session_state.navs_global_history.append({"role": "user", "content": user_input})
             st.session_state.navs_global_pending = user_input
@@ -848,36 +865,36 @@ def render(data: dict):
         st.session_state.pending_chip = None
 
     # Avatar source
-    if avatar_base64:
-        avatar_src = f"data:image/png;base64,{avatar_base64}"
-    else:
+        if avatar_base64:
+            avatar_src = f"data:image/png;base64,{avatar_base64}"
+        else:
         avatar_src = "https://ui-avatars.com/api/?name=AI+Naveen&background=A41034&color=fff&size=56"
 
     # Header with avatar and title
-    st.markdown(
-        f"""
-        <div class="ai-header">
-          <div class="avatar-container">
+        st.markdown(
+            f"""
+            <div class="ai-header">
+                <div class="avatar-container">
             <img src="{avatar_src}" alt="Naveen"/>
-          </div>
+                </div>
           <div style="flex: 1;">
-            <h2 style="margin:0; color:#fff; border:none;">Naveen</h2>
-            <div class="greeting">Ask about enrollment, yield, NTR, and trends.</div>
-          </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+            <h2 style="margin:0; color:#fff; border:none;">Ask Navs</h2>
+            <div class="greeting">Naveen • AI & BI Engineering Manager at Stevens. Ask about enrollment, yield, NTR, and trends.</div>
+              </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
     
     # New Chat button - positioned to overlap with header (appears inside it visually)
     st.markdown('<div class="new-chat-row">', unsafe_allow_html=True)
     if st.button("✨ New Chat", key="new_chat_btn"):
-        st.session_state.chat_history = []
-        st.session_state.chat_summary = ""
-        st.session_state.summary_tick = 0
-        st.session_state.pending_chip = None
+            st.session_state.chat_history = []
+            st.session_state.chat_summary = ""
+            st.session_state.summary_tick = 0
+            st.session_state.pending_chip = None
         st.session_state.pending_response = None
-        st.rerun()
+            st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
     
     # Check if we need to process a pending response
@@ -900,10 +917,10 @@ def render(data: dict):
                 avatar = avatar_path if msg["role"] == "assistant" else None
                 with st.chat_message(msg["role"], avatar=avatar):
                     st.markdown(msg["content"])
-            
+    
             # Show thinking indicator if we're waiting for a response
             if st.session_state.pending_response:
-                with st.chat_message("assistant", avatar=avatar_path):
+    with st.chat_message("assistant", avatar=avatar_path):
                     with st.spinner(random.choice(fun_quotes)):
                         # Generate response
                         prompt = st.session_state.pending_response
@@ -920,16 +937,16 @@ def render(data: dict):
                         )
                         if st.session_state.chat_summary:
                             context += "\n\nChat Summary:\n" + st.session_state.chat_summary
-                        
-                        try:
-                            response = query_gemini(prompt, context, api_key)
-                        except Exception as e:
-                            if "429" in str(e) or "Too Many Requests" in str(e):
-                                response = fallback_response(prompt, data)
-                            else:
+            
+            try:
+                response = query_gemini(prompt, context, api_key)
+            except Exception as e:
+                if "429" in str(e) or "Too Many Requests" in str(e):
+                    response = fallback_response(prompt, data)
+                else:
                                 response = f"Error: {e}"
-                        
-                        response = clean_markdown(response)
+
+        response = clean_markdown(response)
                         st.session_state.chat_history.append({"role": "assistant", "content": response})
                         st.session_state.pending_response = None
                         
@@ -954,7 +971,7 @@ def render(data: dict):
                         # Add user message and set pending response
                         st.session_state.chat_history.append({"role": "user", "content": chip})
                         st.session_state.pending_response = chip
-                        st.rerun()
+    st.rerun()
     
     # Chat input
     if prompt := st.chat_input("Ask about enrollment, yield, NTR, or trends..."):

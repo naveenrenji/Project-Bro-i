@@ -93,12 +93,39 @@ st.markdown(f"""
     }}
 
     /* Ask Navs floating widget (minimized by default, noticeable glow) */
-    div.element-container:has(.navs-widget-marker) {{
+    div.element-container:has(.navs-bubble-marker),
+    div.element-container:has(.navs-panel-marker) {{
         height: 0 !important;
         margin: 0 !important;
         padding: 0 !important;
     }}
-    div[data-testid="stVerticalBlock"]:has(> div.element-container .navs-widget-marker) {{
+
+    /* Bubble (closed) */
+    div[data-testid="stVerticalBlock"]:has(> div.element-container .navs-bubble-marker) {{
+        position: fixed !important;
+        right: 24px;
+        bottom: 24px;
+        left: auto !important;
+        z-index: 9999;
+        width: 56px;
+        height: 56px;
+        background: transparent;
+        padding: 0;
+        margin: 0;
+    }}
+    div[data-testid="stVerticalBlock"]:has(> div.element-container .navs-bubble-marker) button {{
+        width: 56px !important;
+        height: 56px !important;
+        border-radius: 999px !important;
+        background: #1A1F2E !important;
+        color: #FAFAFA !important;
+        border: 1px solid rgba(164, 16, 52, 0.6) !important;
+        box-shadow: 0 0 0 rgba(164, 16, 52, 0.0);
+        animation: navsGlow 2.6s ease-in-out infinite;
+    }}
+
+    /* Panel (open) */
+    div[data-testid="stVerticalBlock"]:has(> div.element-container .navs-panel-marker) {{
         position: fixed !important;
         right: 24px;
         bottom: 24px;
@@ -110,29 +137,50 @@ st.markdown(f"""
         padding: 0;
         margin: 0;
     }}
-    .navs-panel-header {{
-        background: #1A1F2E;
-        border: 1px solid rgba(255,255,255,0.12);
-        border-bottom: none;
-        border-radius: 12px 12px 0 0;
-        padding: 10px 12px;
-        font-weight: 600;
-        font-size: 13px;
-        color: #FAFAFA;
-    }}
-    div[data-testid="stVerticalBlock"]:has(> div.element-container .navs-widget-marker) > div {{
+    div[data-testid="stVerticalBlock"]:has(> div.element-container .navs-panel-marker) > div {{
         background: #121726;
-        border-radius: 12px;
+        border-radius: 14px;
+        border: 1px solid rgba(255,255,255,0.12);
         box-shadow: 0 12px 30px rgba(0,0,0,0.45);
         padding: 12px;
     }}
-    div[data-testid="stVerticalBlock"]:has(> div.element-container .navs-widget-marker) button {{
-        border-radius: 999px !important;
-        background: #1A1F2E !important;
+    .navs-panel-header {{
+        font-weight: 700;
+        font-size: 14px;
+        color: #FAFAFA;
+        margin-bottom: 2px;
+    }}
+    .navs-panel-subtitle {{
+        font-size: 11px;
+        color: rgba(255,255,255,0.6);
+        margin-bottom: 10px;
+    }}
+    div[data-testid="stVerticalBlock"]:has(> div.element-container .navs-panel-marker) [data-testid="stVerticalBlockBorderWrapper"] {{
+        border: none !important;
+        background: transparent !important;
+        box-shadow: none !important;
+    }}
+    div[data-testid="stVerticalBlock"]:has(> div.element-container .navs-panel-marker) form {{
+        background: transparent !important;
+        border: none !important;
+        padding: 0 !important;
+    }}
+    div[data-testid="stVerticalBlock"]:has(> div.element-container .navs-panel-marker) input {{
+        background: rgba(255,255,255,0.06) !important;
+        border: 1px solid rgba(255,255,255,0.12) !important;
+        border-radius: 12px !important;
         color: #FAFAFA !important;
-        border: 1px solid rgba(164, 16, 52, 0.6) !important;
-        box-shadow: 0 0 0 rgba(164, 16, 52, 0.0);
-        animation: navsGlow 2.6s ease-in-out infinite;
+    }}
+    div[data-testid="stVerticalBlock"]:has(> div.element-container .navs-panel-marker) button {{
+        border-radius: 10px !important;
+        background: rgba(255,255,255,0.08) !important;
+        color: #FAFAFA !important;
+        border: 1px solid rgba(255,255,255,0.12) !important;
+        animation: none !important;
+        box-shadow: none !important;
+    }}
+    div[data-testid="stVerticalBlock"]:has(> div.element-container .navs-panel-marker) button:hover {{
+        background: rgba(255,255,255,0.12) !important;
     }}
     @keyframes navsGlow {{
         0% {{

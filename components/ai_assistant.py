@@ -179,9 +179,19 @@ PREMIUM_CSS = """
     caret-color: #fff !important;
 }
 
-/* Hide the Streamlit New Chat button (we use HTML button) */
-.element-container:has(button[data-testid="baseButton-secondary"]) {
-    display: none !important;
+/* Hide the Streamlit New Chat button visually (keep it for JS click) */
+button[data-testid="baseButton-secondary"] {
+    position: absolute !important;
+    left: -9999px !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+/* Also hide its container */
+.stButton:has(button[data-testid="baseButton-secondary"]) {
+    height: 0 !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
 }
 
 /* Avatar - larger size, no cropping */

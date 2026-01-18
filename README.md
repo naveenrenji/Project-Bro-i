@@ -1,4 +1,6 @@
-# CPE Graduate Online Analytics Dashboard
+# Projct IRIS Analytics Dashboard
+
+###Developer - Naveen Renji
 
 A comprehensive, password-protected Streamlit dashboard for tracking the full enrollment funnel from applications to enrollments and Net Tuition Revenue (NTR).
 

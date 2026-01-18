@@ -21,7 +21,7 @@ from components.ai_insights import (
 GEMINI_MODEL = "gemini-3-flash-preview"
 
 
-# Premium CSS Styles - Applied to Streamlit's native containers
+# Premium CSS Styles - Simplified for Streamlit compatibility
 PREMIUM_CSS = """
 <style>
 /* -------- Design tokens -------- */
@@ -29,53 +29,23 @@ PREMIUM_CSS = """
     --ai-radius-sm: 10px;
     --ai-radius-md: 12px;
     --ai-radius-lg: 16px;
-    --ai-gap-xs: 8px;
-    --ai-gap-sm: 12px;
-    --ai-gap-md: 16px;
-    --ai-gap-lg: 24px;
     --ai-border-subtle: rgba(255, 255, 255, 0.10);
     --ai-border-accent: rgba(164, 16, 52, 0.35);
-    --ai-surface-0: rgba(14, 17, 23, 0.92);
-    --ai-surface-1: rgba(26, 31, 46, 0.92);
-    --ai-surface-2: rgba(255, 255, 255, 0.04);
-    --ai-text: rgba(255, 255, 255, 0.92);
     --ai-text-muted: rgba(255, 255, 255, 0.72);
-    --ai-text-faint: rgba(255, 255, 255, 0.55);
-    --ai-shadow: 0 10px 36px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 /* -------- Glass effect on main content area -------- */
 .main .block-container {
-    background: linear-gradient(135deg, rgba(26, 31, 46, 0.92) 0%, rgba(14, 17, 23, 0.96) 100%);
+    background: linear-gradient(135deg, rgba(26, 31, 46, 0.95) 0%, rgba(14, 17, 23, 0.98) 100%);
     border: 1px solid var(--ai-border-accent);
     border-radius: var(--ai-radius-lg);
-    padding: 24px !important;
-    box-shadow: var(--ai-shadow);
-    backdrop-filter: blur(10px);
-    max-width: 1200px;
+    padding: 20px !important;
+    box-shadow: 0 10px 36px rgba(0, 0, 0, 0.45);
+    max-width: 1000px;
     margin: 0 auto;
 }
 
-@media (max-width: 768px) {
-    .main .block-container {
-        padding: 16px !important;
-        border-radius: 14px;
-        margin: 0 8px;
-    }
-}
-
-/* Header section - STICKY */
-.ai-header-wrapper {
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    background: linear-gradient(135deg, rgba(26, 31, 46, 0.98) 0%, rgba(14, 17, 23, 0.98) 100%);
-    margin: -24px -24px 16px -24px;
-    padding: 16px 24px;
-    border-bottom: 1px solid var(--ai-border-subtle);
-    backdrop-filter: blur(12px);
-}
-
+/* -------- Header (static, not sticky) -------- */
 .ai-header {
     background: linear-gradient(90deg, rgba(164, 16, 52, 0.15) 0%, rgba(164, 16, 52, 0.02) 70%, transparent 100%);
     padding: 14px 18px;
@@ -83,20 +53,19 @@ PREMIUM_CSS = """
     border-radius: var(--ai-radius-md);
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: var(--ai-gap-md);
+    gap: 12px;
+    margin-bottom: 16px;
 }
 
 .ai-header-left {
     display: flex;
     align-items: center;
-    gap: var(--ai-gap-sm);
-    min-width: 0;
+    gap: 12px;
+    flex: 1;
 }
 
 .ai-header-content {
     flex: 1;
-    min-width: 0;
 }
 
 .ai-header h2 {
@@ -156,37 +125,43 @@ PREMIUM_CSS = """
     color: #fff;
 }
 
-/* Style the New Chat button to match header */
-.new-chat-streamlit-btn button {
-    background: rgba(164, 16, 52, 0.2) !important;
-    border: 1px solid rgba(164, 16, 52, 0.4) !important;
+/* New Chat button styling */
+button[data-testid="baseButton-secondary"] {
+    background: rgba(164, 16, 52, 0.25) !important;
+    border: 1px solid rgba(164, 16, 52, 0.5) !important;
     color: #fff !important;
-    padding: 8px 16px !important;
     border-radius: 8px !important;
     font-size: 13px !important;
     font-weight: 500 !important;
+    float: right;
+    margin-bottom: 12px;
 }
-.new-chat-streamlit-btn button:hover {
-    background: rgba(164, 16, 52, 0.35) !important;
-    border-color: rgba(164, 16, 52, 0.6) !important;
+button[data-testid="baseButton-secondary"]:hover {
+    background: rgba(164, 16, 52, 0.4) !important;
+    border-color: rgba(164, 16, 52, 0.7) !important;
 }
 
-/* Suggestion chips row styling */
-.suggestion-row {
-    margin-bottom: 8px;
-}
-.suggestion-row button {
-    background: rgba(255, 255, 255, 0.06) !important;
-    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+/* Suggestion buttons - pill style */
+.stButton button {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
     color: rgba(255, 255, 255, 0.85) !important;
-    border-radius: 20px !important;
+    border-radius: 8px !important;
     font-size: 12px !important;
-    padding: 6px 12px !important;
+    padding: 8px 12px !important;
+    text-align: left !important;
 }
-.suggestion-row button:hover {
+.stButton button:hover {
     background: rgba(164, 16, 52, 0.2) !important;
     border-color: rgba(164, 16, 52, 0.4) !important;
     color: #fff !important;
+}
+
+/* Scrollable chat container styling */
+[data-testid="stVerticalBlockBorderWrapper"] {
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 12px !important;
+    background: rgba(0, 0, 0, 0.2) !important;
 }
 
 /* Avatar with animation */
@@ -934,47 +909,40 @@ def render(data: dict):
     else:
         avatar_src = "https://ui-avatars.com/api/?name=AI+Naveen&background=A41034&color=fff&size=48"
 
-    # Sticky header with avatar, title, and New Chat button
-    header_col1, header_col2 = st.columns([5, 1])
+    # Header with avatar, title, and New Chat button (all in one HTML block)
+    new_chat_clicked = st.button("✨ New Chat", key="new_chat_btn", type="secondary")
+    if new_chat_clicked:
+        st.session_state.chat_history = []
+        st.session_state.chat_summary = ""
+        st.session_state.summary_tick = 0
+        st.session_state.pending_chip = None
+        st.rerun()
     
-    with header_col1:
-        st.markdown(
-            f"""
-            <div class="ai-header-wrapper">
-              <div class="ai-header">
-                <div class="ai-header-left">
-                  <div class="avatar-container">
-                    <img src="{avatar_src}" alt="AI Naveen"/>
-                    <div class="avatar-ring"></div>
-                  </div>
-                  <div class="ai-header-content">
-                    <h2 style="margin:0; color:#fff; border:none;">AI Naveen</h2>
-                    <div class="greeting">Ask about enrollment, yield, NTR, and trends.</div>
-                  </div>
-                </div>
-              </div>
+    st.markdown(
+        f"""
+        <div class="ai-header">
+          <div class="ai-header-left">
+            <div class="avatar-container">
+              <img src="{avatar_src}" alt="AI Naveen"/>
             </div>
-            """,
-            unsafe_allow_html=True,
-        )
+            <div class="ai-header-content">
+              <h2 style="margin:0; color:#fff; border:none;">AI Naveen</h2>
+              <div class="greeting">Ask about enrollment, yield, NTR, and trends.</div>
+            </div>
+          </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
     
-    with header_col2:
-        st.markdown('<div class="new-chat-streamlit-btn">', unsafe_allow_html=True)
-        if st.button("✨ New Chat", key="new_chat_btn"):
-            st.session_state.chat_history = []
-            st.session_state.chat_summary = ""
-            st.session_state.summary_tick = 0
-            st.session_state.pending_chip = None
-            st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
-    
-    # Chat messages area
-    chat_container = st.container()
+    # Scrollable chat area with fixed height
+    chat_container = st.container(height=400)
     
     with chat_container:
         if not st.session_state.chat_history:
+            # Empty state with suggestions
             st.markdown(
-                "<div style='color: rgba(255,255,255,0.75); font-size: 13px;'>Type a question below or click a suggestion to start.</div>",
+                "<div style='color: rgba(255,255,255,0.6); font-size: 13px; margin-bottom: 12px;'>Start a conversation by typing below or clicking a suggestion.</div>",
                 unsafe_allow_html=True,
             )
         else:
@@ -990,20 +958,18 @@ def render(data: dict):
         st.session_state.pending_chip = None
         process_message(prompt, data, api_key, avatar_path, fun_quotes)
     
-    # Suggested questions (pill-style, right above chat input)
+    # Suggested questions (only when chat is empty)
     if not st.session_state.chat_history:
-        st.markdown('<div class="section-label" style="margin-top: 16px;">Quick questions</div>', unsafe_allow_html=True)
         chips = suggestion_chips[:4]
-        st.markdown('<div class="suggestion-row">', unsafe_allow_html=True)
-        chip_cols = st.columns(len(chips)) if chips else []
-        for i, chip in enumerate(chips):
-            with chip_cols[i]:
-                # Truncate long chips for display
-                display_text = chip if len(chip) <= 35 else chip[:32] + "..."
-                if st.button(display_text, key=f"chip_{i}", help=chip):
-                    st.session_state.pending_chip = chip
-                    st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
+        if chips:
+            chip_cols = st.columns(2)
+            for i, chip in enumerate(chips):
+                col_idx = i % 2
+                with chip_cols[col_idx]:
+                    display_text = chip if len(chip) <= 40 else chip[:37] + "..."
+                    if st.button(display_text, key=f"chip_{i}", use_container_width=True):
+                        st.session_state.pending_chip = chip
+                        st.rerun()
     
     # Chat input
     if prompt := st.chat_input("Ask about enrollment, yield, NTR, or trends..."): 

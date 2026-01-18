@@ -44,6 +44,7 @@ PREMIUM_CSS = """
     display: flex;
     align-items: center;
     gap: 14px;
+    margin-bottom: 16px;
 }
 
 .ai-header h2 {
@@ -75,19 +76,30 @@ PREMIUM_CSS = """
     background: rgba(255,255,255,0.05);
 }
 
-/* New Chat button styling */
-.new-chat-btn-col button {
-    background: rgba(164, 16, 52, 0.25) !important;
-    border: 1px solid rgba(164, 16, 52, 0.5) !important;
-    color: #fff !important;
-    border-radius: 8px !important;
-    font-size: 13px !important;
-    font-weight: 500 !important;
-    padding: 8px 14px !important;
+/* New Chat button inside header */
+.new-chat-btn {
+    background: rgba(164, 16, 52, 0.25);
+    border: 1px solid rgba(164, 16, 52, 0.5);
+    color: #fff;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    margin-left: auto;
 }
-.new-chat-btn-col button:hover {
-    background: rgba(164, 16, 52, 0.4) !important;
-    border-color: rgba(164, 16, 52, 0.7) !important;
+.new-chat-btn:hover {
+    background: rgba(164, 16, 52, 0.4);
+    border-color: rgba(164, 16, 52, 0.7);
+}
+
+/* Hide the actual Streamlit button */
+#new-chat-hidden {
+    position: absolute;
+    left: -9999px;
+    opacity: 0;
+    pointer-events: none;
 }
 
 /* Scrollable chat container */
@@ -535,35 +547,35 @@ def render(data: dict):
     else:
         avatar_src = "https://ui-avatars.com/api/?name=AI+Naveen&background=A41034&color=fff&size=56"
 
-    # Header row with avatar/title and New Chat button
-    header_col, btn_col = st.columns([5, 1])
-    
-    with header_col:
-        st.markdown(
-            f"""
-            <div class="ai-header">
-              <div class="avatar-container">
-                <img src="{avatar_src}" alt="AI Naveen"/>
-              </div>
-              <div>
-                <h2 style="margin:0; color:#fff; border:none;">AI Naveen</h2>
-                <div class="greeting">Ask about enrollment, yield, NTR, and trends.</div>
-              </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-    
-    with btn_col:
-        st.markdown('<div class="new-chat-btn-col">', unsafe_allow_html=True)
-        if st.button("✨ New", key="new_chat_btn", use_container_width=True):
-            st.session_state.chat_history = []
-            st.session_state.chat_summary = ""
-            st.session_state.summary_tick = 0
-            st.session_state.pending_chip = None
-            st.session_state.pending_response = None
-            st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
+    # Hidden Streamlit button for New Chat functionality
+    st.markdown('<div id="new-chat-hidden">', unsafe_allow_html=True)
+    if st.button("New Chat", key="new_chat_btn"):
+        st.session_state.chat_history = []
+        st.session_state.chat_summary = ""
+        st.session_state.summary_tick = 0
+        st.session_state.pending_chip = None
+        st.session_state.pending_response = None
+        st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # Header with avatar, title, and New Chat button all in one box
+    st.markdown(
+        f"""
+        <div class="ai-header">
+          <div class="avatar-container">
+            <img src="{avatar_src}" alt="AI Naveen"/>
+          </div>
+          <div style="flex: 1;">
+            <h2 style="margin:0; color:#fff; border:none;">AI Naveen</h2>
+            <div class="greeting">Ask about enrollment, yield, NTR, and trends.</div>
+          </div>
+          <button class="new-chat-btn" onclick="document.querySelector('#new-chat-hidden button').click()">
+            ✨ New Chat
+          </button>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
     
     # Check if we need to process a pending response
     if "pending_response" not in st.session_state:

@@ -5,7 +5,6 @@ Main application entry point with navigation and page routing.
 
 import streamlit as st
 import sys
-import base64
 from pathlib import Path
 from datetime import datetime, timedelta
 
@@ -36,50 +35,10 @@ st.set_page_config(
 # Global UI tokens/classes
 inject_global_styles()
 
-# Embed logo for header (safe fallback if missing)
+# Use Streamlit's built-in logo function (appears in sidebar/header)
 logo_path = Path(__file__).parent / "Stevens-CPE-logo-RGB_Linear-4C-BLK-bg.png"
-logo_b64 = ""
-try:
-    if logo_path.exists():
-        logo_b64 = base64.b64encode(logo_path.read_bytes()).decode("ascii")
-except Exception:
-    logo_b64 = ""
-
-# Custom CSS for Stevens branding
-logo_css = f"""
-    header[data-testid="stHeader"] {{
-        position: relative;
-        min-height: 44px;
-    }}
-    header[data-testid="stHeader"]::before {{
-        content: "";
-        position: absolute;
-        left: 16px;
-        top: 50%;
-        transform: translateY(-50%);
-        background-image: url('data:image/png;base64,{logo_b64}');
-        background-repeat: no-repeat;
-        background-position: center;
-        background-size: contain;
-        width: clamp(140px, 15vw, 200px);
-        height: clamp(28px, 4vw, 44px);
-        z-index: 2;
-        pointer-events: none;
-    }}
-    /* Fallback in case nav renders outside header */
-    [data-testid="stNavigation"]::before,
-    [data-testid="stNavigation"] nav::before {{
-        content: "";
-        display: inline-block;
-        background-image: url('data:image/png;base64,{logo_b64}');
-        background-repeat: no-repeat;
-        background-position: center;
-        background-size: contain;
-        width: clamp(140px, 15vw, 200px);
-        height: clamp(28px, 4vw, 44px);
-        margin-right: 8px;
-    }}
-"""
+if logo_path.exists():
+    st.logo(str(logo_path), size="large")
 
 st.markdown(f"""
 <style>
@@ -145,25 +104,11 @@ st.markdown(f"""
         padding: 6px 10px;
         margin-bottom: 0;
     }}
-    /* Make room for logo in header */
-    [data-testid="stNavigation"] {{
-        padding-left: clamp(120px, 14vw, 190px);
-    }}
-    /* Inline logo aligned with nav items */
+    /* Nav items layout */
     [data-testid="stNavigation"] nav {{
         display: flex;
         align-items: center;
         gap: 12px;
-    }}
-    [data-testid="stNavigation"] nav::before {{
-        content: "";
-        display: inline-block;
-        background-image: url('data:image/png;base64,{logo_b64}');
-        background-repeat: no-repeat;
-        background-position: center;
-        background-size: contain;
-        width: clamp(140px, 15vw, 200px);
-        height: clamp(28px, 4vw, 44px);
     }}
 
     /* Nav label sizing */
@@ -179,7 +124,14 @@ st.markdown(f"""
         display: none !important;
     }}
 
-    {logo_css}
+    /* Force reduce gap between header and content */
+    [data-testid="stAppViewContainer"] > div:first-child {{
+        padding-top: 0 !important;
+        margin-top: 0 !important;
+    }}
+    .stApp > header + div {{
+        padding-top: 0 !important;
+    }}
 
     /* Navigation buttons */
     [data-testid="stSidebar"] .stButton > button {{

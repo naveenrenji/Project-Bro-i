@@ -1,0 +1,18 @@
+[theme]
+# Stevens Institute of Technology Brand Colors
+base = "dark"
+primaryColor = "#A41034"
+backgroundColor = "#0E1117"
+secondaryBackgroundColor = "#1A1F2E"
+textColor = "#FAFAFA"
+font = "sans serif"
+
+[server]
+headless = true
+# With XSRF protection enabled, CORS must be enabled; Streamlit will override anyway.
+enableCORS = true
+enableXsrfProtection = true
+runOnSave = true
+
+[browser]
+gatherUsageStats = false

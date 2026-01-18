@@ -76,6 +76,14 @@ st.markdown("""
 
 st.markdown(f"""
 <style>
+    /* Force dark rendering even if user/browser prefers light */
+    :root {{
+        color-scheme: dark;
+    }}
+    html, body, .stApp, [data-testid="stAppViewContainer"] {{
+        background: {BACKGROUND_DARK} !important;
+    }}
+
     /* Main container */
     .main .block-container {{
         padding-top: 0;

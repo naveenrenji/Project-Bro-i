@@ -40,15 +40,35 @@ logo_path = Path(__file__).parent / "Stevens-CPE-logo-RGB_Linear-4C-BLK-bg.png"
 if logo_path.exists():
     st.logo(str(logo_path), size="large")
 
-# CSS to scale up the logo 2x
+# CSS to make navbar 2x larger (font, padding, height)
 st.markdown("""
 <style>
-    /* Scale st.logo() image 2x */
+    /* Make header taller */
+    header[data-testid="stHeader"] {
+        min-height: 80px !important;
+        padding: 12px 0 !important;
+    }
+    /* Make navigation elements larger */
+    [data-testid="stNavigation"] {
+        padding: 16px 24px !important;
+        min-height: 60px !important;
+    }
+    [data-testid="stNavigation"] * {
+        font-size: 1.2rem !important;
+    }
+    [data-testid="stNavigation"] a,
+    [data-testid="stNavigation"] button {
+        padding: 12px 20px !important;
+        font-size: 1.2rem !important;
+    }
+    /* Make logo larger */
     [data-testid="stLogo"] img,
     [data-testid="stSidebarHeader"] img,
-    .stLogo img {
-        transform: scale(2);
-        transform-origin: left center;
+    .stLogo img,
+    header img {
+        height: 50px !important;
+        width: auto !important;
+        max-height: 50px !important;
     }
 </style>
 """, unsafe_allow_html=True)

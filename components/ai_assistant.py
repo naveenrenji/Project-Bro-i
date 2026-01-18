@@ -21,11 +21,11 @@ from components.ai_insights import (
 GEMINI_MODEL = "gemini-3-flash-preview"
 
 
-# Premium CSS Styles
+# Premium CSS Styles - Applied to Streamlit's native containers
 PREMIUM_CSS = """
 <style>
-/* -------- Design tokens (single source of truth) -------- */
-.ai-naveen-scope {
+/* -------- Design tokens -------- */
+:root {
     --ai-radius-sm: 10px;
     --ai-radius-md: 12px;
     --ai-radius-lg: 16px;
@@ -44,44 +44,23 @@ PREMIUM_CSS = """
     --ai-shadow: 0 10px 36px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
-/* -------- Page layout (centered container) -------- */
-.ai-naveen-scope {
-    max-width: 1200px;
-    margin: 0 auto !important;
-}
-
-/* Hide empty element containers that create gray bars */
-.ai-naveen-scope .element-container:has(> div:empty),
-.element-container:has(> .ai-naveen-scope:empty),
-.element-container:has(> .ai-glass:empty) {
-    display: none !important;
-}
-.stMarkdown:empty,
-.element-container > div:empty {
-    display: none !important;
-    height: 0 !important;
-    margin: 0 !important;
-    padding: 0 !important;
-}
-
-.ai-glass {
+/* -------- Glass effect on main content area -------- */
+.main .block-container {
     background: linear-gradient(135deg, rgba(26, 31, 46, 0.92) 0%, rgba(14, 17, 23, 0.96) 100%);
     border: 1px solid var(--ai-border-accent);
     border-radius: var(--ai-radius-lg);
-    padding: 18px;
+    padding: 24px !important;
     box-shadow: var(--ai-shadow);
     backdrop-filter: blur(10px);
+    max-width: 1200px;
+    margin: 0 auto;
 }
 
 @media (max-width: 768px) {
-    .ai-naveen-scope {
-        max-width: 100%;
-        padding-left: 0.5rem !important;
-        padding-right: 0.5rem !important;
-    }
-    .ai-glass {
-        padding: 14px;
+    .main .block-container {
+        padding: 16px !important;
         border-radius: 14px;
+        margin: 0 8px;
     }
 }
 
@@ -812,11 +791,8 @@ def render_empty_state(data: dict, suggestion_chips: List[str]):
 def render(data: dict):
     """Render the premium AI Naveen chat interface."""
     
-    # Inject premium CSS
+    # Inject premium CSS (applies glass effect to the page container)
     st.markdown(PREMIUM_CSS, unsafe_allow_html=True)
-
-    # Scope styles to this page only (prevents CSS leakage into other pages)
-    st.markdown('<div class="ai-naveen-scope">', unsafe_allow_html=True)
     
     avatar_path = "naveen-headshot.png"
     avatar_base64 = get_avatar_base64()
@@ -867,9 +843,6 @@ def render(data: dict):
     if "pending_chip" not in st.session_state:
         st.session_state.pending_chip = None
 
-    # Single, unified glass container for the entire tab
-    st.markdown('<div class="ai-glass">', unsafe_allow_html=True)
-    
     # Header (keep it simple)
     header_col1, header_col2 = st.columns([6, 2])
     with header_col1:

@@ -54,12 +54,12 @@ st.markdown("""
         min-height: 60px !important;
     }
     [data-testid="stNavigation"] * {
-        font-size: 1.2rem !important;
+        font-size: 1.5rem !important;
     }
     [data-testid="stNavigation"] a,
     [data-testid="stNavigation"] button {
-        padding: 12px 20px !important;
-        font-size: 1.2rem !important;
+        padding: 14px 24px !important;
+        font-size: 1.5rem !important;
     }
     /* Make logo larger */
     [data-testid="stLogo"] img,

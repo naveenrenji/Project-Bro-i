@@ -54,12 +54,13 @@ st.markdown("""
         min-height: 60px !important;
     }
     [data-testid="stNavigation"] * {
-        font-size: 1.5rem !important;
+        font-size: 2.5rem !important;
     }
     [data-testid="stNavigation"] a,
     [data-testid="stNavigation"] button {
         padding: 14px 24px !important;
-        font-size: 1.5rem !important;
+        font-size: 2rem !important;
+        font-weight: bold !important;
     }
     /* Make logo larger */
     [data-testid="stLogo"] img,
@@ -75,12 +76,19 @@ st.markdown("""
 
 st.markdown(f"""
 <style>
-    /* Main container */
+    /* Main container - aggressive gap removal */
     .main .block-container {{
-        padding-top: 0;
-        margin-top: -1rem;
+        padding-top: 0 !important;
+        margin-top: -2rem !important;
         padding-bottom: 2rem;
         max-width: 1400px;
+    }}
+    .stApp [data-testid="stAppViewContainer"] {{
+        padding-top: 0 !important;
+    }}
+    /* Remove any stray separators/borders */
+    .stApp hr, .main hr {{
+        display: none !important;
     }}
 
     /* Mobile responsiveness */
@@ -144,10 +152,7 @@ st.markdown(f"""
         gap: 12px;
     }}
 
-    /* Nav label sizing */
-    [data-testid="stNavigation"] * {{
-        font-size: 0.95rem;
-    }}
+    /* Nav label sizing - handled in earlier CSS block */
 
     /* Hide heading anchor links (chain icon) */
     h1 a, h2 a, h3 a, h4 a {{
@@ -163,6 +168,32 @@ st.markdown(f"""
         margin-top: 0 !important;
     }}
     .stApp > header + div {{
+        padding-top: 0 !important;
+    }}
+    /* Hide empty/placeholder elements that create gray bars */
+    .stApp [data-testid="stDecoration"],
+    .stApp [data-testid="stToolbar"],
+    .element-container:empty,
+    [data-testid="stStatusWidget"],
+    [data-testid="stHeader"]::before,
+    [data-testid="stHeader"]::after {{
+        display: none !important;
+    }}
+    /* Remove any horizontal rules globally */
+    hr {{
+        display: none !important;
+    }}
+    /* Remove top border/decoration from main content area */
+    .main::before,
+    .main::after,
+    [data-testid="stAppViewContainer"]::before,
+    [data-testid="stAppViewContainer"]::after {{
+        display: none !important;
+        content: none !important;
+    }}
+    /* Reduce top spacing on first element after header */
+    .main > div > div:first-child {{
+        margin-top: 0 !important;
         padding-top: 0 !important;
     }}
 

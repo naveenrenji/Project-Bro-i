@@ -92,7 +92,7 @@ st.markdown(f"""
         max-width: 1400px;
     }}
 
-    /* Ask Navs floating widget (isolate to the widget container only) */
+    /* Ask Navs floating widget (minimized by default, noticeable glow) */
     div.element-container:has(.navs-widget-marker) {{
         height: 0 !important;
         margin: 0 !important;
@@ -127,6 +127,25 @@ st.markdown(f"""
     }}
     div.element-container > div[data-testid="stVerticalBlock"]:has(.navs-widget-marker) button {{
         border-radius: 999px !important;
+        background: #1A1F2E !important;
+        color: #FAFAFA !important;
+        border: 1px solid rgba(164, 16, 52, 0.6) !important;
+        box-shadow: 0 0 0 rgba(164, 16, 52, 0.0);
+        animation: navsGlow 2.6s ease-in-out infinite;
+    }}
+    @keyframes navsGlow {{
+        0% {{
+            box-shadow: 0 0 0 0 rgba(164, 16, 52, 0.0),
+                        0 0 10px 2px rgba(164, 16, 52, 0.25);
+        }}
+        50% {{
+            box-shadow: 0 0 0 6px rgba(164, 16, 52, 0.08),
+                        0 0 16px 4px rgba(164, 16, 52, 0.45);
+        }}
+        100% {{
+            box-shadow: 0 0 0 0 rgba(164, 16, 52, 0.0),
+                        0 0 10px 2px rgba(164, 16, 52, 0.25);
+        }}
     }}
 
     /* Mobile responsiveness */

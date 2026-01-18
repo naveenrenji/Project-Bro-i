@@ -433,6 +433,12 @@ def render_floating_widget(data: dict, page_hint: str = ""):
     if not api_key:
         return
 
+    # Always minimize by default when landing on a new page/tab
+    last_page = st.session_state.get("navs_widget_last_page")
+    if last_page != page_hint:
+        st.session_state.navs_widget_open = False
+        st.session_state.navs_widget_last_page = page_hint
+
     # Widget container (positioned via CSS from app.py)
     widget = st.container()
     with widget:

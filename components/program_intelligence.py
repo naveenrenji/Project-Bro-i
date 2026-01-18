@@ -13,6 +13,105 @@ from utils.constants import (
 )
 
 
+def _compute_census_program_headcount(census_df: pd.DataFrame) -> pd.DataFrame:
+    """Compute headcount (unique students) by program from census."""
+    if census_df is None or census_df.empty:
+        return pd.DataFrame()
+
+    student_id_col = "Census_1_STUDENT_ID"
+    program_col = "Census_1_PROGRAM_OF_STUDY" if "Census_1_PROGRAM_OF_STUDY" in census_df.columns else None
+    if program_col is None and "Census_1_PRIMARY_PROGRAM_OF_STUDY" in census_df.columns:
+        program_col = "Census_1_PRIMARY_PROGRAM_OF_STUDY"
+
+    if not program_col or student_id_col not in census_df.columns:
+        return pd.DataFrame()
+
+    df = census_df[[student_id_col, program_col]].copy()
+    df = df[df[program_col].notna() & (df[program_col].astype(str).str.strip() != "")]
+
+    headcount = (
+        df.groupby(program_col)[student_id_col]
+        .nunique()
+        .reset_index()
+        .rename(columns={program_col: "Program", student_id_col: "Headcount"})
+        .sort_values("Headcount", ascending=False)
+    )
+
+    # Optional breakdown by student status (New/Continuing/Returning)
+    if "Census_1_STUDENT_STATUS" in census_df.columns:
+        status_df = census_df[[student_id_col, program_col, "Census_1_STUDENT_STATUS"]].copy()
+        status_df = status_df[
+            status_df[program_col].notna()
+            & (status_df[program_col].astype(str).str.strip() != "")
+            & status_df["Census_1_STUDENT_STATUS"].notna()
+        ]
+        status_counts = (
+            status_df.groupby([program_col, "Census_1_STUDENT_STATUS"])[student_id_col]
+            .nunique()
+            .reset_index()
+            .pivot(index=program_col, columns="Census_1_STUDENT_STATUS", values=student_id_col)
+            .fillna(0)
+            .reset_index()
+            .rename(columns={program_col: "Program"})
+        )
+        for c in status_counts.columns:
+            if c != "Program":
+                status_counts[c] = status_counts[c].astype(int)
+        headcount = headcount.merge(status_counts, on="Program", how="left")
+
+    return headcount
+
+
+def _render_census_headcount_section(census_df: pd.DataFrame):
+    """Render census-based program intelligence (headcount)."""
+    headcount_df = _compute_census_program_headcount(census_df)
+    if headcount_df.empty:
+        st.info("Census headcount by program not available.")
+        return
+
+    # KPI row
+    total_students = int(headcount_df["Headcount"].sum())
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Total Headcount (Census)", format_number(total_students))
+    with col2:
+        st.metric("Programs w/ Headcount", format_number(len(headcount_df)))
+    with col3:
+        st.metric("Top Program Headcount", format_number(int(headcount_df["Headcount"].max())))
+
+    st.markdown("### Top Programs by Headcount (Census)")
+    top = headcount_df.head(15).copy()
+
+    fig = go.Figure()
+    fig.add_trace(
+        go.Bar(
+            y=top["Program"].tolist()[::-1],
+            x=top["Headcount"].tolist()[::-1],
+            orientation="h",
+            marker_color=STEVENS_RED,
+            text=top["Headcount"].tolist()[::-1],
+            textposition="inside",
+            name="Headcount",
+        )
+    )
+    fig.update_layout(
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font={"color": STEVENS_WHITE, "size": 11},
+        height=420,
+        margin=dict(l=20, r=20, t=20, b=40),
+        xaxis=dict(gridcolor="#333", title="Students"),
+        yaxis=dict(gridcolor="#333"),
+        showlegend=False,
+    )
+    st.plotly_chart(fig, width="stretch")
+
+    st.markdown("### All Programs (Census Headcount)")
+    # Helpful column ordering
+    cols = ["Program", "Headcount"] + [c for c in headcount_df.columns if c not in ("Program", "Headcount")]
+    st.dataframe(headcount_df[cols], width="stretch", hide_index=True, height=520)
+
+
 def render_program_heatmap(program_stats: pd.DataFrame):
     """Render a heatmap of programs vs metrics."""
     if program_stats is None or program_stats.empty:
@@ -339,74 +438,86 @@ def render(data: dict):
     """Main render function for the Program Intelligence page."""
     st.markdown("## Program Intelligence")
     st.markdown("Analyze performance metrics across all graduate programs.")
-    
-    st.markdown("---")
-    
-    # Calculate program stats
-    from analytics import calculate_program_stats
-    
-    apps_data = data.get('applications', {})
-    
-    program_stats = calculate_program_stats(
-        apps_data.get('current'),
-        apps_data.get('previous')
-    )
-    
-    if program_stats.empty:
-        st.warning("Application data not available for program analysis.")
-        return
-    
-    # Program heatmap
-    st.markdown("### Program Performance Heatmap")
-    render_program_heatmap(program_stats)
-    
-    # School breakdown
-    st.markdown("### Programs by School")
-    render_programs_by_school(program_stats)
-    
-    st.markdown("---")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.markdown("### Top Programs by Enrollment")
-        render_top_programs(program_stats)
-    
-    with col2:
-        st.markdown("### Program Trends (YoY)")
-        render_program_trends(program_stats)
-    
-    st.markdown("---")
-    
-    # Program comparison
-    st.markdown("### Program Comparison")
-    render_program_comparison(program_stats)
-    
-    st.markdown("---")
-    
-    # Full table
-    st.markdown("### All Programs")
-    
-    # Filters
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        schools = ["All"] + [s for s in program_stats['School'].unique().tolist() if s]
-        school_filter = st.selectbox("Filter by School", schools)
-    with col2:
-        degrees = ["All"] + [d for d in program_stats['Degree Type'].unique().tolist() if d]
-        degree_filter = st.selectbox("Filter by Degree Type", degrees)
-    with col3:
-        sort_by = st.selectbox(
-            "Sort by",
-            ['Applications 2026', 'Enrollments 2026', 'Apps YoY %', 'Yield Rate 2026']
+
+    tab_slate, tab_census = st.tabs(["Slate Funnel (Apps→Admits→Enroll)", "Census Headcount"])
+
+    with tab_slate:
+        st.markdown("---")
+
+        # Calculate program stats
+        from analytics import calculate_program_stats
+
+        apps_data = data.get('applications', {})
+
+        program_stats = calculate_program_stats(
+            apps_data.get('current'),
+            apps_data.get('previous')
         )
-    
-    filtered_df = program_stats.copy()
-    if school_filter != "All":
-        filtered_df = filtered_df[filtered_df['School'] == school_filter]
-    if degree_filter != "All":
-        filtered_df = filtered_df[filtered_df['Degree Type'] == degree_filter]
-    
-    filtered_df = filtered_df.sort_values(sort_by, ascending=False)
-    
-    render_program_table(filtered_df)
+
+        if program_stats.empty:
+            st.warning("Application data not available for program analysis.")
+            return
+
+        # Program heatmap
+        st.markdown("### Program Performance Heatmap")
+        render_program_heatmap(program_stats)
+
+        # School breakdown
+        st.markdown("### Programs by School")
+        render_programs_by_school(program_stats)
+
+        st.markdown("---")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown("### Top Programs by Enrollment")
+            render_top_programs(program_stats)
+
+        with col2:
+            st.markdown("### Program Trends (YoY)")
+            render_program_trends(program_stats)
+
+        st.markdown("---")
+
+        # Program comparison
+        st.markdown("### Program Comparison")
+        render_program_comparison(program_stats)
+
+        st.markdown("---")
+
+        # Full table
+        st.markdown("### All Programs")
+
+        # Filters
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            schools = ["All"] + [s for s in program_stats['School'].unique().tolist() if s]
+            school_filter = st.selectbox("Filter by School", schools)
+        with col2:
+            degrees = ["All"] + [d for d in program_stats['Degree Type'].unique().tolist() if d]
+            degree_filter = st.selectbox("Filter by Degree Type", degrees)
+        with col3:
+            sort_by = st.selectbox(
+                "Sort by",
+                ['Applications 2026', 'Enrollments 2026', 'Apps YoY %', 'Yield Rate 2026']
+            )
+
+        filtered_df = program_stats.copy()
+        if school_filter != "All":
+            filtered_df = filtered_df[filtered_df['School'] == school_filter]
+        if degree_filter != "All":
+            filtered_df = filtered_df[filtered_df['Degree Type'] == degree_filter]
+
+        filtered_df = filtered_df.sort_values(sort_by, ascending=False)
+
+        render_program_table(filtered_df)
+
+    with tab_census:
+        st.markdown("---")
+        census_df = data.get("census", {}).get("raw_df")
+        if census_df is None or getattr(census_df, "empty", True):
+            st.info("Census data not available.")
+            return
+
+        _render_census_headcount_section(census_df)

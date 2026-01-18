@@ -6,7 +6,7 @@ Displays corporate partner analytics and enrollment data.
 import streamlit as st
 import plotly.graph_objects as go
 import pandas as pd
-from utils.formatting import format_number
+from utils.formatting import format_number, format_percent
 from utils.constants import (
     STEVENS_RED, STEVENS_GRAY_DARK, STEVENS_GRAY_LIGHT, STEVENS_WHITE,
     BACKGROUND_CARD, CHART_SUCCESS, CHART_COLORS
@@ -257,6 +257,100 @@ def render(data: dict):
     if cohort_df.empty:
         st.warning("No corporate cohort data found in census.")
         return
+
+    # -----------------------------
+    # Census headcount intelligence
+    # -----------------------------
+    status_col = "Census_1_STUDENT_STATUS"
+    program_col = "Census_1_PROGRAM_OF_STUDY" if "Census_1_PROGRAM_OF_STUDY" in cohort_df.columns else None
+    if program_col is None and "Census_1_PRIMARY_PROGRAM_OF_STUDY" in cohort_df.columns:
+        program_col = "Census_1_PRIMARY_PROGRAM_OF_STUDY"
+
+    total_students = cohort_df[student_id_col].nunique()
+    status_counts = {}
+    if status_col in cohort_df.columns:
+        status_counts = (
+            cohort_df.groupby(status_col)[student_id_col]
+            .nunique()
+            .to_dict()
+        )
+    new_count = int(status_counts.get("New", 0))
+    continuing_count = int(status_counts.get("Continuing", 0))
+    returning_count = int(status_counts.get("Returning", 0))
+
+    st.markdown("### Headcount Intelligence (Census)")
+    k1, k2, k3, k4 = st.columns(4)
+    with k1:
+        st.metric("Corporate Headcount", format_number(int(total_students)))
+    with k2:
+        st.metric("New", format_number(new_count))
+    with k3:
+        st.metric("Continuing", format_number(continuing_count))
+    with k4:
+        pct_new = (new_count / total_students) if total_students else 0
+        st.metric("% New", format_percent(pct_new))
+
+    # Cohort headcount table with status breakdown
+    cohort_headcount = (
+        cohort_df.groupby(cohort_col)[student_id_col]
+        .nunique()
+        .reset_index()
+        .rename(columns={cohort_col: "Cohort", student_id_col: "Headcount"})
+        .sort_values("Headcount", ascending=False)
+    )
+
+    if status_col in cohort_df.columns:
+        cohort_status = (
+            cohort_df.groupby([cohort_col, status_col])[student_id_col]
+            .nunique()
+            .reset_index()
+            .pivot(index=cohort_col, columns=status_col, values=student_id_col)
+            .fillna(0)
+            .reset_index()
+            .rename(columns={cohort_col: "Cohort"})
+        )
+        for c in cohort_status.columns:
+            if c != "Cohort":
+                cohort_status[c] = cohort_status[c].astype(int)
+        cohort_headcount = cohort_headcount.merge(cohort_status, on="Cohort", how="left")
+
+    st.markdown("#### Corporate Cohort Headcount (Census)")
+    st.dataframe(cohort_headcount, width="stretch", hide_index=True, height=380)
+
+    # Optional: top programs within corporate cohorts
+    if program_col and program_col in cohort_df.columns:
+        prog_headcount = (
+            cohort_df.groupby(program_col)[student_id_col]
+            .nunique()
+            .reset_index()
+            .rename(columns={program_col: "Program", student_id_col: "Headcount"})
+            .sort_values("Headcount", ascending=False)
+            .head(12)
+        )
+
+        st.markdown("#### Top Programs Within Corporate Cohorts (Census Headcount)")
+        fig = go.Figure()
+        fig.add_trace(
+            go.Bar(
+                y=prog_headcount["Program"].tolist()[::-1],
+                x=prog_headcount["Headcount"].tolist()[::-1],
+                orientation="h",
+                marker_color=STEVENS_RED,
+                text=prog_headcount["Headcount"].tolist()[::-1],
+                textposition="inside",
+            )
+        )
+        fig.update_layout(
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            font={"color": STEVENS_WHITE},
+            height=420,
+            margin=dict(l=20, r=20, t=10, b=40),
+            xaxis=dict(gridcolor="#333", title="Students"),
+            yaxis=dict(gridcolor="#333"),
+            showlegend=False,
+        )
+        st.plotly_chart(fig, width="stretch")
     
     corporate_stats = (
         cohort_df.groupby(cohort_col)

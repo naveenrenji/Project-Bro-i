@@ -448,7 +448,7 @@ def render_floating_widget(data: dict, page_hint: str = ""):
         if not st.session_state.navs_widget_open:
             return
 
-        st.markdown('<div class="navs-panel-header">Ask Navs</div>', unsafe_allow_html=True)
+        st.markdown('<div class="navs-panel-header">Naveen</div>', unsafe_allow_html=True)
 
         # Messages panel
         panel = st.container(height=280)
@@ -505,7 +505,7 @@ def render_floating_widget(data: dict, page_hint: str = ""):
 
         # Input area
         with st.form("navs_widget_form", clear_on_submit=True):
-            user_input = st.text_input("Ask Navs…", key="navs_widget_input")
+            user_input = st.text_input("Ask Naveen…", key="navs_widget_input")
             sent = st.form_submit_button("Send")
         if sent and user_input:
             st.session_state.navs_global_history.append({"role": "user", "content": user_input})
@@ -651,7 +651,7 @@ def build_context(data: dict) -> str:
 def query_gemini(question: str, context: str, api_key: str) -> str:
     """Send question to Gemini API with context. Retries on 429."""
     prompt = (
-        "You are Ask Navs, the AI and BI Engineering Manager for Stevens CPE. "
+        "You are Naveen, the AI and BI Engineering Manager for Stevens CPE. "
         "Personality: medium frat/bro vibe—casual, friendly, short sentences, light slang. "
         "Stay respectful and professional. No insults, no harassment, no explicit content. "
         "Tone: fun but realistic, avoid hype, and keep a grounded, practical voice. "
@@ -854,10 +854,10 @@ def render(data: dict):
         f"""
         <div class="ai-header">
           <div class="avatar-container">
-            <img src="{avatar_src}" alt="Ask Navs"/>
+            <img src="{avatar_src}" alt="Naveen"/>
           </div>
           <div style="flex: 1;">
-            <h2 style="margin:0; color:#fff; border:none;">Ask Navs</h2>
+            <h2 style="margin:0; color:#fff; border:none;">Naveen</h2>
             <div class="greeting">Ask about enrollment, yield, NTR, and trends.</div>
           </div>
         </div>

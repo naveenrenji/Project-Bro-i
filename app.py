@@ -500,11 +500,12 @@ def main():
     current = st.navigation(pages, position="top", expanded=False)
     current.run()
 
-    # Floating Ask Navs widget on every page
+    # Floating chat widget on every page except the dedicated chat page
     try:
         from components import ai_assistant
         page_hint = getattr(current, "title", "") or ""
-        ai_assistant.render_floating_widget(_get_data(), page_hint=page_hint)
+        if page_hint not in ("Ask Navs", "Naveen"):
+            ai_assistant.render_floating_widget(_get_data(), page_hint=page_hint)
     except Exception:
         # Never block page render if widget fails
         pass

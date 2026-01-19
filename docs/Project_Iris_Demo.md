@@ -2,14 +2,14 @@
 **by Naveen Mathews Renji**
 
 ## Table of Contents
-- 1. Executive Summary (What the system does)
-- 2. System Architecture Overview (High level)
-- 3. Data Engineering Pipeline (Ingestion + snapshots + caching)
-- 4. Analytics Layer (Funnel, yield, NTR, cohorts, YoY)
-- 5. AI Assistant System (Ask Navs, persona: Naveen)
-- 6. UI Walkthrough (Screenshots by page)
-- 7. Security and Deployment
-- 8. Demo Script (Recommended flow)
+1. Executive Summary (What the system does)
+2. System Architecture Overview (High level)
+3. Data Engineering Pipeline (Ingestion + snapshots + caching)
+4. Analytics Layer (Funnel, yield, NTR, cohorts, YoY)
+5. AI Assistant System (Ask Navs, persona: Naveen)
+6. UI Walkthrough (Screenshots by page)
+7. Security and Deployment
+8. Demo Script (Recommended flow)
 
 ## 1. Executive Summary (What the system does)
 

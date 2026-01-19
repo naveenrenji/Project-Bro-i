@@ -1,198 +1,214 @@
-# Project Iris
-## Stevens AI and BI Software
+# Project Iris - Stevens AI and BI Software
 **by Naveen Mathews Renji**
 
----
+This demo guide is aligned to the system description and terminology in `AI_SYSTEMS_TECHNICAL_DOSSIER.md`. The dossier is the technical deep dive. This document is the presentation walkthrough with screenshots and a talk track.
 
-## Overview
+## Table of Contents
+- 1. Executive Summary (What the system does)
+- 2. System Architecture Overview (High level)
+- 3. Data Engineering Pipeline (Ingestion + snapshots + caching)
+- 4. Analytics Layer (Funnel, yield, NTR, cohorts, YoY)
+- 5. AI Assistant System (Ask Navs, persona: Naveen)
+- 6. UI Walkthrough (Screenshots by page)
+- 7. Security and Deployment
+- 8. Demo Script (Recommended flow)
 
-**Project Iris** is an AI-powered Business Intelligence dashboard built for Stevens Institute of Technology's College of Professional Education (CPE). It consolidates graduate enrollment data from Slate CRM and Census systems into a single, real-time analytics platform with an embedded AI assistant.
+## 1. Executive Summary (What the system does)
+
+Project Iris is an AI-powered enrollment analytics and intelligence platform built for Stevens CPE. It unifies Slate funnel data and Census headcount data into a single dashboard, and adds a conversational AI assistant for natural language exploration.
 
 ### Key Capabilities
-- **Real-time enrollment funnel tracking** — Applications → Admits → Enrollments
-- **Net Tuition Revenue (NTR) monitoring** — Goal progress, category breakdowns
-- **Program-level intelligence** — Heatmaps, trend analysis, comparison tools
-- **Corporate cohort analytics** — Partner enrollment tracking
-- **Historical year-over-year analysis** — 3-year trends, conversion rates
-- **AI-powered insights** — Ask Navs, a context-aware chat assistant available on every page
+- **Enrollment funnel analytics**: Applications -> Admits -> Offers Accepted -> Enrollments
+- **NTR tracking**: Goal progress, category and degree breakdowns, gap to goal
+- **Program intelligence**: Heatmaps, top programs, YoY trends, comparisons
+- **Corporate cohorts**: Partner headcount, distribution, and top cohort tracking
+- **Historical YoY**: 3-year trends, conversion/yield trends over time
+- **Ask Navs AI assistant**: Page-aware chat available as a floating widget and a dedicated page
 
----
+## 2. System Architecture Overview (High level)
 
-## Pages & Features
+Aligned with Section 3 of `AI_SYSTEMS_TECHNICAL_DOSSIER.md`.
 
-### 1. Executive Summary
+At a high level, the platform has four layers:
+- **Ingestion**: Slate API + Census sources (including snapshot files)
+- **Analytics**: Funnel metrics, program stats, NTR calculation, cohort summaries
+- **AI layer**: Gemini-powered assistant grounded with structured context and guardrails
+- **UI**: Streamlit pages plus an always-available floating chat assistant
+
+## 3. Data Engineering Pipeline (Ingestion + snapshots + caching)
+
+Aligned with Section 4 of `AI_SYSTEMS_TECHNICAL_DOSSIER.md`.
+
+### Data Sources
+- **Slate CRM**: Application funnel data via API or snapshot
+- **Census**: Headcount and credit-based attributes (used for continuing/returning and NTR)
+
+### Snapshot-first design
+The app prioritizes `data/snapshots/` so local and cloud deployments are deterministic and do not depend on local file paths.
+
+### Caching and refresh
+Data is cached to avoid repeated fetch and heavy processing, with explicit refresh controls and a periodic refresh window.
+
+## 4. Analytics Layer (Funnel, yield, NTR, cohorts, YoY)
+
+Aligned with Section 5 of `AI_SYSTEMS_TECHNICAL_DOSSIER.md`.
+
+### Core metrics
+- **Admit rate**: admits / applications
+- **Yield rate**: enrollments / admits
+- **Offer accept rate**: offers accepted / admits
+- **YoY change**: percent change vs prior year
+
+### NTR model
+NTR is calculated using census attributes and credit load, producing:
+- Total NTR and progress to goal
+- New vs continuing components
+- Category and degree breakdowns (where available)
+
+## 5. AI Assistant System (Ask Navs, persona: Naveen)
+
+Aligned with Section 6 of `AI_SYSTEMS_TECHNICAL_DOSSIER.md`.
+
+### Naming and roles
+- **Ask Navs**: The feature name and tab label
+- **Naveen**: The assistant persona inside Ask Navs
+
+### How it works (high level)
+- Uses Google Gemini as the LLM
+- Uses structured, data-grounded context with guardrails to avoid fabrication
+- Uses a two-stage approach: first select relevant context categories, then build the final context and answer
+- Maintains conversation memory via summarization
+
+## 6. UI Walkthrough (Screenshots by page)
+
+### 6.1 Executive Summary
 
 ![Executive Summary](screenshots/01.png)
 
-The landing page provides a high-level snapshot of enrollment performance:
+What to point out:
+- **AI Insights**: A concise, data-grounded narrative of the current state
+- **Funnel KPIs**: Applications, admits, enrollments, and yield with YoY context
+- **Headcount Breakdown**: New (Slate) plus continuing and returning (Census)
+- **Ask Navs widget**: Floating assistant for quick questions without leaving the page
 
-- **AI Insights** — Auto-generated summary highlighting key metrics (e.g., "Enrollments up 24% YoY with 381 new students. NTR at 82% of $9.8M goal.")
-- **Enrollment Funnel KPIs** — Applications (878), Admits (798), Enrollments (381) with YoY deltas
-- **Headcount Breakdown** — New (Slate), Continuing (Census), Returning (Census)
-- **Mini Funnel Chart** — Visual funnel from applications to enrolled
-- **By Application Category** — Horizontal bar chart showing enrollment by category
-- **Floating Ask Navs Widget** — Available on every page for instant AI-powered Q&A
-
----
-
-### 2. Enrollment Funnel
+### 6.2 Enrollment Funnel
 
 ![Enrollment Funnel - Sankey](screenshots/02.png)
 
-Interactive Sankey diagram showing student flow through the admissions pipeline:
+What to point out:
+- **Stage cards**: Applications, admits, offers accepted, enrolled
+- **Sankey flow**: Visual progression and drop-off through the funnel
+- **Expandable category breakouts**: Drill down by category when expanded
 
-- **Stage Cards** — Applications, Admits, Offers Accepted, Enrolled with rates
-- **Sankey Flow** — Visualizes progression (green) and drop-off (gray) at each stage
-- **Expandable Category Breakdowns** — Click to see per-category funnels
+![Enrollment Funnel - Waterfall, YoY, By School](screenshots/03.png)
 
-![Enrollment Funnel - Waterfall & YoY](screenshots/03.png)
+What to point out:
+- **Conversion waterfall**: Where students drop at each stage
+- **YoY table**: Quick comparison across 2024, 2025, 2026
+- **By school**: Funnel volume by school
 
-- **Conversion Waterfall** — Bar chart showing student loss at each stage
-- **Year-over-Year Table** — 2024/2025/2026 comparison with YoY percentages
-- **By School** — Applications, Admits, Enrollments grouped by school (SES, CPE, Dual Degree, SSB)
-
----
-
-### 3. NTR Tracker
+### 6.3 NTR Tracker
 
 ![NTR Tracker](screenshots/04.png)
 
-Tracks Net Tuition Revenue against the semester goal:
+What to point out:
+- **Goal tracking**: Total NTR, goal, progress percentage, gap to goal
+- **Category breakdown**: NTR composition across enrollment categories
+- **Ask Navs**: Ask for levers and action plan grounded in the current data
 
-- **KPI Cards** — Total NTR ($8M), Goal ($9.8M), Progress (82%), Gap to Goal ($1.77M)
-- **Gauge Chart** — Visual progress indicator
-- **NTR by Category** — Horizontal bar chart (Corporate, Select Professional Online, Retail, etc.)
-- **NTR by Degree** — Breakdown by degree type
-- **Ask Navs Integration** — Example: "Best levers for growing NTR?" with AI response
-
----
-
-### 4. Program Intelligence
+### 6.4 Program Intelligence
 
 ![Program Intelligence - Heatmap](screenshots/05.png)
 
-Deep dive into program-level performance:
+What to point out:
+- **Heatmap**: Program performance across apps, admits, enrollments
+- **Programs by school**: Distribution across schools
 
-- **Toggle Views** — Slate Funnel (Apps/Admits/Enroll) vs. Census Headcount
-- **Performance Heatmap** — Programs on x-axis, metrics on y-axis, color intensity by volume
-- **Programs by School** — Grouped bar chart
+![Program Intelligence - Trends and Comparison](screenshots/06.png)
 
-![Program Intelligence - Trends](screenshots/06.png)
+What to point out:
+- **Top programs**: Highest enrollment contributors
+- **Top gainers / needs attention**: YoY deltas for quick prioritization
+- **Program comparison**: Radar chart for side-by-side analysis
 
-- **Top Programs by Enrollment** — Horizontal bar chart (Management of AI leads with 222 enrollments)
-- **Program Trends (YoY)** — Top Gainers and Needs Attention tables
-- **Program Comparison** — Radar chart comparing selected programs across metrics
+![Program Intelligence - All Programs Table](screenshots/07.png)
 
-![Program Intelligence - Table](screenshots/07.png)
+What to point out:
+- **Filters**: School and degree type
+- **Sort and scan**: Applications, admits, enrollments, yield, YoY
 
-- **All Programs Table** — Filterable by School, Degree Type; sortable by Applications, Admits, Enrollments, Yield Rate, YoY %
-- **Quick Stats** — Admit Rate, Yield Rate per program
-
----
-
-### 5. Corporate Cohorts
+### 6.5 Corporate Cohorts
 
 ![Corporate Cohorts](screenshots/08.png)
 
-Analytics for corporate partnership enrollments:
+What to point out:
+- **Corporate partner view**: Partners, enrollments, distribution
+- **Top cohorts**: Who is driving corporate headcount
 
-- **KPI Cards** — Corporate Partners (31), Corporate Enrollments (1,063), Corporate Applications
-- **Top Corporate Cohorts** — Horizontal bar chart (Pfizer leads with 587 enrollments)
-- **Enrollment Distribution** — Pie chart showing cohort share
-- **Headcount Intelligence** — Census-based breakdown of corporate headcount
+### 6.6 Historical and YoY
 
----
+![Historical and YoY - Trends](screenshots/09.png)
 
-### 6. Historical & YoY
+What to point out:
+- **3-year trends**: Applications, admits, enrollments
+- **YoY summary**: Table view for quick reference
+- **Category mix**: 2026 enrollment distribution by category
 
-![Historical & YoY - Trends](screenshots/09.png)
+![Historical and YoY - School and Conversion Rates](screenshots/10.png)
 
-Three-year historical analysis:
+What to point out:
+- **School trend**: Applications by school across 3 years
+- **Conversion rates over time**: Admit rate and yield rate trends
+- **YoY change by category**: Where growth and decline is concentrated
 
-- **3-Year Enrollment Funnel Trends** — Line chart (Applications, Admits, Enrollments from 2024–2026)
-- **Year-over-Year Summary Table** — Applications, Admits, Enrollments, Admit Rate, Yield Rate by year
-- **2026 Enrollments by Category** — Pie chart (Stevens Online Corporate 70%, CPE, ASAP, etc.)
-
-![Historical & YoY - School & Rates](screenshots/10.png)
-
-- **Applications by School (3-Year)** — Grouped bar chart (SES, CPE, Dual Degree, SSB)
-- **Conversion Rates Over Time** — Admit Rate and Yield Rate line chart
-- **YoY Change by Category** — Bar chart showing percentage change by enrollment category
-
----
-
-### 7. Ask Navs (AI Assistant)
+### 6.7 Ask Navs (Dedicated AI page)
 
 ![Ask Navs](screenshots/11.png)
 
-Dedicated AI chat page powered by Google Gemini:
+What to point out:
+- **Natural language analytics**: Ask questions and get grounded answers
+- **Actionable breakdowns**: Responses structured into short sections and bullets
+- **Consistent voice**: Friendly and confident, but professional
 
-- **Persona** — Naveen, a professional and approachable BI assistant
-- **Two-Stage Context Planning** — AI determines which data categories are relevant before generating a response
-- **Conversation Memory** — Chat history persists across page navigations
-- **Suggested Questions** — Pre-built prompts for common queries
-- **Floating Widget** — Also accessible on every other page via the bottom-right chat bubble
+## 7. Security and Deployment
 
-**Example Interaction:**
-> **User:** What's driving enrollment growth?
->
-> **Naveen:** Hey there! Great to see you. We have some solid momentum heading into Spring 2026. The 24% year over year growth in enrollments is a massive win for the team. Here is the breakdown of what is fueling that engine.
->
-> **Corporate Channel Dominance**
-> - Stevens Online (Corporate) is the primary engine behind our growth.
-> - This category delivered 267 enrollments with an impressive 73% yield rate.
->
-> **AI Program Momentum**
-> - Management Of Artificial Intelligence is our standout performer.
-> - This program alone brought in 222 enrollments and maintained a high 75% yield.
+Aligned with Sections 9 and 10 of `AI_SYSTEMS_TECHNICAL_DOSSIER.md`.
 
----
+### Security
+- Password-protected access via Streamlit secrets
+- API keys stored in secrets, not in code
+- Aggregate analytics only (no student-level PII displayed in the UI)
 
-## Technical Highlights
+### Deployment and refresh workflow
+- Streamlit Cloud deploys on pushes to `main`
+- Data can be refreshed via `scripts/refresh_and_push.sh` which updates snapshots and triggers deployment
 
-| Component | Technology |
-|-----------|------------|
-| Frontend | Streamlit |
-| Data Sources | Slate CRM API, Census CSV |
-| AI Engine | Google Gemini (gemini-3-flash-preview) |
-| Visualizations | Plotly |
-| Hosting | Streamlit Community Cloud |
-| Auth | Password-protected access |
+## 8. Demo Script (Recommended flow)
 
----
+Use this as a talk track for a 7 to 12 minute demo:
 
-## Data Flow
+1) **Open Executive Summary**
+- Explain overall goal: unify funnel, NTR, and headcount
+- Call out KPIs and AI Insights
+- Ask Ask Navs: \"What is driving yield and where should we focus?\"
 
-```
-┌─────────────┐      ┌─────────────┐      ┌─────────────┐
-│  Slate CRM  │─────▶│  Dashboard  │◀─────│   Census    │
-│   (Apps)    │      │   (Iris)    │      │  (Headcount)│
-└─────────────┘      └─────────────┘      └─────────────┘
-                            │
-                            ▼
-                    ┌─────────────┐
-                    │   Gemini    │
-                    │  (Ask Navs) │
-                    └─────────────┘
-```
+2) **Enrollment Funnel**
+- Walk through Sankey and the main stage rates
+- Show conversion waterfall and YoY table for trend context
 
----
+3) **NTR Tracker**
+- Show progress to goal and gap
+- Ask Ask Navs: \"What are the best levers to close the gap?\"\n+
+4) **Program Intelligence**
+- Show top programs and YoY gainers/attention list
+- Use program comparison to tell a performance story\n+
+5) **Corporate Cohorts**
+- Show partner distribution and top cohorts
 
-## Deployment
+6) **Historical and YoY**
+- Show 3-year trend lines and conversion rates over time
 
-The dashboard auto-deploys to Streamlit Community Cloud on every push to the `main` branch. A refresh script (`scripts/refresh_and_push.sh`) can be run to:
-1. Fetch the latest data from Slate and Census
-2. Save snapshots to `data/snapshots/`
-3. Commit and push to GitHub, triggering a redeploy
+7) **Ask Navs page**
+- End with the AI assistant as the \"natural language interface\" to the dashboard
 
----
-
-## Contact
-
-**Naveen Mathews Renji**  
-AI & BI Engineering Manager  
-Stevens Institute of Technology — College of Professional Education
-
----
-
-*Document generated January 2026*
+Document generated January 2026.

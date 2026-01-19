@@ -1,8 +1,6 @@
 # Project Iris - Stevens AI and BI Software
 **by Naveen Mathews Renji**
 
-This demo guide is aligned to the system description and terminology in `AI_SYSTEMS_TECHNICAL_DOSSIER.md`. The dossier is the technical deep dive. This document is the presentation walkthrough with screenshots and a talk track.
-
 ## Table of Contents
 - 1. Executive Summary (What the system does)
 - 2. System Architecture Overview (High level)

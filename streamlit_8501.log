@@ -1,3 +1,6 @@
+2026-01-18 19:49:16.696 "theme.sidebar.skeletonBackgroundColor" is not a valid config option. If you previously had this config option set, it may have been removed.
+2026-01-18 19:49:16.696 "theme.sidebar.widgetBackgroundColor" is not a valid config option. If you previously had this config option set, it may have been removed.
+2026-01-18 19:49:16.696 "theme.sidebar.widgetBorderColor" is not a valid config option. If you previously had this config option set, it may have been removed.
 
   You can now view your Streamlit app in your browser.
 

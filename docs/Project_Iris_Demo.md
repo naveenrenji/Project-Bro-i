@@ -83,7 +83,7 @@ Aligned with Section 6 of `AI_SYSTEMS_TECHNICAL_DOSSIER.md`.
 
 ![Executive Summary](screenshots/01.png)
 
-What to point out:
+ 
 - **AI Insights**: A concise, data-grounded narrative of the current state
 - **Funnel KPIs**: Applications, admits, enrollments, and yield with YoY context
 - **Headcount Breakdown**: New (Slate) plus continuing and returning (Census)
@@ -93,14 +93,14 @@ What to point out:
 
 ![Enrollment Funnel - Sankey](screenshots/02.png)
 
-What to point out:
+ 
 - **Stage cards**: Applications, admits, offers accepted, enrolled
 - **Sankey flow**: Visual progression and drop-off through the funnel
 - **Expandable category breakouts**: Drill down by category when expanded
 
 ![Enrollment Funnel - Waterfall, YoY, By School](screenshots/03.png)
 
-What to point out:
+ 
 - **Conversion waterfall**: Where students drop at each stage
 - **YoY table**: Quick comparison across 2024, 2025, 2026
 - **By school**: Funnel volume by school
@@ -109,7 +109,7 @@ What to point out:
 
 ![NTR Tracker](screenshots/04.png)
 
-What to point out:
+ 
 - **Goal tracking**: Total NTR, goal, progress percentage, gap to goal
 - **Category breakdown**: NTR composition across enrollment categories
 - **Ask Navs**: Ask for levers and action plan grounded in the current data
@@ -118,20 +118,20 @@ What to point out:
 
 ![Program Intelligence - Heatmap](screenshots/05.png)
 
-What to point out:
+ 
 - **Heatmap**: Program performance across apps, admits, enrollments
 - **Programs by school**: Distribution across schools
 
 ![Program Intelligence - Trends and Comparison](screenshots/06.png)
 
-What to point out:
+ 
 - **Top programs**: Highest enrollment contributors
 - **Top gainers / needs attention**: YoY deltas for quick prioritization
 - **Program comparison**: Radar chart for side-by-side analysis
 
 ![Program Intelligence - All Programs Table](screenshots/07.png)
 
-What to point out:
+ 
 - **Filters**: School and degree type
 - **Sort and scan**: Applications, admits, enrollments, yield, YoY
 
@@ -139,7 +139,7 @@ What to point out:
 
 ![Corporate Cohorts](screenshots/08.png)
 
-What to point out:
+ 
 - **Corporate partner view**: Partners, enrollments, distribution
 - **Top cohorts**: Who is driving corporate headcount
 
@@ -147,14 +147,14 @@ What to point out:
 
 ![Historical and YoY - Trends](screenshots/09.png)
 
-What to point out:
+ 
 - **3-year trends**: Applications, admits, enrollments
 - **YoY summary**: Table view for quick reference
 - **Category mix**: 2026 enrollment distribution by category
 
 ![Historical and YoY - School and Conversion Rates](screenshots/10.png)
 
-What to point out:
+ 
 - **School trend**: Applications by school across 3 years
 - **Conversion rates over time**: Admit rate and yield rate trends
 - **YoY change by category**: Where growth and decline is concentrated
@@ -163,7 +163,7 @@ What to point out:
 
 ![Ask Navs](screenshots/11.png)
 
-What to point out:
+ 
 - **Natural language analytics**: Ask questions and get grounded answers
 - **Actionable breakdowns**: Responses structured into short sections and bullets
 - **Consistent voice**: Friendly and confident, but professional
@@ -177,36 +177,4 @@ Aligned with Sections 9 and 10 of `AI_SYSTEMS_TECHNICAL_DOSSIER.md`.
 - API keys stored in secrets, not in code
 - Aggregate analytics only (no student-level PII displayed in the UI)
 
-### Deployment and refresh workflow
-- Streamlit Cloud deploys on pushes to `main`
-- Data can be refreshed via `scripts/refresh_and_push.sh` which updates snapshots and triggers deployment
-
-## 8. Demo Script (Recommended flow)
-
-Use this as a talk track for a 7 to 12 minute demo:
-
-1) **Open Executive Summary**
-- Explain overall goal: unify funnel, NTR, and headcount
-- Call out KPIs and AI Insights
-- Ask Ask Navs: \"What is driving yield and where should we focus?\"
-
-2) **Enrollment Funnel**
-- Walk through Sankey and the main stage rates
-- Show conversion waterfall and YoY table for trend context
-
-3) **NTR Tracker**
-- Show progress to goal and gap
-- Ask Ask Navs: \"What are the best levers to close the gap?\"\n+
-4) **Program Intelligence**
-- Show top programs and YoY gainers/attention list
-- Use program comparison to tell a performance story\n+
-5) **Corporate Cohorts**
-- Show partner distribution and top cohorts
-
-6) **Historical and YoY**
-- Show 3-year trend lines and conversion rates over time
-
-7) **Ask Navs page**
-- End with the AI assistant as the \"natural language interface\" to the dashboard
-
-Document generated January 2026.
+January 2026.

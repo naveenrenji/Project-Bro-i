@@ -14,6 +14,7 @@ import requests
 import io
 import os
 import glob
+import shutil
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -968,8 +969,80 @@ def get_last_refresh_info() -> Tuple[datetime, timedelta]:
     return last_refresh, time_until_refresh
 
 
+def _refresh_census_snapshot():
+    """
+    Copy the latest census file from OneDrive (census_folder) to the snapshot folder.
+    This ensures the app uses the most recent census data with all columns.
+    """
+    config = get_config()
+    census_folder = config.get('census_folder', '')
+    snapshot_folder = _get_snapshot_folder()
+    
+    if not census_folder or not os.path.exists(census_folder):
+        print(f"[REFRESH] Census folder not found: {census_folder}")
+        return False
+    
+    # Find the most recent census file
+    pattern = os.path.join(census_folder, "daily_census_file_*.csv")
+    files = glob.glob(pattern)
+    if not files:
+        print(f"[REFRESH] No census files found matching: {pattern}")
+        return False
+    
+    files.sort(key=os.path.getmtime, reverse=True)
+    latest_file = files[0]
+    
+    # Copy to snapshot folder
+    dest = os.path.join(snapshot_folder, "census_latest.csv")
+    try:
+        shutil.copy2(latest_file, dest)
+        print(f"[REFRESH] Census snapshot updated: {latest_file} -> {dest}")
+        return True
+    except Exception as e:
+        print(f"[REFRESH] Failed to copy census: {e}")
+        return False
+
+
+def _refresh_apps_snapshot():
+    """
+    Copy the latest applications Excel file to the snapshot folder.
+    """
+    config = get_config()
+    data_folder = config.get('data_folder', '')
+    snapshot_folder = _get_snapshot_folder()
+    
+    if not data_folder or not os.path.exists(data_folder):
+        print(f"[REFRESH] Data folder not found: {data_folder}")
+        return False
+    
+    # Find the most recent applications file
+    pattern = os.path.join(data_folder, "Online Applications CPE (Spring) YoY*.xlsx")
+    files = glob.glob(pattern)
+    if not files:
+        print(f"[REFRESH] No applications files found matching: {pattern}")
+        return False
+    
+    files.sort(key=os.path.getmtime, reverse=True)
+    latest_file = files[0]
+    
+    # Copy to snapshot folder
+    dest = os.path.join(snapshot_folder, "apps_latest.xlsx")
+    try:
+        shutil.copy2(latest_file, dest)
+        print(f"[REFRESH] Apps snapshot updated: {latest_file} -> {dest}")
+        return True
+    except Exception as e:
+        print(f"[REFRESH] Failed to copy apps: {e}")
+        return False
+
+
 def force_refresh():
-    """Force a data refresh by clearing the cache."""
+    """Force a data refresh by updating snapshots and clearing the cache."""
+    # First, refresh the local snapshots from OneDrive/source folders
+    _refresh_census_snapshot()
+    _refresh_apps_snapshot()
+    
+    # Then clear all caches so data is reloaded
     load_all_data.clear()
     fetch_slate_data.clear()
     load_applications_data.clear()

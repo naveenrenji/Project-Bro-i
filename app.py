@@ -515,6 +515,11 @@ def page_historical_yoy():
     historical_yoy.render(_get_data())
 
 
+def page_student_intelligence():
+    from components import student_intelligence
+    student_intelligence.render(_get_data())
+
+
 def page_ask_navs():
     from components import ai_assistant
     ai_assistant.render(_get_data())
@@ -560,6 +565,7 @@ def main():
     p_ntr = st.Page(page_ntr_tracker, title="NTR Tracker")
     p_prog = st.Page(page_program_intelligence, title="Program Intelligence")
     p_cohorts = st.Page(page_corporate_cohorts, title="Corporate Cohorts")
+    p_student = st.Page(page_student_intelligence, title="Student Intelligence")
     p_yoy = st.Page(page_historical_yoy, title="Historical & YoY")
     p_ai = st.Page(page_ask_navs, title="Ask Navs")
     # Store AI page object for in-app CTA (kept in session state for this session only).
@@ -571,6 +577,7 @@ def main():
         p_ntr,
         p_prog,
         p_cohorts,
+        p_student,
         p_yoy,
         p_ai,
     ]

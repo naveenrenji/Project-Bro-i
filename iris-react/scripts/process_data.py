@@ -447,6 +447,7 @@ def categorize_census_row(row: pd.Series) -> str:
     degree_type = str(row.get('Census_1_DEGREE_TYPE', '')).strip()
     location = str(row.get('Census_1_STUDENT_LOCATION_DETAILED', '')).strip()
     corporate_flag = str(row.get('Census_1_CORPORATE_STUDENT', '')).strip()
+    corporate_cohort = str(row.get('Census_1_CORPORATE_COHORT', '')).strip()
     beacon_flag = row.get('Census_1_BEACON_FLAG', 0)
     program = str(row.get('Census_1_PRIMARY_PROGRAM_OF_STUDY', '')).strip()
     school = str(row.get('Census_1_SCHOOL', '')).strip()
@@ -461,8 +462,14 @@ def categorize_census_row(row: pd.Series) -> str:
         return 'Select Professional Online'
     if beacon_flag == 1:
         return 'Beacon'
+    
+    # Corporate check: must have corporate flag AND a valid cohort (not 'Not reported')
     if location == 'Online' and corporate_flag == 'Corporate':
+        # If cohort is 'Not reported' or empty, treat as Retail instead
+        if corporate_cohort.lower() in ['not reported', '', 'nan', 'none']:
+            return 'Stevens Online (Retail)'
         return 'Stevens Online (Corporate)'
+    
     if location == 'Online':
         return 'Stevens Online (Retail)'
     return 'Uncategorized'

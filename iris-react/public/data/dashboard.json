@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-01-27T05:32:38.048796Z",
+  "lastUpdated": "2026-01-27T15:55:19.573656Z",
   "semester": "2026S",
   "students": [
     {
@@ -10799,7 +10799,7 @@
     {
       "id": "census_17227",
       "source": "census",
-      "category": "Corporate",
+      "category": "Retail",
       "school": "School of Engineering and Science",
       "degreeType": "Masters",
       "program": "Applied Artificial Intelligence",
@@ -10809,8 +10809,8 @@
       "creditsRemaining": 30,
       "creditsAfterTerm": 27,
       "graduatingThisTerm": false,
-      "cpcRate": 1300,
-      "ntr": 3900,
+      "cpcRate": 1395,
+      "ntr": 4185,
       "domesticInternational": "Domestic",
       "state": "New Jersey",
       "country": "United States of America",
@@ -11072,7 +11072,7 @@
     {
       "id": "census_17246",
       "source": "census",
-      "category": "Corporate",
+      "category": "Retail",
       "school": "School of Business",
       "degreeType": "Masters",
       "program": "Business analytics and artificial intelligence",
@@ -11082,8 +11082,8 @@
       "creditsRemaining": 33,
       "creditsAfterTerm": 30,
       "graduatingThisTerm": false,
-      "cpcRate": 1300,
-      "ntr": 3900,
+      "cpcRate": 1395,
+      "ntr": 4185,
       "domesticInternational": "Domestic",
       "state": "New York",
       "country": "Canada",
@@ -11324,7 +11324,7 @@
     {
       "id": "census_17264",
       "source": "census",
-      "category": "Corporate",
+      "category": "Retail",
       "school": "School of Engineering and Science",
       "degreeType": "Masters",
       "program": "Systems Engineering",
@@ -11334,8 +11334,8 @@
       "creditsRemaining": 15,
       "creditsAfterTerm": 12,
       "graduatingThisTerm": false,
-      "cpcRate": 1550,
-      "ntr": 4650,
+      "cpcRate": 1723,
+      "ntr": 5169,
       "domesticInternational": "Domestic",
       "state": "North Carolina",
       "country": "United States of America",
@@ -11345,7 +11345,7 @@
     {
       "id": "census_17265",
       "source": "census",
-      "category": "Corporate",
+      "category": "Retail",
       "school": "School of Engineering and Science",
       "degreeType": "Masters",
       "program": "Systems Engineering",
@@ -11355,8 +11355,8 @@
       "creditsRemaining": null,
       "creditsAfterTerm": null,
       "graduatingThisTerm": false,
-      "cpcRate": 1550,
-      "ntr": 4650,
+      "cpcRate": 1723,
+      "ntr": 5169,
       "domesticInternational": "Domestic",
       "state": "New Mexico",
       "country": "United States of America",
@@ -14684,7 +14684,7 @@
     {
       "id": "census_18050",
       "source": "census",
-      "category": "Corporate",
+      "category": "Retail",
       "school": "School of Engineering and Science",
       "degreeType": "Masters",
       "program": "Space Systems Engineering",
@@ -14694,8 +14694,8 @@
       "creditsRemaining": 30,
       "creditsAfterTerm": 21,
       "graduatingThisTerm": false,
-      "cpcRate": 1300,
-      "ntr": 11700,
+      "cpcRate": 1395,
+      "ntr": 12555,
       "domesticInternational": "Domestic",
       "state": "South Carolina",
       "country": "United States of America",
@@ -28376,7 +28376,7 @@
     {
       "id": "census_19790",
       "source": "census",
-      "category": "Corporate",
+      "category": "Retail",
       "school": "School of Engineering and Science",
       "degreeType": "Masters",
       "program": "Machine Learning",
@@ -28386,8 +28386,8 @@
       "creditsRemaining": 21,
       "creditsAfterTerm": 15,
       "graduatingThisTerm": false,
-      "cpcRate": 1300,
-      "ntr": 7800,
+      "cpcRate": 1395,
+      "ntr": 8370,
       "domesticInternational": "Domestic",
       "state": "New Jersey",
       "country": "United States of America",
@@ -34634,7 +34634,7 @@
     {
       "id": "census_20653",
       "source": "census",
-      "category": "Corporate",
+      "category": "Retail",
       "school": "School of Business",
       "degreeType": "Masters",
       "program": "Information Systems",
@@ -34644,8 +34644,8 @@
       "creditsRemaining": 27,
       "creditsAfterTerm": 21,
       "graduatingThisTerm": false,
-      "cpcRate": 1300,
-      "ntr": 7800,
+      "cpcRate": 1395,
+      "ntr": 8370,
       "domesticInternational": "Domestic",
       "state": "Virginia",
       "country": "Not reported",
@@ -36818,7 +36818,7 @@
     {
       "id": "census_20765",
       "source": "census",
-      "category": "Corporate",
+      "category": "Retail",
       "school": "School of Engineering and Science",
       "degreeType": "Masters",
       "program": "Systems Engineering",
@@ -36828,8 +36828,8 @@
       "creditsRemaining": 30,
       "creditsAfterTerm": 24,
       "graduatingThisTerm": false,
-      "cpcRate": 1300,
-      "ntr": 7800,
+      "cpcRate": 1395,
+      "ntr": 8370,
       "domesticInternational": "Domestic",
       "state": "Virginia",
       "country": "United States of America",
@@ -37154,7 +37154,7 @@
     {
       "id": "census_20797",
       "source": "census",
-      "category": "Corporate",
+      "category": "Retail",
       "school": "School of Engineering and Science",
       "degreeType": "Masters",
       "program": "Space Systems Engineering",
@@ -37164,8 +37164,8 @@
       "creditsRemaining": 30,
       "creditsAfterTerm": 27,
       "graduatingThisTerm": false,
-      "cpcRate": 1300,
-      "ntr": 3900,
+      "cpcRate": 1395,
+      "ntr": 4185,
       "domesticInternational": "Domestic",
       "state": "Virginia",
       "country": "United States of America",
@@ -37364,7 +37364,7 @@
     {
       "id": "census_20809",
       "source": "census",
-      "category": "Corporate",
+      "category": "Retail",
       "school": "School of Business",
       "degreeType": "Masters",
       "program": "Analytics (MBA)",
@@ -37374,8 +37374,8 @@
       "creditsRemaining": 48,
       "creditsAfterTerm": 36,
       "graduatingThisTerm": false,
-      "cpcRate": 1300,
-      "ntr": 15600,
+      "cpcRate": 1395,
+      "ntr": 16740,
       "domesticInternational": "International",
       "state": "Not reported",
       "country": "Indonesia",
@@ -37469,7 +37469,7 @@
     {
       "id": "census_20820",
       "source": "census",
-      "category": "Corporate",
+      "category": "Retail",
       "school": "School of Business",
       "degreeType": "Masters",
       "program": "Financial Engineering",
@@ -37479,8 +37479,8 @@
       "creditsRemaining": 30,
       "creditsAfterTerm": 27,
       "graduatingThisTerm": false,
-      "cpcRate": 1300,
-      "ntr": 3900,
+      "cpcRate": 1395,
+      "ntr": 4185,
       "domesticInternational": "Domestic",
       "state": "California",
       "country": "United States of America",
@@ -37490,7 +37490,7 @@
     {
       "id": "census_20822",
       "source": "census",
-      "category": "Corporate",
+      "category": "Retail",
       "school": "School of Business",
       "degreeType": "Masters",
       "program": "Pharmaceutical manufacturing (mba)",
@@ -37500,8 +37500,8 @@
       "creditsRemaining": 57,
       "creditsAfterTerm": 48,
       "graduatingThisTerm": false,
-      "cpcRate": 1300,
-      "ntr": 11700,
+      "cpcRate": 1395,
+      "ntr": 12555,
       "domesticInternational": "Domestic",
       "state": "New Jersey",
       "country": "United States of America",
@@ -37553,7 +37553,7 @@
     {
       "id": "census_20828",
       "source": "census",
-      "category": "Corporate",
+      "category": "Retail",
       "school": "School of Engineering and Science",
       "degreeType": "Masters",
       "program": "Machine Learning",
@@ -37563,8 +37563,8 @@
       "creditsRemaining": 30,
       "creditsAfterTerm": 21,
       "graduatingThisTerm": false,
-      "cpcRate": 1300,
-      "ntr": 11700,
+      "cpcRate": 1395,
+      "ntr": 12555,
       "domesticInternational": "Domestic",
       "state": "California",
       "country": "China",
@@ -37679,7 +37679,7 @@
     {
       "id": "census_20837",
       "source": "census",
-      "category": "Corporate",
+      "category": "Retail",
       "school": "School of Engineering and Science",
       "degreeType": "Masters",
       "program": "Applied Artificial Intelligence",
@@ -37689,8 +37689,8 @@
       "creditsRemaining": 30,
       "creditsAfterTerm": 27,
       "graduatingThisTerm": false,
-      "cpcRate": 1300,
-      "ntr": 3900,
+      "cpcRate": 1395,
+      "ntr": 4185,
       "domesticInternational": "Domestic",
       "state": "Puerto Rico",
       "country": "United States of America",
@@ -37784,7 +37784,7 @@
     {
       "id": "census_20845",
       "source": "census",
-      "category": "Corporate",
+      "category": "Retail",
       "school": "School of Business",
       "degreeType": "Masters",
       "program": "Information Systems",
@@ -37794,8 +37794,8 @@
       "creditsRemaining": 33,
       "creditsAfterTerm": 27,
       "graduatingThisTerm": false,
-      "cpcRate": 1300,
-      "ntr": 7800,
+      "cpcRate": 1395,
+      "ntr": 8370,
       "domesticInternational": "Domestic",
       "state": "Connecticut",
       "country": "United States of America",
@@ -37868,7 +37868,7 @@
     {
       "id": "census_20854",
       "source": "census",
-      "category": "Corporate",
+      "category": "Retail",
       "school": "School of Business",
       "degreeType": "Masters",
       "program": "Financial Engineering",
@@ -37878,8 +37878,8 @@
       "creditsRemaining": 30,
       "creditsAfterTerm": 24,
       "graduatingThisTerm": false,
-      "cpcRate": 1300,
-      "ntr": 7800,
+      "cpcRate": 1395,
+      "ntr": 8370,
       "domesticInternational": "Domestic",
       "state": "New York",
       "country": "United States of America",
@@ -37994,7 +37994,7 @@
     {
       "id": "census_20860",
       "source": "census",
-      "category": "Corporate",
+      "category": "Retail",
       "school": "School of Engineering and Science",
       "degreeType": "Masters",
       "program": "Applied Artificial Intelligence",
@@ -38004,8 +38004,8 @@
       "creditsRemaining": 30,
       "creditsAfterTerm": 21,
       "graduatingThisTerm": false,
-      "cpcRate": 1300,
-      "ntr": 11700,
+      "cpcRate": 1395,
+      "ntr": 12555,
       "domesticInternational": "Domestic",
       "state": "New Jersey",
       "country": "United States of America",
@@ -38288,7 +38288,7 @@
     {
       "id": "census_20881",
       "source": "census",
-      "category": "Corporate",
+      "category": "Retail",
       "school": "School of Business",
       "degreeType": "Masters",
       "program": "Information Systems",
@@ -38298,8 +38298,8 @@
       "creditsRemaining": 33,
       "creditsAfterTerm": 27,
       "graduatingThisTerm": false,
-      "cpcRate": 1300,
-      "ntr": 7800,
+      "cpcRate": 1395,
+      "ntr": 8370,
       "domesticInternational": "Domestic",
       "state": "New Jersey",
       "country": "United States of America",
@@ -38456,7 +38456,7 @@
     {
       "id": "census_20917",
       "source": "census",
-      "category": "Corporate",
+      "category": "Retail",
       "school": "School of Business",
       "degreeType": "Masters",
       "program": "Financial Engineering",
@@ -38466,8 +38466,8 @@
       "creditsRemaining": 30,
       "creditsAfterTerm": 21,
       "graduatingThisTerm": false,
-      "cpcRate": 1300,
-      "ntr": 11700,
+      "cpcRate": 1395,
+      "ntr": 12555,
       "domesticInternational": "International",
       "state": "Texas",
       "country": "Ukraine",
@@ -38498,7 +38498,7 @@
     {
       "id": "census_20920",
       "source": "census",
-      "category": "Corporate",
+      "category": "Retail",
       "school": "School of Engineering and Science",
       "degreeType": "Masters",
       "program": "Pharmaceutical Manufacturing",
@@ -38508,8 +38508,8 @@
       "creditsRemaining": 30,
       "creditsAfterTerm": 27,
       "graduatingThisTerm": false,
-      "cpcRate": 1300,
-      "ntr": 3900,
+      "cpcRate": 1395,
+      "ntr": 4185,
       "domesticInternational": "Domestic",
       "state": "New Jersey",
       "country": "Ukraine",
@@ -39359,7 +39359,7 @@
     {
       "id": "census_20986",
       "source": "census",
-      "category": "Corporate",
+      "category": "Retail",
       "school": "School of Business",
       "degreeType": "Masters",
       "program": "Information Systems",
@@ -39369,8 +39369,8 @@
       "creditsRemaining": 33,
       "creditsAfterTerm": 27,
       "graduatingThisTerm": false,
-      "cpcRate": 1300,
-      "ntr": 7800,
+      "cpcRate": 1395,
+      "ntr": 8370,
       "domesticInternational": "Domestic",
       "state": "New Jersey",
       "country": "United States of America",
@@ -41816,7 +41816,7 @@
     {
       "id": "census_21115",
       "source": "census",
-      "category": "Corporate",
+      "category": "Retail",
       "school": "School of Engineering and Science",
       "degreeType": "Masters",
       "program": "Applied Artificial Intelligence",
@@ -41826,8 +41826,8 @@
       "creditsRemaining": 30,
       "creditsAfterTerm": 21,
       "graduatingThisTerm": false,
-      "cpcRate": 1300,
-      "ntr": 11700,
+      "cpcRate": 1395,
+      "ntr": 12555,
       "domesticInternational": "Domestic",
       "state": "Texas",
       "country": "United States of America",
@@ -41837,7 +41837,7 @@
     {
       "id": "census_21116",
       "source": "census",
-      "category": "Corporate",
+      "category": "Retail",
       "school": "School of Engineering and Science",
       "degreeType": "Masters",
       "program": "Robotics",
@@ -41847,8 +41847,8 @@
       "creditsRemaining": 30,
       "creditsAfterTerm": 24,
       "graduatingThisTerm": false,
-      "cpcRate": 1300,
-      "ntr": 7800,
+      "cpcRate": 1395,
+      "ntr": 8370,
       "domesticInternational": "Domestic",
       "state": "Missouri",
       "country": "United States of America",
@@ -43433,7 +43433,7 @@
     {
       "id": "census_21195",
       "source": "census",
-      "category": "Corporate",
+      "category": "Retail",
       "school": "School of Business",
       "degreeType": "Masters",
       "program": "Management",
@@ -43443,8 +43443,8 @@
       "creditsRemaining": 30,
       "creditsAfterTerm": 27,
       "graduatingThisTerm": false,
-      "cpcRate": 1300,
-      "ntr": 3900,
+      "cpcRate": 1395,
+      "ntr": 4185,
       "domesticInternational": "Domestic",
       "state": "Georgia",
       "country": "United States of America",
@@ -43454,7 +43454,7 @@
     {
       "id": "census_21196",
       "source": "census",
-      "category": "Corporate",
+      "category": "Retail",
       "school": "School of Engineering and Science",
       "degreeType": "Masters",
       "program": "Systems Engineering",
@@ -43464,8 +43464,8 @@
       "creditsRemaining": 30,
       "creditsAfterTerm": 24,
       "graduatingThisTerm": false,
-      "cpcRate": 1300,
-      "ntr": 7800,
+      "cpcRate": 1395,
+      "ntr": 8370,
       "domesticInternational": "Domestic",
       "state": "Oklahoma",
       "country": "United States of America",
@@ -46216,16 +46216,16 @@
   "kpis": {
     "ntr": {
       "label": "NTR",
-      "value": 8600169,
-      "previousValue": 7654150,
+      "value": 8614602,
+      "previousValue": 7666995,
       "format": "currency",
       "trend": [
-        6020118,
-        6450126,
-        7052138,
-        7568148,
-        8084158,
-        8600169
+        6030221,
+        6460951,
+        7063973,
+        7580849,
+        8097725,
+        8614602
       ]
     },
     "enrolled": {
@@ -46293,6 +46293,28 @@
     }
   ],
   "funnelByCategory": {
+    "Select Professional Online": [
+      {
+        "stage": "Applications",
+        "count": 97,
+        "conversionRate": 100
+      },
+      {
+        "stage": "Admits",
+        "count": 79,
+        "conversionRate": 81.4
+      },
+      {
+        "stage": "Accepted",
+        "count": 33,
+        "conversionRate": 41.8
+      },
+      {
+        "stage": "Enrolled",
+        "count": 32,
+        "conversionRate": 97.0
+      }
+    ],
     "Retail": [
       {
         "stage": "Applications",
@@ -46311,30 +46333,8 @@
       },
       {
         "stage": "Enrolled",
-        "count": 6,
-        "conversionRate": 17.1
-      }
-    ],
-    "Corporate": [
-      {
-        "stage": "Applications",
-        "count": 400,
-        "conversionRate": 100
-      },
-      {
-        "stage": "Admits",
-        "count": 378,
-        "conversionRate": 94.5
-      },
-      {
-        "stage": "Accepted",
-        "count": 347,
-        "conversionRate": 91.8
-      },
-      {
-        "stage": "Enrolled",
-        "count": 339,
-        "conversionRate": 97.7
+        "count": 29,
+        "conversionRate": 82.9
       }
     ],
     "Special Program": [
@@ -46359,6 +46359,28 @@
         "conversionRate": 0.0
       }
     ],
+    "Corporate": [
+      {
+        "stage": "Applications",
+        "count": 400,
+        "conversionRate": 100
+      },
+      {
+        "stage": "Admits",
+        "count": 378,
+        "conversionRate": 94.5
+      },
+      {
+        "stage": "Accepted",
+        "count": 347,
+        "conversionRate": 91.8
+      },
+      {
+        "stage": "Enrolled",
+        "count": 316,
+        "conversionRate": 91.1
+      }
+    ],
     "CPE": [
       {
         "stage": "Applications",
@@ -46379,28 +46401,6 @@
         "stage": "Enrolled",
         "count": 79,
         "conversionRate": 79.0
-      }
-    ],
-    "ASAP": [
-      {
-        "stage": "Applications",
-        "count": 96,
-        "conversionRate": 100
-      },
-      {
-        "stage": "Admits",
-        "count": 91,
-        "conversionRate": 94.8
-      },
-      {
-        "stage": "Accepted",
-        "count": 32,
-        "conversionRate": 35.2
-      },
-      {
-        "stage": "Enrolled",
-        "count": 24,
-        "conversionRate": 75.0
       }
     ],
     "Beacon": [
@@ -46425,26 +46425,26 @@
         "conversionRate": 81.2
       }
     ],
-    "Select Professional Online": [
+    "ASAP": [
       {
         "stage": "Applications",
-        "count": 97,
+        "count": 96,
         "conversionRate": 100
       },
       {
         "stage": "Admits",
-        "count": 79,
-        "conversionRate": 81.4
+        "count": 91,
+        "conversionRate": 94.8
       },
       {
         "stage": "Accepted",
-        "count": 33,
-        "conversionRate": 41.8
+        "count": 32,
+        "conversionRate": 35.2
       },
       {
         "stage": "Enrolled",
-        "count": 32,
-        "conversionRate": 97.0
+        "count": 24,
+        "conversionRate": 75.0
       }
     ]
   },
@@ -46453,8 +46453,8 @@
       "category": "Corporate",
       "applications": 400,
       "admits": 378,
-      "enrollments": 1061,
-      "yield": 89.7
+      "enrollments": 1036,
+      "yield": 83.6
     },
     {
       "category": "Select Professional Online",
@@ -46467,8 +46467,8 @@
       "category": "Retail",
       "applications": 89,
       "admits": 69,
-      "enrollments": 125,
-      "yield": 8.7
+      "enrollments": 150,
+      "yield": 42.0
     },
     {
       "category": "Beacon",
@@ -47792,12 +47792,12 @@
     }
   ],
   "ntr": {
-    "total": 8600169,
+    "total": 8614602,
     "goal": 9800000,
-    "percentOfGoal": 87.8,
-    "gapToGoal": 1199831,
-    "newNTR": 1991484,
-    "currentNTR": 6608685,
+    "percentOfGoal": 87.9,
+    "gapToGoal": 1185398,
+    "newNTR": 2004879,
+    "currentNTR": 6609723,
     "newStudents": 506,
     "currentStudents": 1174,
     "newCredits": 1875,
@@ -47814,24 +47814,24 @@
       },
       {
         "category": "Corporate",
-        "degreeType": "Masters",
-        "ntr": 2319600,
-        "students": 436,
-        "credits": 1542
-      },
-      {
-        "category": "Corporate",
         "degreeType": "Graduate Certificate",
         "ntr": 2252575,
         "students": 625,
         "credits": 1885
       },
       {
+        "category": "Corporate",
+        "degreeType": "Masters",
+        "ntr": 2127000,
+        "students": 411,
+        "credits": 1395
+      },
+      {
         "category": "Retail",
         "degreeType": "Masters",
-        "ntr": 1084020,
-        "students": 118,
-        "credits": 636
+        "ntr": 1291053,
+        "students": 143,
+        "credits": 783
       },
       {
         "category": "Beacon",
@@ -47887,21 +47887,6 @@
       },
       {
         "category": "Corporate",
-        "degreeType": "Masters",
-        "newStudents": 67,
-        "currentStudents": 369,
-        "totalStudents": 436,
-        "newCredits": 282,
-        "currentCredits": 1260,
-        "totalCredits": 1542,
-        "cpcNew": 1300,
-        "cpcCurrent": 1550,
-        "ntrNew": 366600,
-        "ntrCurrent": 1953000,
-        "totalNtr": 2319600
-      },
-      {
-        "category": "Corporate",
         "degreeType": "Graduate Certificate",
         "newStudents": 272,
         "currentStudents": 353,
@@ -47916,19 +47901,34 @@
         "totalNtr": 2252575
       },
       {
+        "category": "Corporate",
+        "degreeType": "Masters",
+        "newStudents": 44,
+        "currentStudents": 367,
+        "totalStudents": 411,
+        "newCredits": 141,
+        "currentCredits": 1254,
+        "totalCredits": 1395,
+        "cpcNew": 1300,
+        "cpcCurrent": 1550,
+        "ntrNew": 183300,
+        "ntrCurrent": 1943700,
+        "totalNtr": 2127000
+      },
+      {
         "category": "Retail",
         "degreeType": "Masters",
-        "newStudents": 5,
-        "currentStudents": 113,
-        "totalStudents": 118,
-        "newCredits": 36,
-        "currentCredits": 600,
-        "totalCredits": 636,
+        "newStudents": 28,
+        "currentStudents": 115,
+        "totalStudents": 143,
+        "newCredits": 177,
+        "currentCredits": 606,
+        "totalCredits": 783,
         "cpcNew": 1395,
         "cpcCurrent": 1723,
-        "ntrNew": 50220,
-        "ntrCurrent": 1033800,
-        "totalNtr": 1084020
+        "ntrNew": 246915,
+        "ntrCurrent": 1044138,
+        "totalNtr": 1291053
       },
       {
         "category": "Beacon",
@@ -48009,13 +48009,13 @@
     "byStudentType": [
       {
         "type": "New",
-        "ntr": 1991484,
+        "ntr": 2004879,
         "students": 506,
         "credits": 1875
       },
       {
         "type": "Current",
-        "ntr": 6608685,
+        "ntr": 6609723,
         "students": 1174,
         "credits": 4762
       }
@@ -48435,9 +48435,9 @@
         "category": "Corporate",
         "graduating": 71,
         "within10": 440,
-        "within20": 407,
-        "continuing": 990,
-        "total": 1061
+        "within20": 406,
+        "continuing": 965,
+        "total": 1036
       },
       {
         "category": "Select Professional Online",
@@ -48451,9 +48451,9 @@
         "category": "Retail",
         "graduating": 20,
         "within10": 37,
-        "within20": 27,
-        "continuing": 105,
-        "total": 125
+        "within20": 28,
+        "continuing": 130,
+        "total": 150
       },
       {
         "category": "Beacon",
@@ -48986,21 +48986,15 @@
   "alerts": [
     {
       "type": "warning",
-      "message": "Retail yield at 8.7% - below threshold",
-      "metric": "yield",
-      "value": 8.7
-    },
-    {
-      "type": "warning",
       "message": "ASAP yield at 26.4% - below threshold",
       "metric": "yield",
       "value": 26.4
     },
     {
       "type": "success",
-      "message": "Corporate performing well with 89.7% yield",
+      "message": "Corporate performing well with 83.6% yield",
       "metric": "yield",
-      "value": 89.7
+      "value": 83.6
     }
   ],
   "insights": {

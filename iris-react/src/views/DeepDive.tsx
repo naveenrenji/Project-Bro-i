@@ -3,7 +3,7 @@ import { DollarSign, GitBranch, PieChart, Users, TrendingUp, GraduationCap, Chev
 import { cn, formatCurrency, formatNumber, formatPercent } from '@/lib/utils'
 import { useUIStore } from '@/store/uiStore'
 import { useData, useNTR, useNTRBreakdown, useNTRByStudentType, useGraduation, useDemographics, useYoY, useBySchool, useByDegree } from '@/hooks/useData'
-import { useFilteredNTR, useFilteredGraduation, useFilteredCategories, useFilteredMetrics, useIsFiltered, useFilterSummary } from '@/hooks/useFilteredData'
+import { useFilteredNTR, useFilteredGraduation, useFilteredCategories, useFilteredMetrics, useFilteredDemographics, useIsFiltered, useFilterSummary } from '@/hooks/useFilteredData'
 import { DEEP_DIVE_TABS } from '@/lib/constants'
 import { GlassCard } from '@/components/shared/GlassCard'
 import { GaugeChart } from '@/components/charts/GaugeChart'
@@ -414,10 +414,14 @@ function SegmentTab({ data }: { data: NonNullable<ReturnType<typeof useData>['da
 function StudentTab({ data }: { data: NonNullable<ReturnType<typeof useData>['data']> }) {
   const rawGraduation = useGraduation()
   const filteredGraduation = useFilteredGraduation()
-  const demographics = useDemographics()
+  const rawDemographics = useDemographics()
+  const filteredDemographics = useFilteredDemographics()
   const filteredMetrics = useFilteredMetrics()
   const isFiltered = useIsFiltered()
   const [showDemographics, setShowDemographics] = useState(false)
+  
+  // Use filtered demographics when filters are active
+  const demographics = isFiltered ? filteredDemographics : rawDemographics
   
   // Use filtered data when filters are active
   const graduation = isFiltered ? filteredGraduation : rawGraduation
@@ -434,10 +438,10 @@ function StudentTab({ data }: { data: NonNullable<ReturnType<typeof useData>['da
             <h3 className="font-semibold text-white mb-1">Navs Summary {isFiltered && <span className="text-xs text-[var(--color-accent-primary)]">(Filtered)</span>}</h3>
             <p className="text-[var(--color-text-secondary)]">
               Total enrollment: <strong className="text-white">{formatNumber(isFiltered ? enrollment.total : data.enrollmentBreakdown.total)}</strong> students. 
-              {!isFiltered && demographics && (
+              {demographics && demographics.domesticInternational?.length > 0 && (
                 <><strong className="text-white">{demographics.domesticInternational.find(d => d.status === 'Domestic')?.percentage || 0}%</strong> domestic, <strong className="text-white">{demographics.domesticInternational.find(d => d.status === 'International')?.percentage || 0}%</strong> international. </>
               )}
-              {!isFiltered && demographics?.ageDistribution && (
+              {demographics?.ageDistribution && (
                 <>Average age: <strong className="text-white">{demographics.ageDistribution.mean}</strong>. </>
               )}
               {graduation && (

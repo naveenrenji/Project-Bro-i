@@ -259,6 +259,97 @@ function calculateNTRByCategory(students: StudentRecord[]) {
 }
 
 /**
+ * Hook to get filtered demographics data
+ */
+export function useFilteredDemographics() {
+  const students = useFilteredStudents()
+  const hasFilters = useFilterStore((state) => state.hasActiveFilters())
+  const data = useDataStore((state) => state.data)
+  
+  return useMemo(() => {
+    // If no filters active, return original data
+    if (!hasFilters) {
+      return data?.demographics ?? null
+    }
+    
+    // Calculate demographics from filtered census students
+    const censusStudents = students.filter(s => s.source === 'census')
+    const total = censusStudents.length
+    
+    if (total === 0) {
+      return {
+        totalStudents: 0,
+        domesticInternational: [],
+        raceEthnicity: [],
+        ageDistribution: null,
+        gpaDistribution: null,
+        topStates: [],
+        topCountries: [],
+      }
+    }
+    
+    // Domestic vs International
+    const domIntCounts: Record<string, number> = {}
+    censusStudents.forEach(s => {
+      const status = s.domesticInternational || 'Unknown'
+      domIntCounts[status] = (domIntCounts[status] || 0) + 1
+    })
+    const domesticInternational = Object.entries(domIntCounts)
+      .filter(([status]) => status && status !== 'Unknown' && status !== '')
+      .map(([status, count]) => ({
+        status,
+        count,
+        percentage: Math.round((count / total) * 100 * 10) / 10,
+      }))
+      .sort((a, b) => b.count - a.count)
+    
+    // Top States
+    const stateCounts: Record<string, number> = {}
+    censusStudents.forEach(s => {
+      const state = s.state || ''
+      if (state && state !== 'Not reported' && state !== '') {
+        stateCounts[state] = (stateCounts[state] || 0) + 1
+      }
+    })
+    const topStates = Object.entries(stateCounts)
+      .map(([state, count]) => ({
+        state,
+        count,
+        percentage: Math.round((count / total) * 100 * 10) / 10,
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10)
+    
+    // Top Countries
+    const countryCounts: Record<string, number> = {}
+    censusStudents.forEach(s => {
+      const country = s.country || ''
+      if (country && country !== 'Not reported' && country !== '') {
+        countryCounts[country] = (countryCounts[country] || 0) + 1
+      }
+    })
+    const topCountries = Object.entries(countryCounts)
+      .map(([country, count]) => ({
+        country,
+        count,
+        percentage: Math.round((count / total) * 100 * 10) / 10,
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10)
+    
+    return {
+      totalStudents: total,
+      domesticInternational,
+      raceEthnicity: data?.demographics?.raceEthnicity || [], // Keep original for now (not in student records)
+      ageDistribution: data?.demographics?.ageDistribution || null, // Keep original for now
+      gpaDistribution: data?.demographics?.gpaDistribution || null, // Keep original for now
+      topStates,
+      topCountries,
+    }
+  }, [students, hasFilters, data?.demographics])
+}
+
+/**
  * Hook to check if data is being filtered
  */
 export function useIsFiltered() {

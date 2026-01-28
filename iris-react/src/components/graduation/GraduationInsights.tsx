@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import { GraduationCap, Users, TrendingUp, ChevronDown, AlertCircle } from 'lucide-react'
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 import { useState } from 'react'
 import { cn, formatNumber, formatPercent } from '@/lib/utils'
 import { GlassCard } from '@/components/shared/GlassCard'
@@ -27,6 +28,21 @@ export function GraduationInsights({
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null)
   const [showAllStudents, setShowAllStudents] = useState(false)
   
+  // Custom label for pie slices - shows count
+  const renderPieLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, value }: {
+    cx: number, cy: number, midAngle: number, innerRadius: number, outerRadius: number, value: number
+  }) => {
+    const RADIAN = Math.PI / 180
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.5
+    const x = cx + radius * Math.cos(-midAngle * RADIAN)
+    const y = cy + radius * Math.sin(-midAngle * RADIAN)
+    return (
+      <text x={x} y={y} fill="#fff" textAnchor="middle" dominantBaseline="central" fontSize={12} fontWeight={600}>
+        {formatNumber(value)}
+      </text>
+    )
+  }
+  
   if (!graduation) {
     return (
       <GlassCard className={className}>
@@ -41,63 +57,63 @@ export function GraduationInsights({
   return (
     <div className={cn('space-y-6', className)}>
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <GradMetricCard
-          label="Graduating This Term"
-          value={graduation.graduatingThisTerm}
-          color="var(--color-success)"
-          icon={<GraduationCap className="h-5 w-5" />}
-        />
-        <GradMetricCard
-          label="Within 10 Credits"
-          value={graduation.within10Credits}
-          color="var(--color-warning)"
-          icon={<TrendingUp className="h-5 w-5" />}
-        />
-        <GradMetricCard
-          label="Within 20 Credits"
-          value={graduation.within20Credits}
-          color="var(--color-accent-primary)"
-          icon={<Users className="h-5 w-5" />}
-        />
-        <GradMetricCard
-          label="30+ Credits Left"
-          value={graduation.credits30Plus}
-          color="var(--color-text-muted)"
-          icon={<Users className="h-5 w-5" />}
-        />
-      </div>
-
-      {/* Progress Distribution Bar */}
+      {/* Credits Remaining Distribution - Pie Chart */}
       {graduation.progressDistribution && graduation.progressDistribution.length > 0 && (
         <GlassCard>
-          <h3 className="text-lg font-semibold text-white mb-4">Progress Distribution</h3>
-          <div className="space-y-3">
-            {graduation.progressDistribution.map((item, i) => (
-              <div key={i} className="flex items-center gap-3">
-                <div 
-                  className="w-3 h-3 rounded-full flex-shrink-0" 
-                  style={{ backgroundColor: item.color }} 
-                />
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center gap-2 mb-4">
+            <GraduationCap className="h-5 w-5 text-[var(--color-accent-primary)]" />
+            <h3 className="text-lg font-semibold text-white">Credits Remaining Distribution</h3>
+          </div>
+          <div className="flex flex-col lg:flex-row items-center gap-6">
+            <div className="w-full lg:w-1/2 h-[250px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={graduation.progressDistribution}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={50}
+                    outerRadius={90}
+                    paddingAngle={2}
+                    dataKey="value"
+                    nameKey="label"
+                    label={renderPieLabel}
+                    labelLine={false}
+                  >
+                    {graduation.progressDistribution.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'rgba(17, 24, 39, 0.98)',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      borderRadius: '8px',
+                      color: '#fff',
+                    }}
+                    itemStyle={{ color: '#fff' }}
+                    labelStyle={{ color: '#fff', fontWeight: 600 }}
+                    formatter={(value: number) => [formatNumber(value), 'Students']}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="w-full lg:w-1/2 space-y-2">
+              {graduation.progressDistribution.map((item, i) => (
+                <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-[var(--color-bg-elevated)]">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
                     <span className="text-sm text-[var(--color-text-secondary)]">{item.label}</span>
-                    <span className="text-sm font-medium text-white">
-                      {formatNumber(item.value)} ({formatPercent((item.value / graduation.totalStudents) * 100)})
+                  </div>
+                  <div className="text-right">
+                    <span className="font-semibold text-white">{formatNumber(item.value)}</span>
+                    <span className="text-xs text-[var(--color-text-muted)] ml-1">
+                      ({formatPercent((item.value / graduation.totalStudents) * 100)})
                     </span>
                   </div>
-                  <div className="h-2 rounded-full bg-[var(--color-bg-elevated)] overflow-hidden">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${(item.value / graduation.totalStudents) * 100}%` }}
-                      transition={{ duration: 0.5, delay: i * 0.1 }}
-                      className="h-full rounded-full"
-                      style={{ backgroundColor: item.color }}
-                    />
-                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
           
           {/* Retention Projection */}

@@ -10,6 +10,7 @@ import {
 
 /**
  * Hook to get filtered student records based on current filter state
+ * Returns ALL years (for YoY comparisons)
  */
 export function useFilteredStudents() {
   const data = useDataStore((state) => state.data)
@@ -32,10 +33,22 @@ export function useFilteredStudents() {
 }
 
 /**
- * Hook to get aggregated metrics from filtered students
+ * Hook to get filtered student records for CURRENT YEAR ONLY (2026)
+ * Use this for student tab, graduation, enrollment metrics
+ */
+export function useFilteredStudentsCurrentYear() {
+  const students = useFilteredStudents()
+  
+  return useMemo(() => {
+    return students.filter(s => s.year === '2026')
+  }, [students])
+}
+
+/**
+ * Hook to get aggregated metrics from filtered students (current year only)
  */
 export function useFilteredMetrics() {
-  const students = useFilteredStudents()
+  const students = useFilteredStudentsCurrentYear()
   
   return useMemo(() => {
     return aggregateStudentMetrics(students)
@@ -77,10 +90,10 @@ export function useFilteredFunnel() {
 }
 
 /**
- * Hook to get filtered NTR data
+ * Hook to get filtered NTR data (current year only)
  */
 export function useFilteredNTR() {
-  const students = useFilteredStudents()
+  const students = useFilteredStudentsCurrentYear()
   const hasFilters = useFilterStore((state) => state.hasActiveFilters())
   const data = useDataStore((state) => state.data)
   
@@ -129,10 +142,10 @@ export function useFilteredNTR() {
 }
 
 /**
- * Hook to get filtered graduation data
+ * Hook to get filtered graduation data (current year only)
  */
 export function useFilteredGraduation() {
-  const students = useFilteredStudents()
+  const students = useFilteredStudentsCurrentYear()
   const hasFilters = useFilterStore((state) => state.hasActiveFilters())
   const data = useDataStore((state) => state.data)
   
@@ -145,50 +158,60 @@ export function useFilteredGraduation() {
     // Calculate graduation from filtered census students
     const censusStudents = students.filter(s => s.source === 'census')
     
+    // Graduating = credits after term <= 0
     const graduating = censusStudents.filter(s => s.graduatingThisTerm)
-    const within10 = censusStudents.filter(s => {
+    // Non-graduating students
+    const notGraduating = censusStudents.filter(s => !s.graduatingThisTerm)
+    
+    // MUTUALLY EXCLUSIVE buckets based on credits AFTER term
+    const within10 = notGraduating.filter(s => {
       const after = s.creditsAfterTerm
       return after !== undefined && after > 0 && after <= 10
     })
-    const within20 = censusStudents.filter(s => {
+    const within20 = notGraduating.filter(s => {
       const after = s.creditsAfterTerm
       return after !== undefined && after > 10 && after <= 20
     })
-    const credits30Plus = censusStudents.filter(s => {
+    const credits20Plus = notGraduating.filter(s => {
       const after = s.creditsAfterTerm
-      return after !== undefined && after > 30
+      return after === undefined || after > 20
     })
     
-    // Calculate by category
+    // Calculate by category - MUTUALLY EXCLUSIVE buckets
     const byCategory = Object.entries(groupStudentsBy(censusStudents, 'category'))
       .filter(([cat]) => cat !== 'Unknown' && cat !== '')
-      .map(([category, catStudents]) => ({
-        category,
-        graduating: catStudents.filter(s => s.graduatingThisTerm).length,
-        within10: catStudents.filter(s => {
-          const after = s.creditsAfterTerm
-          return after !== undefined && after > 0 && after <= 10
-        }).length,
-        within20: catStudents.filter(s => {
-          const after = s.creditsAfterTerm
-          return after !== undefined && after > 10 && after <= 20
-        }).length,
-        continuing: catStudents.filter(s => !s.graduatingThisTerm).length,
-        total: catStudents.length,
-      }))
+      .map(([category, catStudents]) => {
+        const catGraduating = catStudents.filter(s => s.graduatingThisTerm)
+        const catNotGraduating = catStudents.filter(s => !s.graduatingThisTerm)
+        
+        return {
+          category,
+          graduating: catGraduating.length,
+          within10: catNotGraduating.filter(s => {
+            const after = s.creditsAfterTerm
+            return after !== undefined && after > 0 && after <= 10
+          }).length,
+          within20: catNotGraduating.filter(s => {
+            const after = s.creditsAfterTerm
+            return after !== undefined && after > 10 && after <= 20
+          }).length,
+          continuing: catNotGraduating.length,
+          total: catStudents.length,
+        }
+      })
       .sort((a, b) => b.total - a.total)
     
     return {
       graduatingThisTerm: graduating.length,
       within10Credits: within10.length,
       within20Credits: within20.length,
-      credits30Plus: credits30Plus.length,
+      credits20Plus: credits20Plus.length,
       totalStudents: censusStudents.length,
       progressDistribution: [
         { label: 'Graduating', value: graduating.length, color: '#22c55e' },
         { label: '1-10 remaining', value: within10.length, color: '#3b82f6' },
         { label: '11-20 remaining', value: within20.length, color: '#f59e0b' },
-        { label: '30+ remaining', value: credits30Plus.length, color: '#ef4444' },
+        { label: '20+ remaining', value: credits20Plus.length, color: '#ef4444' },
       ],
       graduatingStudents: graduating.slice(0, 30).map(s => ({
         program: s.program,
@@ -206,10 +229,10 @@ export function useFilteredGraduation() {
 }
 
 /**
- * Hook to get filtered categories with metrics
+ * Hook to get filtered categories with metrics (current year only)
  */
 export function useFilteredCategories() {
-  const students = useFilteredStudents()
+  const students = useFilteredStudentsCurrentYear()
   const hasFilters = useFilterStore((state) => state.hasActiveFilters())
   const data = useDataStore((state) => state.data)
   
@@ -259,10 +282,10 @@ function calculateNTRByCategory(students: StudentRecord[]) {
 }
 
 /**
- * Hook to get filtered demographics data
+ * Hook to get filtered demographics data (current year only)
  */
 export function useFilteredDemographics() {
-  const students = useFilteredStudents()
+  const students = useFilteredStudentsCurrentYear()
   const hasFilters = useFilterStore((state) => state.hasActiveFilters())
   const data = useDataStore((state) => state.data)
   
@@ -347,6 +370,105 @@ export function useFilteredDemographics() {
       topCountries,
     }
   }, [students, hasFilters, data?.demographics])
+}
+
+/**
+ * Hook to get filtered YoY/historical data
+ * Filters all years (2024, 2025, 2026) using student-level data
+ */
+export function useFilteredHistorical() {
+  const students = useFilteredStudents()
+  const hasFilters = useFilterStore((state) => state.hasActiveFilters())
+  const data = useDataStore((state) => state.data)
+  
+  return useMemo(() => {
+    const rawHistorical = data?.historical
+    const rawYoY = data?.yoy
+    
+    if (!hasFilters || !rawHistorical) {
+      return {
+        historical: rawHistorical,
+        yoy: rawYoY,
+        isFiltered: false,
+      }
+    }
+    
+    // Calculate metrics for each year from filtered students
+    const years = ['2024', '2025', '2026']
+    const yearStats = years.map(year => {
+      const yearSlate = students.filter(s => s.source === 'slate' && s.year === year)
+      const yearCensus = students.filter(s => s.source === 'census' && s.year === year)
+      
+      const apps = yearSlate.length
+      const admits = yearSlate.filter(s => 
+        s.funnelStage === 'admitted' || s.funnelStage === 'accepted' || s.funnelStage === 'enrolled'
+      ).length
+      const accepted = yearSlate.filter(s => 
+        s.funnelStage === 'accepted' || s.funnelStage === 'enrolled'
+      ).length
+      const slateEnrolled = yearSlate.filter(s => s.funnelStage === 'enrolled').length
+      
+      // Census enrollment (total students from census for that year)
+      const censusTotal = yearCensus.length
+      const censusNew = yearCensus.filter(s => s.studentType === 'New').length
+      
+      const yieldRate = admits > 0 ? Math.round((slateEnrolled / admits) * 100 * 10) / 10 : 0
+      
+      return {
+        apps,
+        admits,
+        accepted,
+        enrolled: slateEnrolled,
+        censusTotal,
+        censusNew,
+        yield: yieldRate,
+      }
+    })
+    
+    // Build filtered historical
+    const filteredHistorical = {
+      years,
+      applications: yearStats.map(s => s.apps),
+      admits: yearStats.map(s => s.admits),
+      enrollments: yearStats.map(s => s.enrolled),
+      yields: yearStats.map(s => s.yield),
+      // Census data
+      censusTotal: yearStats.map(s => s.censusTotal),
+      censusNew: yearStats.map(s => s.censusNew),
+    }
+    
+    // Calculate YoY changes (2026 vs 2025)
+    const curr = yearStats[2] // 2026
+    const prev = yearStats[1] // 2025
+    const twoYears = yearStats[0] // 2024
+    
+    const calcChange = (curr: number, prev: number) => 
+      prev > 0 ? Math.round(((curr - prev) / prev) * 100 * 10) / 10 : 0
+    
+    const filteredYoY = {
+      current: { apps: curr.apps, admits: curr.admits, enrollments: curr.enrolled, yield: curr.yield },
+      previous: { apps: prev.apps, admits: prev.admits, enrollments: prev.enrolled, yield: prev.yield },
+      twoYearsAgo: { apps: twoYears.apps, admits: twoYears.admits, enrollments: twoYears.enrolled, yield: twoYears.yield },
+      vsLastYear: {
+        appsChange: calcChange(curr.apps, prev.apps),
+        admitsChange: calcChange(curr.admits, prev.admits),
+        enrollmentsChange: calcChange(curr.enrolled, prev.enrolled),
+        yieldChange: Math.round((curr.yield - prev.yield) * 10) / 10,
+      },
+      vsTwoYearsAgo: {
+        appsChange: calcChange(curr.apps, twoYears.apps),
+        admitsChange: calcChange(curr.admits, twoYears.admits),
+        enrollmentsChange: calcChange(curr.enrolled, twoYears.enrolled),
+        yieldChange: Math.round((curr.yield - twoYears.yield) * 10) / 10,
+      },
+    }
+    
+    return {
+      historical: filteredHistorical,
+      yoy: filteredYoY,
+      isFiltered: true,
+    }
+  }, [students, hasFilters, data?.historical, data?.yoy])
 }
 
 /**

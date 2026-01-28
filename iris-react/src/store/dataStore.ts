@@ -98,7 +98,7 @@ export interface GraduationData {
   graduatingThisTerm: number
   within10Credits: number
   within20Credits: number
-  credits30Plus: number
+  credits20Plus: number
   totalStudents: number
   progressDistribution: Array<{
     label: string

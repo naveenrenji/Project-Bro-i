@@ -1,14 +1,62 @@
 import { NavLink } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { LayoutDashboard, Search, Calculator, MessageSquare } from 'lucide-react'
+import { LayoutDashboard, Search, Calculator, MessageSquare, RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { NAV_ITEMS } from '@/lib/constants'
+import { useDataStore } from '@/store/dataStore'
 
 const iconMap = {
   LayoutDashboard,
   Search,
   Calculator,
   MessageSquare,
+}
+
+// Format relative time
+function formatRelativeTime(date: Date | null): string {
+  if (!date) return 'Never'
+  
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffSecs = Math.floor(diffMs / 1000)
+  const diffMins = Math.floor(diffSecs / 60)
+  const diffHours = Math.floor(diffMins / 60)
+  
+  if (diffSecs < 60) return 'Just now'
+  if (diffMins < 60) return `${diffMins}m ago`
+  if (diffHours < 24) return `${diffHours}h ago`
+  return date.toLocaleDateString()
+}
+
+function RefreshButton() {
+  const { refreshData, isLoading, lastFetched } = useDataStore()
+  
+  const handleRefresh = async () => {
+    await refreshData()
+  }
+  
+  return (
+    <button
+      onClick={handleRefresh}
+      disabled={isLoading}
+      className={cn(
+        'flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium transition-all',
+        'bg-[var(--color-bg-surface)] border border-[var(--color-border-subtle)]',
+        'hover:bg-[var(--color-bg-elevated)] hover:border-[var(--color-border-default)]',
+        'disabled:opacity-50 disabled:cursor-not-allowed'
+      )}
+    >
+      <RefreshCw className={cn('h-3.5 w-3.5 text-[var(--color-text-secondary)]', isLoading && 'animate-spin')} />
+      <div className="hidden sm:flex flex-col items-start">
+        <span className="text-[var(--color-text-secondary)]">
+          {isLoading ? 'Refreshing...' : 'Refresh'}
+        </span>
+        <span className="text-[10px] text-[var(--color-text-muted)]">
+          {formatRelativeTime(lastFetched)}
+        </span>
+      </div>
+    </button>
+  )
 }
 
 export function Navigation() {
@@ -66,6 +114,9 @@ export function Navigation() {
         
         {/* Right Side */}
         <div className="flex items-center gap-4">
+          {/* Refresh Button with Last Update Time */}
+          <RefreshButton />
+          
           {/* Keyboard Shortcut Hint */}
           <div className="hidden lg:flex items-center gap-2 text-xs text-[var(--color-text-muted)]">
             <kbd className="rounded bg-[var(--color-bg-surface)] px-2 py-1 font-mono">⌘K</kbd>

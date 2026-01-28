@@ -5,6 +5,7 @@ import { persist } from 'zustand/middleware'
 export interface StudentRecord {
   id: string
   source: 'slate' | 'census'
+  year?: string  // '2024', '2025', '2026'
   category: string
   school: string
   degreeType: string

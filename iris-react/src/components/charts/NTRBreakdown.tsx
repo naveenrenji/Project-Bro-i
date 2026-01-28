@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, LabelList } from 'recharts'
 import { GlassCard } from '../shared/GlassCard'
 import { formatCurrency, formatNumber } from '@/lib/utils'
 import { Sparkles, TrendingUp, Users, CreditCard } from 'lucide-react'
@@ -94,17 +94,25 @@ export function NTRBarChart({ data, title = 'NTR by Category', onAskNavs }: NTRB
             />
             <Tooltip
               contentStyle={{
-                backgroundColor: 'rgba(20, 24, 36, 0.95)',
-                border: '1px solid rgba(255,255,255,0.1)',
+                backgroundColor: 'rgba(20, 24, 36, 0.98)',
+                border: '1px solid rgba(255,255,255,0.2)',
                 borderRadius: '8px',
+                color: '#fff',
               }}
+              itemStyle={{ color: '#fff' }}
+              labelStyle={{ color: '#fff', fontWeight: 600 }}
               formatter={(value) => [formatCurrency(value as number), 'NTR']}
-              labelStyle={{ color: 'white' }}
             />
             <Bar dataKey="ntr" radius={[0, 4, 4, 0]}>
               {aggregated.map((_, index) => (
                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
               ))}
+              <LabelList 
+                dataKey="ntr" 
+                position="right" 
+                formatter={(value: number) => formatCurrency(value, true)}
+                style={{ fill: '#fff', fontSize: 11, fontWeight: 500 }}
+              />
             </Bar>
           </BarChart>
         </ResponsiveContainer>
@@ -122,6 +130,21 @@ interface NTRPieChartProps {
 export function NTRPieChart({ data, title = 'NTR by Student Type', onAskNavs }: NTRPieChartProps) {
   const COLORS_PIE = ['#3b82f6', '#22c55e']
   const total = data.reduce((sum, item) => sum + item.ntr, 0)
+  
+  // Custom label for pie slices
+  const renderPieLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, value }: {
+    cx: number, cy: number, midAngle: number, innerRadius: number, outerRadius: number, value: number
+  }) => {
+    const RADIAN = Math.PI / 180
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.5
+    const x = cx + radius * Math.cos(-midAngle * RADIAN)
+    const y = cy + radius * Math.sin(-midAngle * RADIAN)
+    return (
+      <text x={x} y={y} fill="#fff" textAnchor="middle" dominantBaseline="central" fontSize={11} fontWeight={600}>
+        {formatCurrency(value, true)}
+      </text>
+    )
+  }
 
   return (
     <GlassCard>
@@ -151,6 +174,8 @@ export function NTRPieChart({ data, title = 'NTR by Student Type', onAskNavs }: 
                 innerRadius={45}
                 outerRadius={70}
                 paddingAngle={2}
+                label={renderPieLabel}
+                labelLine={false}
               >
                 {data.map((_, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS_PIE[index % COLORS_PIE.length]} />
@@ -158,10 +183,13 @@ export function NTRPieChart({ data, title = 'NTR by Student Type', onAskNavs }: 
               </Pie>
               <Tooltip
                 contentStyle={{
-                  backgroundColor: 'rgba(20, 24, 36, 0.95)',
-                  border: '1px solid rgba(255,255,255,0.1)',
+                  backgroundColor: 'rgba(20, 24, 36, 0.98)',
+                  border: '1px solid rgba(255,255,255,0.2)',
                   borderRadius: '8px',
+                  color: '#fff',
                 }}
+                itemStyle={{ color: '#fff' }}
+                labelStyle={{ color: '#fff', fontWeight: 600 }}
                 formatter={(value) => [formatCurrency(value as number), 'NTR']}
               />
             </PieChart>

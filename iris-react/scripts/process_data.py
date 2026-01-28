@@ -542,6 +542,23 @@ def load_apps_data() -> Optional[pd.DataFrame]:
         return None
 
 
+def load_census_data_all_semesters() -> Optional[pd.DataFrame]:
+    """Load Census data for all semesters (for YoY comparisons)."""
+    census_path = SNAPSHOT_DIR / "census_latest.csv"
+    if not census_path.exists():
+        return None
+    
+    try:
+        df = pd.read_csv(census_path, low_memory=False)
+        # Filter for online + graduate only
+        df = df[df['Census_1_STUDENT_LOCATION_DETAILED'].isin(['Online', 'Online Noodle'])].copy()
+        df = df[df['Census_1_DEGREE_TYPE'].isin(['Masters', 'Graduate Certificate', 'Non-Degree'])].copy()
+        return df
+    except Exception as e:
+        print(f"Error loading Census data: {e}")
+        return None
+
+
 def load_census_data(semester: str = '2026S') -> Optional[pd.DataFrame]:
     """Load and filter Census data."""
     census_path = SNAPSHOT_DIR / "census_latest.csv"
@@ -634,16 +651,17 @@ def calculate_graduation_metrics(census_df: pd.DataFrame) -> Dict:
     # Calculate credits after this term (for graduation calculation)
     df['Credits_After_Term'] = df[remaining_col] - df[this_term_col]
     
-    # Graduating = students who will complete after this term
+    # Graduating = students who will complete after this term (credits_after <= 0)
     graduating = df[df['Credits_After_Term'] <= 0]
+    not_graduating = df[df['Credits_After_Term'] > 0]
     
-    # Progress categories based on CURRENT credits remaining (before this term)
-    # This matches the original Streamlit behavior
-    within_10 = df[(df[remaining_col] > 0) & (df[remaining_col] <= 10)]
-    within_20 = df[(df[remaining_col] > 10) & (df[remaining_col] <= 20)]
-    credits_20_plus = df[df[remaining_col] > 20]
+    # Progress categories - MUTUALLY EXCLUSIVE (must add up to total)
+    # Based on credits remaining AFTER this term for non-graduating students
+    within_10 = not_graduating[(not_graduating['Credits_After_Term'] > 0) & (not_graduating['Credits_After_Term'] <= 10)]
+    within_20 = not_graduating[(not_graduating['Credits_After_Term'] > 10) & (not_graduating['Credits_After_Term'] <= 20)]
+    credits_20_plus = not_graduating[not_graduating['Credits_After_Term'] > 20]
     
-    # Progress distribution for pie chart (based on current credits remaining)
+    # Progress distribution for pie chart - should add up to total
     progress_dist = [
         {"label": "Graduating", "value": len(graduating), "color": "#22c55e"},
         {"label": "1-10 remaining", "value": len(within_10), "color": "#3b82f6"},
@@ -651,19 +669,26 @@ def calculate_graduation_metrics(census_df: pd.DataFrame) -> Dict:
         {"label": "20+ remaining", "value": len(credits_20_plus), "color": "#ef4444"},
     ]
     
-    # Calculate by category breakdown
+    # Verify totals add up
+    total_in_buckets = len(graduating) + len(within_10) + len(within_20) + len(credits_20_plus)
+    if total_in_buckets != len(df):
+        print(f"   Warning: Graduation buckets ({total_in_buckets}) != total students ({len(df)})")
+    
+    # Calculate by category breakdown - MUTUALLY EXCLUSIVE buckets
     by_category = []
     if 'Student_Category' in df.columns:
         for cat in df['Student_Category'].unique():
             if not cat or cat == 'Uncategorized':
                 continue
             cat_df = df[df['Student_Category'] == cat]
-            # Graduating uses Credits_After_Term (remaining - this_term <= 0)
+            cat_not_graduating = cat_df[cat_df['Credits_After_Term'] > 0]
+            
+            # Graduating = credits after term <= 0
             cat_graduating = len(cat_df[cat_df['Credits_After_Term'] <= 0])
-            # Within X uses raw credits_remaining (current, before this term)
-            cat_within_10 = len(cat_df[(cat_df[remaining_col] > 0) & (cat_df[remaining_col] <= 10)])
-            cat_within_20 = len(cat_df[(cat_df[remaining_col] > 10) & (cat_df[remaining_col] <= 20)])
-            cat_continuing = len(cat_df[cat_df['Credits_After_Term'] > 0])
+            # Within X = NOT graduating and credits_after in range (mutually exclusive)
+            cat_within_10 = len(cat_not_graduating[(cat_not_graduating['Credits_After_Term'] > 0) & (cat_not_graduating['Credits_After_Term'] <= 10)])
+            cat_within_20 = len(cat_not_graduating[(cat_not_graduating['Credits_After_Term'] > 10) & (cat_not_graduating['Credits_After_Term'] <= 20)])
+            cat_continuing = len(cat_not_graduating)  # All non-graduating students
             
             by_category.append({
                 "category": cat.replace('Stevens Online (', '').replace(')', ''),
@@ -1125,7 +1150,7 @@ def calculate_program_metrics(apps_df: pd.DataFrame, year_dfs: Dict, limit: int 
 
 
 def calculate_yoy_metrics(year_dfs: Dict) -> Dict:
-    """Calculate Year-over-Year comparison metrics."""
+    """Calculate Year-over-Year comparison metrics from Slate (new student pipeline)."""
     current = year_dfs.get('current')
     previous = year_dfs.get('previous')
     two_years = year_dfs.get('two_years_ago')
@@ -1164,6 +1189,75 @@ def calculate_yoy_metrics(year_dfs: Dict) -> Dict:
             "admitsChange": calc_change(current_stats["admits"], two_years_stats["admits"]),
             "enrollmentsChange": calc_change(current_stats["enrollments"], two_years_stats["enrollments"]),
             "yieldChange": round(current_stats["yield"] - two_years_stats["yield"], 1),
+        },
+    }
+
+
+def calculate_census_yoy_metrics() -> Dict:
+    """Calculate Year-over-Year comparison metrics from Census (overall enrollment)."""
+    census_all = load_census_data_all_semesters()
+    if census_all is None:
+        return {}
+    
+    # Use Final Census for historical, current for 2026
+    semesters = {
+        '2024': '2024S - Final Census',
+        '2025': '2025S - Final Census',
+        '2026': '2026S',  # Current semester (final not available yet)
+    }
+    
+    def get_semester_stats(df, semester_filter):
+        sem_df = df[df['Census_1_SEMESTER'] == semester_filter].copy()
+        if sem_df.empty:
+            return {"total": 0, "new": 0, "continuing": 0, "returning": 0}
+        
+        # Classify students
+        def classify(row):
+            status = row.get('Census_1_STUDENT_STATUS', '')
+            if status == 'New':
+                return 'New'
+            elif status == 'Continuing':
+                return 'Continuing'
+            elif status == 'Returning':
+                return 'Returning'
+            return 'Other'
+        
+        sem_df['type'] = sem_df.apply(classify, axis=1)
+        
+        return {
+            "total": len(sem_df),
+            "new": int((sem_df['type'] == 'New').sum()),
+            "continuing": int((sem_df['type'] == 'Continuing').sum()),
+            "returning": int((sem_df['type'] == 'Returning').sum()),
+        }
+    
+    stats_2024 = get_semester_stats(census_all, semesters['2024'])
+    stats_2025 = get_semester_stats(census_all, semesters['2025'])
+    stats_2026 = get_semester_stats(census_all, semesters['2026'])
+    
+    def calc_change(curr, prev):
+        if prev == 0:
+            return 0
+        return round(((curr - prev) / prev) * 100, 1)
+    
+    return {
+        "years": ["2024", "2025", "2026"],
+        "total": [stats_2024["total"], stats_2025["total"], stats_2026["total"]],
+        "new": [stats_2024["new"], stats_2025["new"], stats_2026["new"]],
+        "continuing": [stats_2024["continuing"], stats_2025["continuing"], stats_2026["continuing"]],
+        "returning": [stats_2024["returning"], stats_2025["returning"], stats_2026["returning"]],
+        "stats": {
+            "2024": stats_2024,
+            "2025": stats_2025,
+            "2026": stats_2026,
+        },
+        "changes": {
+            "totalVs2025": calc_change(stats_2026["total"], stats_2025["total"]),
+            "totalVs2024": calc_change(stats_2026["total"], stats_2024["total"]),
+            "newVs2025": calc_change(stats_2026["new"], stats_2025["new"]),
+            "newVs2024": calc_change(stats_2026["new"], stats_2024["new"]),
+            "continuingVs2025": calc_change(stats_2026["continuing"], stats_2025["continuing"]),
+            "continuingVs2024": calc_change(stats_2026["continuing"], stats_2024["continuing"]),
         },
     }
 
@@ -1324,63 +1418,43 @@ def generate_filter_options(apps_df: pd.DataFrame, census_df: pd.DataFrame) -> D
 
 
 def calculate_cohort_metrics(apps_df: pd.DataFrame, census_df: pd.DataFrame) -> List[Dict]:
-    """Calculate corporate cohort metrics."""
-    cohorts = []
+    """Calculate corporate cohort metrics from Census data (primary source)."""
+    cohorts = {}
     
-    # From applications data
-    if apps_df is not None and not apps_df.empty:
-        # Get corporate apps
-        corp_df = apps_df[apps_df['Application Category'] == 'Stevens Online (Corporate)']
-        
-        for company in corp_df['Sponsoring Company'].unique():
-            if not company:
-                continue
-            
-            company_df = corp_df[corp_df['Sponsoring Company'] == company]
-            apps = int(company_df['Is Application'].sum())
-            enrolled = int((company_df['Enrolled'] == 'yes').sum())
-            
-            cohorts.append({
-                "company": company,
-                "enrollments": enrolled,
-                "applications": apps,
-                "newStudents": enrolled,  # Approximation
-                "continuingStudents": 0,
-            })
-    
-    # Enhance with census data for continuing students
+    # Use Census data as primary source for corporate cohorts
     if census_df is not None and not census_df.empty:
         corp_census = census_df[census_df['Student_Category'] == 'Stevens Online (Corporate)']
-        if 'Census_1_CORPORATE_STUDENT_COMPANY' in corp_census.columns:
-            for company in corp_census['Census_1_CORPORATE_STUDENT_COMPANY'].unique():
-                if not company or pd.isna(company):
+        
+        # Use Census_1_CORPORATE_COHORT column for company/cohort name
+        cohort_col = 'Census_1_CORPORATE_COHORT'
+        if cohort_col in corp_census.columns:
+            for cohort in corp_census[cohort_col].unique():
+                if not cohort or pd.isna(cohort) or str(cohort).strip() == '' or str(cohort).lower() == 'not reported':
                     continue
                     
-                company_std = standardize_company_name(company)
-                company_df = corp_census[corp_census['Census_1_CORPORATE_STUDENT_COMPANY'] == company]
+                cohort_std = standardize_company_name(str(cohort))
+                cohort_df = corp_census[corp_census[cohort_col] == cohort]
                 
-                new_count = int((company_df['Student_Type'] == 'New').sum())
-                current_count = int((company_df['Student_Type'] == 'Current').sum())
+                new_count = int((cohort_df['Student_Type'] == 'New').sum())
+                current_count = int((cohort_df['Student_Type'] == 'Current').sum())
                 total = new_count + current_count
                 
-                # Update or add
-                existing = next((c for c in cohorts if c['company'] == company_std), None)
-                if existing:
-                    existing['newStudents'] = new_count
-                    existing['continuingStudents'] = current_count
-                    existing['enrollments'] = max(existing['enrollments'], total)
+                if cohort_std in cohorts:
+                    cohorts[cohort_std]['newStudents'] += new_count
+                    cohorts[cohort_std]['continuingStudents'] += current_count
+                    cohorts[cohort_std]['enrollments'] += total
                 else:
-                    cohorts.append({
-                        "company": company_std,
+                    cohorts[cohort_std] = {
+                        "company": cohort_std,
                         "enrollments": total,
-                        "applications": 0,
                         "newStudents": new_count,
                         "continuingStudents": current_count,
-                    })
+                    }
     
-    # Sort by enrollments and take top 10
-    cohorts.sort(key=lambda x: x['enrollments'], reverse=True)
-    return cohorts[:10]
+    # Convert to list, sort by enrollments, take top 10
+    result = list(cohorts.values())
+    result.sort(key=lambda x: x['enrollments'], reverse=True)
+    return result[:10]
 
 
 def calculate_ntr_metrics(census_df: pd.DataFrame) -> Dict:
@@ -1525,17 +1599,48 @@ def calculate_enrollment_breakdown(census_df: pd.DataFrame) -> Dict:
 # STUDENT-LEVEL DATA EXPORT (for client-side filtering)
 # ============================================================================
 
-def generate_student_records(apps_df: pd.DataFrame, census_df: pd.DataFrame) -> List[Dict]:
+def generate_student_records(apps_df: pd.DataFrame, census_df: pd.DataFrame, year_dfs: Dict = None) -> List[Dict]:
     """
     Generate student-level records for client-side filtering.
     Combines data from both Slate (applications) and Census (enrollment) sources.
+    Includes historical years for YoY filtering.
     """
     students = []
     
-    # Process application records (Slate data)
-    if apps_df is not None and not apps_df.empty:
+    # Process application records (Slate data) - all years
+    year_keys = [('two_years_ago', '2024'), ('previous', '2025'), ('current', '2026')]
+    
+    if year_dfs:
+        for year_key, year in year_keys:
+            df = year_dfs.get(year_key)
+            if df is not None and not df.empty:
+                for idx, row in df.iterrows():
+                    # Determine funnel stage
+                    funnel_stage = 'application'
+                    if row.get('Enrolled') == 'yes':
+                        funnel_stage = 'enrolled'
+                    elif row.get('Offer Accepted') == 'yes':
+                        funnel_stage = 'accepted'
+                    elif row.get('Admit Status') == 'admitted':
+                        funnel_stage = 'admitted'
+                    
+                    student = {
+                        "id": f"slate_{year}_{idx}",
+                        "source": "slate",
+                        "year": year,
+                        "category": str(row.get('Application Category', '')).replace('Stevens Online (', '').replace(')', ''),
+                        "school": str(row.get('School (Expanded)', '')),
+                        "degreeType": str(row.get('Degree Type', '')),
+                        "program": str(row.get('Program Cleaned', '')),
+                        "studentType": "New",  # All Slate records are new students
+                        "studentStatus": "New",
+                        "funnelStage": funnel_stage,
+                        "company": str(row.get('Sponsoring Company', '')) if row.get('Sponsoring Company') else None,
+                    }
+                    students.append(student)
+    elif apps_df is not None and not apps_df.empty:
+        # Fallback if no year_dfs provided
         for idx, row in apps_df.iterrows():
-            # Determine funnel stage
             funnel_stage = 'application'
             if row.get('Enrolled') == 'yes':
                 funnel_stage = 'enrolled'
@@ -1547,64 +1652,83 @@ def generate_student_records(apps_df: pd.DataFrame, census_df: pd.DataFrame) -> 
             student = {
                 "id": f"slate_{idx}",
                 "source": "slate",
+                "year": "2026",
                 "category": str(row.get('Application Category', '')).replace('Stevens Online (', '').replace(')', ''),
                 "school": str(row.get('School (Expanded)', '')),
                 "degreeType": str(row.get('Degree Type', '')),
                 "program": str(row.get('Program Cleaned', '')),
-                "studentType": "New",  # All Slate records are new students
+                "studentType": "New",
                 "studentStatus": "New",
                 "funnelStage": funnel_stage,
                 "company": str(row.get('Sponsoring Company', '')) if row.get('Sponsoring Company') else None,
             }
             students.append(student)
     
-    # Process census records (current enrollment)
-    if census_df is not None and not census_df.empty:
+    # Process census records - all years (use Final Census for historical)
+    census_all = load_census_data_all_semesters()
+    if census_all is not None and not census_all.empty:
         credit_col = 'Census_1_CENSUS3_TOTAL_NUMBER_OF_CREDIT_HOURS'
-        if credit_col not in census_df.columns:
+        if credit_col not in census_all.columns:
             credit_col = 'Census_1_NUMBER_OF_CREDITS'
         
         remaining_col = 'Census_1_CREDITS_REMAINING_FROM_PROGRAM_REQUIREMENTS'
         
-        for idx, row in census_df.iterrows():
-            credits = float(row.get(credit_col, 0)) if pd.notna(row.get(credit_col)) else 0
-            credits_remaining = float(row.get(remaining_col, 999)) if pd.notna(row.get(remaining_col)) else 999
-            credits_after = credits_remaining - credits
+        # Process each semester
+        semester_year_map = {
+            '2024S - Final Census': '2024',
+            '2025S - Final Census': '2025',
+            '2026S': '2026',
+        }
+        
+        for semester, year in semester_year_map.items():
+            sem_df = census_all[census_all['Census_1_SEMESTER'] == semester].copy()
+            if sem_df.empty:
+                continue
             
-            # Get CPC rate for NTR calculation
-            category = str(row.get('Student_Category', ''))
-            degree_type = str(row.get('Census_1_DEGREE_TYPE', ''))
-            student_type = str(row.get('Student_Type', 'New'))
-            cpc_rate = get_cpc_rate(category, degree_type, student_type)
-            ntr = credits * cpc_rate
+            # Add category and student type
+            sem_df['Student_Category'] = sem_df.apply(categorize_census_row, axis=1)
+            sem_df['Student_Type'] = sem_df.apply(classify_student_type, axis=1)
             
-            student = {
-                "id": f"census_{idx}",
-                "source": "census",
-                "category": category.replace('Stevens Online (', '').replace(')', ''),
-                "school": str(row.get('Census_1_SCHOOL', '')),
-                "degreeType": degree_type,
-                "program": str(row.get('Census_1_PRIMARY_PROGRAM_OF_STUDY', '')),
-                "studentType": student_type,
-                "studentStatus": str(row.get('Census_1_STUDENT_STATUS', '')),
-                "credits": int(credits),
-                "creditsRemaining": int(credits_remaining) if credits_remaining < 999 else None,
-                "creditsAfterTerm": int(credits_after) if credits_remaining < 999 else None,
-                "graduatingThisTerm": credits_after <= 0 if credits_remaining < 999 else False,
-                "cpcRate": cpc_rate,
-                "ntr": int(ntr),
-                "domesticInternational": str(row.get('Census_1_DOMESTIC_INTERNATIONAL', '')),
-                "state": str(row.get('Census_1_STATE_PERMANENT_ADDRESS', '')),
-                "country": str(row.get('Census_1_COUNTRY_OF_ORIGIN', '')),
-                "canvasLastLogin": str(row.get('Census_1_CANVAS_LAST_LOGIN_DATE', '')) if pd.notna(row.get('Census_1_CANVAS_LAST_LOGIN_DATE')) else None,
-                "canvasWeeksSinceLogin": int(row.get('Census_1_CANVAS_LAST_LOGIN_FROM_CURRENT_DAY_IN_WEEKS', 0)) if pd.notna(row.get('Census_1_CANVAS_LAST_LOGIN_FROM_CURRENT_DAY_IN_WEEKS')) else None,
-            }
-            
-            # Add company for corporate students
-            if 'Census_1_CORPORATE_STUDENT_COMPANY' in row and pd.notna(row.get('Census_1_CORPORATE_STUDENT_COMPANY')):
-                student["company"] = standardize_company_name(str(row['Census_1_CORPORATE_STUDENT_COMPANY']))
-            
-            students.append(student)
+            for idx, row in sem_df.iterrows():
+                credits = float(row.get(credit_col, 0)) if pd.notna(row.get(credit_col)) else 0
+                credits_remaining = float(row.get(remaining_col, 999)) if pd.notna(row.get(remaining_col)) else 999
+                credits_after = credits_remaining - credits
+                
+                # Get CPC rate for NTR calculation
+                category = str(row.get('Student_Category', ''))
+                degree_type = str(row.get('Census_1_DEGREE_TYPE', ''))
+                student_type = str(row.get('Student_Type', 'New'))
+                cpc_rate = get_cpc_rate(category, degree_type, student_type)
+                ntr = credits * cpc_rate
+                
+                student = {
+                    "id": f"census_{year}_{idx}",
+                    "source": "census",
+                    "year": year,
+                    "category": category.replace('Stevens Online (', '').replace(')', ''),
+                    "school": standardize_school_name(str(row.get('Census_1_SCHOOL', ''))),
+                    "degreeType": degree_type,
+                    "program": str(row.get('Census_1_PRIMARY_PROGRAM_OF_STUDY', '')),
+                    "studentType": student_type,
+                    "studentStatus": str(row.get('Census_1_STUDENT_STATUS', '')),
+                    "credits": int(credits),
+                    "creditsRemaining": int(credits_remaining) if credits_remaining < 999 else None,
+                    "creditsAfterTerm": int(credits_after) if credits_remaining < 999 else None,
+                    "graduatingThisTerm": credits_after <= 0 if credits_remaining < 999 else False,
+                    "cpcRate": cpc_rate,
+                    "ntr": int(ntr),
+                    "domesticInternational": str(row.get('Census_1_DOMESTIC_INTERNATIONAL', '')),
+                    "state": str(row.get('Census_1_STATE_PERMANENT_ADDRESS', '')),
+                    "country": str(row.get('Census_1_COUNTRY_OF_ORIGIN', '')),
+                    "canvasLastLogin": str(row.get('Census_1_CANVAS_LAST_LOGIN_DATE', '')) if pd.notna(row.get('Census_1_CANVAS_LAST_LOGIN_DATE')) else None,
+                    "canvasWeeksSinceLogin": int(row.get('Census_1_CANVAS_LAST_LOGIN_FROM_CURRENT_DAY_IN_WEEKS', 0)) if pd.notna(row.get('Census_1_CANVAS_LAST_LOGIN_FROM_CURRENT_DAY_IN_WEEKS')) else None,
+                }
+                
+                # Add company for corporate students
+                if 'Census_1_CORPORATE_STUDENT_COMPANY' in row.index and pd.notna(row.get('Census_1_CORPORATE_STUDENT_COMPANY')):
+                    student["company"] = standardize_company_name(str(row['Census_1_CORPORATE_STUDENT_COMPANY']))
+                
+                students.append(student)
     
     return students
 
@@ -1917,8 +2041,12 @@ def process_data():
     # Demographics
     demographics = calculate_demographics(census_df)
     
-    # YoY metrics
-    yoy = calculate_yoy_metrics(year_dfs)
+    # YoY metrics from Slate (new student pipeline)
+    yoy_slate = calculate_yoy_metrics(year_dfs)
+    
+    # YoY metrics from Census (overall enrollment)
+    yoy_census = calculate_census_yoy_metrics()
+    print(f"   Census YoY: 2024={yoy_census.get('stats', {}).get('2024', {}).get('total', 0)}, 2025={yoy_census.get('stats', {}).get('2025', {}).get('total', 0)}, 2026={yoy_census.get('stats', {}).get('2026', {}).get('total', 0)}")
     
     # School and degree breakdowns (from Census)
     by_school = calculate_school_metrics_from_census(census_df)
@@ -1933,13 +2061,13 @@ def process_data():
     insights = generate_insights(programs_top, categories)
     alerts = generate_alerts(funnel, ntr, categories)
     
-    # Calculate historical data
-    # Note: Historical uses Slate for apps/admits, current enrollment from Census
-    historical = {
+    # Historical data - NEW STUDENTS (from Slate pipeline)
+    historical_new_students = {
         "years": ["2024", "2025", "2026"],
         "applications": [],
         "admits": [],
-        "enrollments": [],
+        "accepted": [],
+        "enrollments": [],  # Note: 'enrollments' for backward compat with TimeTab
         "yields": [],
     }
     
@@ -1948,22 +2076,22 @@ def process_data():
         if df is not None and not df.empty:
             apps = int(df['Is Application'].sum())
             admits = int((df['Admit Status'] == 'admitted').sum())
-            # For current year, use Census enrollment; for historical, use Slate
-            if key == 'current' and census_df is not None and not census_df.empty:
-                enrolled = len(census_df)  # Total from Census
-            else:
-                enrolled = int((df['Enrolled'] == 'yes').sum())
-            historical['applications'].append(apps)
-            historical['admits'].append(admits)
-            historical['enrollments'].append(enrolled)
-            # Yield based on new students vs admits
-            new_enrolled = int((census_df['Student_Type'] == 'New').sum()) if key == 'current' and census_df is not None else enrolled
-            historical['yields'].append(round((new_enrolled / admits) * 100, 1) if admits > 0 else 0)
+            accepted = int((df['Offer Accepted'] == 'yes').sum())
+            enrolled = int((df['Enrolled'] == 'yes').sum())
+            historical_new_students['applications'].append(apps)
+            historical_new_students['admits'].append(admits)
+            historical_new_students['accepted'].append(accepted)
+            historical_new_students['enrollments'].append(enrolled)
+            historical_new_students['yields'].append(round((enrolled / admits) * 100, 1) if admits > 0 else 0)
         else:
-            historical['applications'].append(0)
-            historical['admits'].append(0)
-            historical['enrollments'].append(0)
-            historical['yields'].append(0)
+            historical_new_students['applications'].append(0)
+            historical_new_students['admits'].append(0)
+            historical_new_students['accepted'].append(0)
+            historical_new_students['enrollments'].append(0)
+            historical_new_students['yields'].append(0)
+    
+    # Historical data - OVERALL ENROLLMENT (from Census)
+    historical_census = yoy_census
     
     # CPC Rates reference table for frontend
     cpc_reference = []
@@ -1976,9 +2104,9 @@ def process_data():
             "rate": rate,
         })
     
-    # Generate student-level records for client-side filtering
-    print("   Generating student-level records...")
-    students = generate_student_records(current_df, census_df)
+    # Generate student-level records for client-side filtering (all years)
+    print("   Generating student-level records (all years)...")
+    students = generate_student_records(current_df, census_df, year_dfs)
     print(f"   Generated {len(students)} student records")
     
     # Generate pre-aggregated summaries
@@ -2008,12 +2136,18 @@ def process_data():
         "programsAll": programs_all,
         "cohorts": cohorts,
         "ntr": ntr,
-        "historical": historical,
+        
+        # YoY Data - Separated by source
+        "historicalNewStudents": historical_new_students,  # From Slate (new student pipeline)
+        "historicalCensus": historical_census,              # From Census (overall enrollment)
+        "historical": historical_new_students,              # Backward compat - alias to new students
         "historicalByCategory": historical_by_category,
+        
         "enrollmentBreakdown": enrollment_breakdown,
         "graduation": graduation,
         "demographics": demographics,
-        "yoy": yoy,
+        "yoy": yoy_slate,           # From Slate (new student pipeline)
+        "yoyCensus": yoy_census,    # From Census (overall enrollment)
         "bySchool": by_school,
         "byDegree": by_degree,
         "filters": filters,
@@ -2046,7 +2180,8 @@ def process_data():
     print(f"   Graduation: {graduation['graduatingThisTerm']} graduating this term")
     print(f"   Graduation by Category: {len(graduation.get('byCategory', []))} categories")
     print(f"   Historical by Category: {len(historical_by_category)} categories")
-    print(f"   YoY Apps: {yoy['vsLastYear']['appsChange']}%")
+    print(f"   YoY (Slate) Apps: {yoy_slate['vsLastYear']['appsChange']}%")
+    print(f"   YoY (Census) Total: {yoy_census.get('changes', {}).get('totalVs2025', 0)}%")
     print(f"   By School: {len(by_school)}")
     print(f"   By Degree: {len(by_degree)}")
     print(f"   Filter Programs: {len(filters['programs'])}")

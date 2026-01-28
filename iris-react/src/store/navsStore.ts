@@ -144,7 +144,7 @@ function buildContext(data: DashboardData | null): string {
     lines.push(`- Graduating This Term: ${formatNumber(data.graduation.graduatingThisTerm)}`)
     lines.push(`- Within 10 Credits: ${formatNumber(data.graduation.within10Credits)}`)
     lines.push(`- Within 20 Credits: ${formatNumber(data.graduation.within20Credits || 0)}`)
-    lines.push(`- 30+ Credits Remaining: ${formatNumber(data.graduation.credits30Plus)}`)
+    lines.push(`- 20+ Credits Remaining: ${formatNumber(data.graduation.credits20Plus)}`)
     lines.push(`- Total Students: ${formatNumber(data.graduation.totalStudents || 0)}`)
     if (data.graduation.retentionRate) {
       lines.push(`- Estimated Retention Rate: ${(data.graduation.retentionRate * 100).toFixed(1)}%`)

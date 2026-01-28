@@ -1,9 +1,10 @@
 import { motion } from 'framer-motion'
-import { DollarSign, GitBranch, PieChart, Users, TrendingUp, GraduationCap, ChevronDown, Filter } from 'lucide-react'
+import { DollarSign, GitBranch, PieChart as PieChartIcon, Users, TrendingUp, GraduationCap, ChevronDown, Filter } from 'lucide-react'
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts'
 import { cn, formatCurrency, formatNumber, formatPercent } from '@/lib/utils'
 import { useUIStore } from '@/store/uiStore'
 import { useData, useNTR, useNTRBreakdown, useNTRByStudentType, useGraduation, useDemographics, useYoY, useBySchool, useByDegree } from '@/hooks/useData'
-import { useFilteredNTR, useFilteredGraduation, useFilteredCategories, useFilteredMetrics, useFilteredDemographics, useIsFiltered, useFilterSummary } from '@/hooks/useFilteredData'
+import { useFilteredNTR, useFilteredGraduation, useFilteredCategories, useFilteredMetrics, useFilteredDemographics, useFilteredHistorical, useIsFiltered, useFilterSummary } from '@/hooks/useFilteredData'
 import { DEEP_DIVE_TABS } from '@/lib/constants'
 import { GlassCard } from '@/components/shared/GlassCard'
 import { GaugeChart } from '@/components/charts/GaugeChart'
@@ -16,7 +17,7 @@ import { useState } from 'react'
 const iconMap = {
   DollarSign,
   GitBranch,
-  PieChart,
+  PieChart: PieChartIcon,
   Users,
   TrendingUp,
 }
@@ -420,6 +421,21 @@ function StudentTab({ data }: { data: NonNullable<ReturnType<typeof useData>['da
   const isFiltered = useIsFiltered()
   const [showDemographics, setShowDemographics] = useState(false)
   
+  // Custom label for pie slices - shows count
+  const renderPieLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, value }: {
+    cx: number, cy: number, midAngle: number, innerRadius: number, outerRadius: number, value: number
+  }) => {
+    const RADIAN = Math.PI / 180
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.5
+    const x = cx + radius * Math.cos(-midAngle * RADIAN)
+    const y = cy + radius * Math.sin(-midAngle * RADIAN)
+    return (
+      <text x={x} y={y} fill="#fff" textAnchor="middle" dominantBaseline="central" fontSize={12} fontWeight={600}>
+        {formatNumber(value)}
+      </text>
+    )
+  }
+  
   // Use filtered demographics when filters are active
   const demographics = isFiltered ? filteredDemographics : rawDemographics
   
@@ -608,63 +624,65 @@ function StudentTab({ data }: { data: NonNullable<ReturnType<typeof useData>['da
         </>
       )}
       
-      {/* Graduation Tracking */}
-      {graduation && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <GlassCard>
-            <div className="flex items-center gap-2 mb-4">
-              <GraduationCap className="h-5 w-5 text-[var(--color-warning)]" />
-              <h3 className="text-lg font-semibold text-white">Graduation Tracking</h3>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="p-4 rounded-lg bg-[var(--color-bg-elevated)]">
-                <div className="text-2xl font-bold text-[var(--color-warning)]">{graduation.graduatingThisTerm}</div>
-                <div className="text-sm text-[var(--color-text-muted)]">Graduating This Term</div>
-              </div>
-              <div className="p-4 rounded-lg bg-[var(--color-bg-elevated)]">
-                <div className="text-2xl font-bold text-[var(--color-success)]">{graduation.within10Credits}</div>
-                <div className="text-sm text-[var(--color-text-muted)]">Within 10 Credits</div>
-              </div>
-              <div className="p-4 rounded-lg bg-[var(--color-bg-elevated)]">
-                <div className="text-2xl font-bold text-white">{graduation.within20Credits}</div>
-                <div className="text-sm text-[var(--color-text-muted)]">Within 20 Credits</div>
-              </div>
-              <div className="p-4 rounded-lg bg-[var(--color-bg-elevated)]">
-                <div className="text-2xl font-bold text-[var(--color-text-secondary)]">{graduation.credits30Plus}</div>
-                <div className="text-sm text-[var(--color-text-muted)]">30+ Credits Left</div>
-              </div>
-            </div>
-          </GlassCard>
-          
-          {/* Progress Distribution */}
-          {graduation.progressDistribution?.length > 0 && (
-            <GlassCard>
-              <h3 className="text-lg font-semibold text-white mb-4">Progress Distribution</h3>
-              <div className="space-y-3">
-                {graduation.progressDistribution.map((item, i) => (
-                  <div key={i} className="flex items-center gap-3">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between mb-1">
+      {/* Credits Remaining Distribution */}
+      {graduation && graduation.progressDistribution?.length > 0 && (
+        <GlassCard>
+          <div className="flex items-center gap-2 mb-4">
+            <GraduationCap className="h-5 w-5 text-[var(--color-accent-primary)]" />
+            <h3 className="text-lg font-semibold text-white">Credits Remaining Distribution</h3>
+          </div>
+              <div className="flex flex-col lg:flex-row items-center gap-6">
+                <div className="w-full lg:w-1/2 h-[280px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={graduation.progressDistribution}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={100}
+                        paddingAngle={2}
+                        dataKey="value"
+                        nameKey="label"
+                        label={renderPieLabel}
+                        labelLine={false}
+                      >
+                        {graduation.progressDistribution.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: 'rgba(17, 24, 39, 0.98)',
+                          border: '1px solid rgba(255, 255, 255, 0.2)',
+                          borderRadius: '8px',
+                          color: '#fff',
+                        }}
+                        itemStyle={{ color: '#fff' }}
+                        labelStyle={{ color: '#fff', fontWeight: 600 }}
+                        formatter={(value: number) => [formatNumber(value), 'Students']}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="w-full lg:w-1/2 space-y-3">
+                  {graduation.progressDistribution.map((item, i) => (
+                    <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-[var(--color-bg-elevated)]">
+                      <div className="flex items-center gap-3">
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: item.color }} />
                         <span className="text-sm text-[var(--color-text-secondary)]">{item.label}</span>
-                        <span className="text-sm font-medium text-white">{item.value}</span>
                       </div>
-                      <div className="h-2 rounded-full bg-[var(--color-bg-elevated)] overflow-hidden">
-                        <div
-                          className="h-full rounded-full transition-all"
-                          style={{ 
-                            width: `${(item.value / graduation.totalStudents) * 100}%`,
-                            backgroundColor: item.color 
-                          }}
-                        />
+                      <div className="text-right">
+                        <span className="text-lg font-semibold text-white">{formatNumber(item.value)}</span>
+                        <span className="text-xs text-[var(--color-text-muted)] ml-2">
+                          ({((item.value / graduation.totalStudents) * 100).toFixed(1)}%)
+                        </span>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </GlassCard>
-          )}
-        </div>
+        </GlassCard>
       )}
       
       {/* Corporate Cohorts */}
@@ -674,18 +692,16 @@ function StudentTab({ data }: { data: NonNullable<ReturnType<typeof useData>['da
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[var(--color-border-subtle)]">
-                <th className="text-left py-3 text-[var(--color-text-muted)] font-medium">Company</th>
-                <th className="text-right py-3 text-[var(--color-text-muted)] font-medium">Applications</th>
+                <th className="text-left py-3 text-[var(--color-text-muted)] font-medium">Cohort</th>
                 <th className="text-right py-3 text-[var(--color-text-muted)] font-medium">New</th>
                 <th className="text-right py-3 text-[var(--color-text-muted)] font-medium">Continuing</th>
-                <th className="text-right py-3 text-[var(--color-text-muted)] font-medium">Total</th>
+                <th className="text-right py-3 text-[var(--color-text-muted)] font-medium">Total Enrolled</th>
               </tr>
             </thead>
             <tbody>
               {data.cohorts.map((cohort, i) => (
                 <tr key={i} className="border-b border-[var(--color-border-subtle)] hover:bg-[var(--color-bg-elevated)]">
                   <td className="py-3 text-white">{cohort.company}</td>
-                  <td className="py-3 text-right text-[var(--color-text-secondary)] tabular-nums">{cohort.applications || '—'}</td>
                   <td className="py-3 text-right text-[var(--color-success)] tabular-nums">{cohort.newStudents}</td>
                   <td className="py-3 text-right text-[var(--color-text-secondary)] tabular-nums">{cohort.continuingStudents}</td>
                   <td className="py-3 text-right text-white font-medium tabular-nums">{cohort.enrollments}</td>
@@ -701,7 +717,12 @@ function StudentTab({ data }: { data: NonNullable<ReturnType<typeof useData>['da
 
 // Time Tab - Enhanced with YoY data
 function TimeTab({ data }: { data: NonNullable<ReturnType<typeof useData>['data']> }) {
-  const yoy = useYoY()
+  const rawYoY = useYoY()
+  const { historical: filteredHistorical, yoy: filteredYoY, isFiltered } = useFilteredHistorical()
+  
+  // Use filtered data when filters are active
+  const yoy = isFiltered ? filteredYoY : rawYoY
+  const historical = isFiltered ? filteredHistorical : data.historical
   
   return (
     <div className="space-y-6">
@@ -711,7 +732,10 @@ function TimeTab({ data }: { data: NonNullable<ReturnType<typeof useData>['data'
             <TrendingUp className="h-4 w-4 text-[var(--color-accent-primary)]" />
           </div>
           <div>
-            <h3 className="font-semibold text-white mb-1">Navs Summary</h3>
+            <h3 className="font-semibold text-white mb-1">
+              Navs Summary
+              {isFiltered && <span className="ml-2 text-xs font-normal text-[var(--color-accent-primary)]">(Filtered)</span>}
+            </h3>
             <p className="text-[var(--color-text-secondary)]">
               {yoy ? (
                 <>
@@ -775,14 +799,19 @@ function TimeTab({ data }: { data: NonNullable<ReturnType<typeof useData>['data'
       
       {/* YoY Comparison Table */}
       <GlassCard>
-        <h3 className="text-lg font-semibold text-white mb-4">Year-over-Year Comparison</h3>
+        <h3 className="text-lg font-semibold text-white mb-4">
+          Year-over-Year Comparison
+          {isFiltered && <span className="ml-2 text-xs font-normal text-[var(--color-accent-primary)]">(Filtered)</span>}
+        </h3>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b border-[var(--color-border-subtle)]">
                 <th className="text-left py-3 text-sm font-medium text-[var(--color-text-muted)]">Metric</th>
-                {data.historical.years.map((year) => (
-                  <th key={year} className="text-right py-3 text-sm font-medium text-[var(--color-text-muted)]">{year}</th>
+                {historical?.years?.map((year: string) => (
+                  <th key={year} className="text-right py-3 text-sm font-medium text-[var(--color-text-muted)]">
+                    {year}
+                  </th>
                 ))}
                 <th className="text-right py-3 text-sm font-medium text-[var(--color-text-muted)]">YoY Change</th>
               </tr>
@@ -790,7 +819,7 @@ function TimeTab({ data }: { data: NonNullable<ReturnType<typeof useData>['data'
             <tbody>
               <tr className="border-b border-[var(--color-border-subtle)]">
                 <td className="py-3 text-[var(--color-text-secondary)]">Applications</td>
-                {data.historical.applications.map((val, i) => (
+                {historical?.applications?.map((val: number, i: number) => (
                   <td key={i} className="text-right py-3 text-white tabular-nums">{formatNumber(val)}</td>
                 ))}
                 <td className={cn(
@@ -802,7 +831,7 @@ function TimeTab({ data }: { data: NonNullable<ReturnType<typeof useData>['data'
               </tr>
               <tr className="border-b border-[var(--color-border-subtle)]">
                 <td className="py-3 text-[var(--color-text-secondary)]">Admits</td>
-                {data.historical.admits.map((val, i) => (
+                {historical?.admits?.map((val: number, i: number) => (
                   <td key={i} className="text-right py-3 text-white tabular-nums">{formatNumber(val)}</td>
                 ))}
                 <td className={cn(
@@ -814,7 +843,7 @@ function TimeTab({ data }: { data: NonNullable<ReturnType<typeof useData>['data'
               </tr>
               <tr className="border-b border-[var(--color-border-subtle)]">
                 <td className="py-3 text-[var(--color-text-secondary)]">Enrollments</td>
-                {data.historical.enrollments.map((val, i) => (
+                {historical?.enrollments?.map((val: number, i: number) => (
                   <td key={i} className="text-right py-3 text-white tabular-nums">{formatNumber(val)}</td>
                 ))}
                 <td className={cn(
@@ -824,10 +853,10 @@ function TimeTab({ data }: { data: NonNullable<ReturnType<typeof useData>['data'
                   {yoy ? `${yoy.vsLastYear.enrollmentsChange >= 0 ? '+' : ''}${yoy.vsLastYear.enrollmentsChange}%` : '—'}
                 </td>
               </tr>
-              {data.historical.yields && (
+              {historical?.yields && (
                 <tr>
                   <td className="py-3 text-[var(--color-text-secondary)]">Yield Rate</td>
-                  {data.historical.yields.map((val, i) => (
+                  {historical.yields.map((val: number, i: number) => (
                     <td key={i} className="text-right py-3 text-white tabular-nums">{val}%</td>
                   ))}
                   <td className={cn(

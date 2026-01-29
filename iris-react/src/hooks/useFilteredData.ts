@@ -472,6 +472,149 @@ export function useFilteredHistorical() {
 }
 
 /**
+ * Normalize program name for consistent grouping (case-insensitive, trimmed)
+ */
+function normalizeProgram(name: string): string {
+  if (!name) return ''
+  return name.trim().toLowerCase().replace(/\s+/g, ' ')
+}
+
+/**
+ * Title case a program name for display
+ */
+function titleCaseProgram(name: string): string {
+  if (!name) return ''
+  return name.trim().split(' ').map(word => 
+    word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+  ).join(' ')
+}
+
+/**
+ * Hook to get filtered programs with metrics (current year only)
+ * Calculates YoY enrollment change vs 2024 Spring Final Census
+ */
+export function useFilteredPrograms() {
+  const allStudents = useFilteredStudents() // All years
+  const hasFilters = useFilterStore((state) => state.hasActiveFilters())
+  const data = useDataStore((state) => state.data)
+  
+  return useMemo(() => {
+    if (!hasFilters) {
+      return {
+        programs: data?.programs ?? [],
+        programsAll: data?.programsAll ?? data?.programs ?? [],
+      }
+    }
+    
+    // Get students for current year (2026) and 2024 for YoY comparison
+    const students2026 = allStudents.filter(s => s.year === '2026')
+    const students2024 = allStudents.filter(s => s.year === '2024')
+    
+    // Group students by program
+    const slateStudents = students2026.filter(s => s.source === 'slate')
+    const censusStudents2026 = students2026.filter(s => s.source === 'census')
+    const censusStudents2024 = students2024.filter(s => s.source === 'census')
+    
+    // Build 2024 enrollment lookup by program (normalized key)
+    const enrollments2024: Record<string, number> = {}
+    censusStudents2024.forEach(s => {
+      const progKey = normalizeProgram(s.program || '')
+      enrollments2024[progKey] = (enrollments2024[progKey] || 0) + 1
+    })
+    
+    // Build program metrics from filtered data
+    // Use normalized key for grouping, store display name
+    const programMap: Record<string, {
+      program: string
+      school: string
+      degreeType: string
+      category: string
+      applications: number
+      admits: number
+      accepted: number
+      enrollments: number
+      enrollments2024: number
+      yoyEnrollChange: number
+    }> = {}
+    
+    // Aggregate Slate data (applications, admits, accepted)
+    slateStudents.forEach(s => {
+      const progRaw = s.program || 'Unknown'
+      const progKey = normalizeProgram(progRaw)
+      
+      if (!programMap[progKey]) {
+        programMap[progKey] = {
+          program: titleCaseProgram(progRaw),
+          school: s.school || '',
+          degreeType: s.degreeType || '',
+          category: s.category || '',
+          applications: 0,
+          admits: 0,
+          accepted: 0,
+          enrollments: 0,
+          enrollments2024: enrollments2024[progKey] || 0,
+          yoyEnrollChange: 0,
+        }
+      }
+      
+      programMap[progKey].applications++
+      if (s.funnelStage === 'admitted' || s.funnelStage === 'accepted' || s.funnelStage === 'enrolled') {
+        programMap[progKey].admits++
+      }
+      if (s.funnelStage === 'accepted' || s.funnelStage === 'enrolled') {
+        programMap[progKey].accepted++
+      }
+    })
+    
+    // Aggregate Census data (enrollments for 2026)
+    censusStudents2026.forEach(s => {
+      const progRaw = s.program || 'Unknown'
+      const progKey = normalizeProgram(progRaw)
+      
+      if (!programMap[progKey]) {
+        programMap[progKey] = {
+          program: titleCaseProgram(progRaw),
+          school: s.school || '',
+          degreeType: s.degreeType || '',
+          category: s.category || '',
+          applications: 0,
+          admits: 0,
+          accepted: 0,
+          enrollments: 0,
+          enrollments2024: enrollments2024[progKey] || 0,
+          yoyEnrollChange: 0,
+        }
+      }
+      
+      programMap[progKey].enrollments++
+      // Update school/degree/category if not set
+      if (!programMap[progKey].school && s.school) programMap[progKey].school = s.school
+      if (!programMap[progKey].degreeType && s.degreeType) programMap[progKey].degreeType = s.degreeType
+      if (!programMap[progKey].category && s.category) programMap[progKey].category = s.category
+    })
+    
+    // Calculate YoY enrollment change vs 2024 for each program
+    const programsAll = Object.values(programMap)
+      .map(p => {
+        const yoyChange = p.enrollments2024 > 0 
+          ? Math.round(((p.enrollments - p.enrollments2024) / p.enrollments2024) * 100)
+          : (p.enrollments > 0 ? 100 : 0) // New program = 100% growth, or 0 if no enrollments
+        return {
+          ...p,
+          yoyEnrollChange: yoyChange,
+        }
+      })
+      .filter(p => p.program && p.program.toLowerCase() !== 'unknown')
+      .sort((a, b) => b.enrollments - a.enrollments)
+    
+    return {
+      programs: programsAll.slice(0, 15),
+      programsAll,
+    }
+  }, [allStudents, hasFilters, data?.programs, data?.programsAll])
+}
+
+/**
  * Hook to check if data is being filtered
  */
 export function useIsFiltered() {

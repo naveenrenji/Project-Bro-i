@@ -1,3 +1,4 @@
+import React from 'react'
 import { NavLink } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { LayoutDashboard, Search, Calculator, MessageSquare, RefreshCw } from 'lucide-react'
@@ -30,32 +31,61 @@ function formatRelativeTime(date: Date | null): string {
 
 function RefreshButton() {
   const { refreshData, isLoading, lastFetched } = useDataStore()
+  const [showSuccess, setShowSuccess] = React.useState(false)
+  const [lastRefreshTime, setLastRefreshTime] = React.useState<Date | null>(lastFetched)
+  
+  // Update local state when store updates
+  React.useEffect(() => {
+    setLastRefreshTime(lastFetched)
+  }, [lastFetched])
   
   const handleRefresh = async () => {
-    await refreshData()
+    try {
+      await refreshData()
+      setShowSuccess(true)
+      setTimeout(() => setShowSuccess(false), 2000)
+    } catch (error) {
+      console.error('Refresh failed:', error)
+    }
   }
   
   return (
-    <button
-      onClick={handleRefresh}
-      disabled={isLoading}
-      className={cn(
-        'flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium transition-all',
-        'bg-[var(--color-bg-surface)] border border-[var(--color-border-subtle)]',
-        'hover:bg-[var(--color-bg-elevated)] hover:border-[var(--color-border-default)]',
-        'disabled:opacity-50 disabled:cursor-not-allowed'
+    <div className="relative">
+      <button
+        onClick={handleRefresh}
+        disabled={isLoading}
+        className={cn(
+          'flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium transition-all',
+          'bg-[var(--color-bg-surface)] border border-[var(--color-border-subtle)]',
+          'hover:bg-[var(--color-bg-elevated)] hover:border-[var(--color-border-default)]',
+          'disabled:opacity-50 disabled:cursor-not-allowed',
+          showSuccess && 'border-[var(--color-success)] bg-[var(--color-success)]/10'
+        )}
+      >
+        <RefreshCw className={cn(
+          'h-3.5 w-3.5',
+          isLoading && 'animate-spin text-[var(--color-accent-primary)]',
+          showSuccess ? 'text-[var(--color-success)]' : 'text-[var(--color-text-secondary)]'
+        )} />
+        <div className="hidden sm:flex flex-col items-start">
+          <span className={cn(
+            showSuccess ? 'text-[var(--color-success)]' : 'text-[var(--color-text-secondary)]'
+          )}>
+            {isLoading ? 'Refreshing...' : showSuccess ? 'Updated!' : 'Refresh'}
+          </span>
+          <span className="text-[10px] text-[var(--color-text-muted)]">
+            {formatRelativeTime(lastRefreshTime)}
+          </span>
+        </div>
+      </button>
+      
+      {/* Success toast */}
+      {showSuccess && (
+        <div className="absolute top-full right-0 mt-2 px-3 py-2 bg-[var(--color-success)]/20 border border-[var(--color-success)]/30 rounded-lg text-xs text-[var(--color-success)] whitespace-nowrap animate-in fade-in slide-in-from-top-1">
+          ✓ Data refreshed successfully
+        </div>
       )}
-    >
-      <RefreshCw className={cn('h-3.5 w-3.5 text-[var(--color-text-secondary)]', isLoading && 'animate-spin')} />
-      <div className="hidden sm:flex flex-col items-start">
-        <span className="text-[var(--color-text-secondary)]">
-          {isLoading ? 'Refreshing...' : 'Refresh'}
-        </span>
-        <span className="text-[10px] text-[var(--color-text-muted)]">
-          {formatRelativeTime(lastFetched)}
-        </span>
-      </div>
-    </button>
+    </div>
   )
 }
 

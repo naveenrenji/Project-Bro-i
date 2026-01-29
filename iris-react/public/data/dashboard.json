@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-01-27T22:21:02.292774Z",
+  "lastUpdated": "2026-01-29T20:14:01.949413Z",
   "semester": "2026S",
   "students": [
     {
@@ -111940,26 +111940,26 @@
         "conversionRate": 81.2
       }
     ],
-    "ASAP": [
+    "CPE": [
       {
         "stage": "Applications",
-        "count": 96,
+        "count": 152,
         "conversionRate": 100
       },
       {
         "stage": "Admits",
-        "count": 91,
-        "conversionRate": 94.8
+        "count": 143,
+        "conversionRate": 94.1
       },
       {
         "stage": "Accepted",
-        "count": 32,
-        "conversionRate": 35.2
+        "count": 100,
+        "conversionRate": 69.9
       },
       {
         "stage": "Enrolled",
-        "count": 24,
-        "conversionRate": 75.0
+        "count": 79,
+        "conversionRate": 79.0
       }
     ],
     "Retail": [
@@ -111982,6 +111982,50 @@
         "stage": "Enrolled",
         "count": 29,
         "conversionRate": 82.9
+      }
+    ],
+    "ASAP": [
+      {
+        "stage": "Applications",
+        "count": 96,
+        "conversionRate": 100
+      },
+      {
+        "stage": "Admits",
+        "count": 91,
+        "conversionRate": 94.8
+      },
+      {
+        "stage": "Accepted",
+        "count": 32,
+        "conversionRate": 35.2
+      },
+      {
+        "stage": "Enrolled",
+        "count": 24,
+        "conversionRate": 75.0
+      }
+    ],
+    "Corporate": [
+      {
+        "stage": "Applications",
+        "count": 400,
+        "conversionRate": 100
+      },
+      {
+        "stage": "Admits",
+        "count": 378,
+        "conversionRate": 94.5
+      },
+      {
+        "stage": "Accepted",
+        "count": 347,
+        "conversionRate": 91.8
+      },
+      {
+        "stage": "Enrolled",
+        "count": 316,
+        "conversionRate": 91.1
       }
     ],
     "Select Professional Online": [
@@ -112026,50 +112070,6 @@
         "stage": "Enrolled",
         "count": 0,
         "conversionRate": 0.0
-      }
-    ],
-    "CPE": [
-      {
-        "stage": "Applications",
-        "count": 152,
-        "conversionRate": 100
-      },
-      {
-        "stage": "Admits",
-        "count": 143,
-        "conversionRate": 94.1
-      },
-      {
-        "stage": "Accepted",
-        "count": 100,
-        "conversionRate": 69.9
-      },
-      {
-        "stage": "Enrolled",
-        "count": 79,
-        "conversionRate": 79.0
-      }
-    ],
-    "Corporate": [
-      {
-        "stage": "Applications",
-        "count": 400,
-        "conversionRate": 100
-      },
-      {
-        "stage": "Admits",
-        "count": 378,
-        "conversionRate": 94.5
-      },
-      {
-        "stage": "Accepted",
-        "count": 347,
-        "conversionRate": 91.8
-      },
-      {
-        "stage": "Enrolled",
-        "count": 316,
-        "conversionRate": 91.1
       }
     ]
   },

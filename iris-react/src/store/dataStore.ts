@@ -363,7 +363,7 @@ interface DataState {
   setData: (data: DashboardData) => void
   setLoading: (loading: boolean) => void
   setError: (error: string | null) => void
-  fetchData: () => Promise<void>
+  fetchData: (forceRefresh?: boolean) => Promise<void>
   refreshData: () => Promise<void>
 }
 
@@ -377,22 +377,33 @@ export const useDataStore = create<DataState>((set, get) => ({
   setLoading: (isLoading) => set({ isLoading }),
   setError: (error) => set({ error }),
   
-  fetchData: async () => {
+  fetchData: async (forceRefresh = false) => {
     const { isLoading, lastFetched } = get()
     
-    // Don't fetch if already loading or recently fetched (within 5 min)
+    // Don't fetch if already loading
     if (isLoading) return
-    if (lastFetched && Date.now() - lastFetched.getTime() < 5 * 60 * 1000) return
+    
+    // Skip if recently fetched (within 5 min) unless force refresh
+    if (!forceRefresh && lastFetched && Date.now() - lastFetched.getTime() < 5 * 60 * 1000) return
     
     set({ isLoading: true, error: null })
     
     try {
-      // Fetch from static JSON file
-      const response = await fetch('/data/dashboard.json')
+      // Fetch from static JSON file with cache-busting for refresh
+      const url = forceRefresh 
+        ? `/data/dashboard.json?t=${Date.now()}` 
+        : '/data/dashboard.json'
+      
+      const response = await fetch(url, {
+        cache: forceRefresh ? 'no-store' : 'default'
+      })
       
       if (response.ok) {
         const data = await response.json()
         set({ data, isLoading: false, lastFetched: new Date() })
+        if (forceRefresh) {
+          console.log('Data refreshed at', new Date().toLocaleTimeString())
+        }
       } else {
         throw new Error('Failed to load dashboard data')
       }
@@ -403,7 +414,26 @@ export const useDataStore = create<DataState>((set, get) => ({
   },
   
   refreshData: async () => {
-    set({ lastFetched: null })
-    await get().fetchData()
+    // First, trigger the Python script to process fresh data from source files
+    try {
+      console.log('🔄 Triggering data processing from source files...')
+      const response = await fetch('/api/refresh', { 
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      })
+      
+      if (response.ok) {
+        const result = await response.json()
+        console.log('✅ Data processing complete:', result.message)
+      } else {
+        console.warn('⚠️ Data processing API not available, loading existing data')
+      }
+    } catch (error) {
+      // API might not be available (e.g., in production), just log and continue
+      console.warn('⚠️ Data processing API not available:', error)
+    }
+    
+    // Then fetch the (newly processed) data
+    await get().fetchData(true)
   },
 }))

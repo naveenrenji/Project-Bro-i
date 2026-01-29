@@ -4,7 +4,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recha
 import { cn, formatCurrency, formatNumber, formatPercent } from '@/lib/utils'
 import { useUIStore } from '@/store/uiStore'
 import { useData, useNTR, useNTRBreakdown, useNTRByStudentType, useGraduation, useDemographics, useYoY, useBySchool, useByDegree } from '@/hooks/useData'
-import { useFilteredNTR, useFilteredGraduation, useFilteredCategories, useFilteredMetrics, useFilteredDemographics, useFilteredHistorical, useIsFiltered, useFilterSummary } from '@/hooks/useFilteredData'
+import { useFilteredNTR, useFilteredGraduation, useFilteredCategories, useFilteredMetrics, useFilteredDemographics, useFilteredHistorical, useFilteredPrograms, useIsFiltered, useFilterSummary } from '@/hooks/useFilteredData'
 import { DEEP_DIVE_TABS } from '@/lib/constants'
 import { GlassCard } from '@/components/shared/GlassCard'
 import { GaugeChart } from '@/components/charts/GaugeChart'
@@ -286,11 +286,17 @@ function PipelineTab({ data }: { data: NonNullable<ReturnType<typeof useData>['d
 function SegmentTab({ data }: { data: NonNullable<ReturnType<typeof useData>['data']> }) {
   const bySchool = useBySchool()
   const byDegree = useByDegree()
+  const { programs: filteredPrograms, programsAll: filteredProgramsAll } = useFilteredPrograms()
+  const isFiltered = useIsFiltered()
   const [showAllPrograms, setShowAllPrograms] = useState(false)
   
+  // Use filtered programs when filters are active
+  const programs = isFiltered ? filteredPrograms : data.programs
+  const programsAll = isFiltered ? filteredProgramsAll : (data.programsAll || data.programs)
+  
   const programsToShow = showAllPrograms 
-    ? (data.programsAll || data.programs) 
-    : data.programs.slice(0, 10)
+    ? programsAll 
+    : programs.slice(0, 10)
 
   return (
     <div className="space-y-6">
@@ -372,7 +378,7 @@ function SegmentTab({ data }: { data: NonNullable<ReturnType<typeof useData>['da
             onClick={() => setShowAllPrograms(!showAllPrograms)}
             className="text-sm text-[var(--color-accent-primary)] hover:text-[var(--color-accent-glow)]"
           >
-            {showAllPrograms ? 'Show Less' : `Show All (${data.programsAll?.length || data.programs.length})`}
+            {showAllPrograms ? 'Show Less' : `Show All (${programsAll.length})`}
           </button>
         </div>
         <div className="overflow-x-auto">
@@ -383,26 +389,27 @@ function SegmentTab({ data }: { data: NonNullable<ReturnType<typeof useData>['da
                 <th className="text-left py-3 text-[var(--color-text-muted)] font-medium">School</th>
                 <th className="text-right py-3 text-[var(--color-text-muted)] font-medium">Apps</th>
                 <th className="text-right py-3 text-[var(--color-text-muted)] font-medium">Enrolled</th>
-                <th className="text-right py-3 text-[var(--color-text-muted)] font-medium">Yield</th>
-                <th className="text-right py-3 text-[var(--color-text-muted)] font-medium">YoY</th>
+                <th className="text-right py-3 text-[var(--color-text-muted)] font-medium">vs 2024</th>
               </tr>
             </thead>
             <tbody>
-              {programsToShow.map((prog, i) => (
-                <tr key={i} className="border-b border-[var(--color-border-subtle)] hover:bg-[var(--color-bg-elevated)]">
-                  <td className="py-3 text-white">{prog.program}</td>
-                  <td className="py-3 text-[var(--color-text-secondary)]">{prog.school}</td>
-                  <td className="py-3 text-right text-white tabular-nums">{prog.applications}</td>
-                  <td className="py-3 text-right text-white tabular-nums">{prog.enrollments}</td>
-                  <td className="py-3 text-right text-white tabular-nums">{prog.yield}%</td>
-                  <td className={cn(
-                    'py-3 text-right font-medium tabular-nums',
-                    (prog.yoyChange ?? 0) >= 0 ? 'text-[var(--color-success)]' : 'text-[var(--color-danger)]'
-                  )}>
-                    {(prog.yoyChange ?? 0) >= 0 ? '+' : ''}{prog.yoyChange || 0}%
-                  </td>
-                </tr>
-              ))}
+              {programsToShow.map((prog, i) => {
+                const yoyChange = (prog as { yoyEnrollChange?: number }).yoyEnrollChange ?? prog.yoyChange ?? 0
+                return (
+                  <tr key={i} className="border-b border-[var(--color-border-subtle)] hover:bg-[var(--color-bg-elevated)]">
+                    <td className="py-3 text-white">{prog.program}</td>
+                    <td className="py-3 text-[var(--color-text-secondary)]">{prog.school}</td>
+                    <td className="py-3 text-right text-white tabular-nums">{prog.applications}</td>
+                    <td className="py-3 text-right text-white tabular-nums">{prog.enrollments}</td>
+                    <td className={cn(
+                      'py-3 text-right font-medium tabular-nums',
+                      yoyChange >= 0 ? 'text-[var(--color-success)]' : 'text-[var(--color-danger)]'
+                    )}>
+                      {yoyChange >= 0 ? '+' : ''}{yoyChange}%
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>

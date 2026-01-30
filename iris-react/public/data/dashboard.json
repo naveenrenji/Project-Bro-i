@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-01-29T23:16:44.390545Z",
+  "lastUpdated": "2026-01-30T21:39:02.413726Z",
   "semester": "2026S",
   "students": [
     {
@@ -111918,48 +111918,48 @@
     }
   ],
   "funnelByCategory": {
-    "CPE": [
+    "Retail": [
       {
         "stage": "Applications",
-        "count": 152,
+        "count": 89,
         "conversionRate": 100
       },
       {
         "stage": "Admits",
-        "count": 143,
-        "conversionRate": 94.1
+        "count": 69,
+        "conversionRate": 77.5
       },
       {
         "stage": "Accepted",
-        "count": 100,
-        "conversionRate": 69.9
+        "count": 35,
+        "conversionRate": 50.7
       },
       {
         "stage": "Enrolled",
-        "count": 79,
-        "conversionRate": 79.0
+        "count": 29,
+        "conversionRate": 82.9
       }
     ],
-    "Corporate": [
+    "Select Professional Online": [
       {
         "stage": "Applications",
-        "count": 400,
+        "count": 97,
         "conversionRate": 100
       },
       {
         "stage": "Admits",
-        "count": 378,
-        "conversionRate": 94.5
+        "count": 79,
+        "conversionRate": 81.4
       },
       {
         "stage": "Accepted",
-        "count": 347,
-        "conversionRate": 91.8
+        "count": 33,
+        "conversionRate": 41.8
       },
       {
         "stage": "Enrolled",
-        "count": 316,
-        "conversionRate": 91.1
+        "count": 32,
+        "conversionRate": 97.0
       }
     ],
     "Beacon": [
@@ -111984,50 +111984,6 @@
         "conversionRate": 81.2
       }
     ],
-    "ASAP": [
-      {
-        "stage": "Applications",
-        "count": 96,
-        "conversionRate": 100
-      },
-      {
-        "stage": "Admits",
-        "count": 91,
-        "conversionRate": 94.8
-      },
-      {
-        "stage": "Accepted",
-        "count": 32,
-        "conversionRate": 35.2
-      },
-      {
-        "stage": "Enrolled",
-        "count": 24,
-        "conversionRate": 75.0
-      }
-    ],
-    "Retail": [
-      {
-        "stage": "Applications",
-        "count": 89,
-        "conversionRate": 100
-      },
-      {
-        "stage": "Admits",
-        "count": 69,
-        "conversionRate": 77.5
-      },
-      {
-        "stage": "Accepted",
-        "count": 35,
-        "conversionRate": 50.7
-      },
-      {
-        "stage": "Enrolled",
-        "count": 29,
-        "conversionRate": 82.9
-      }
-    ],
     "Special Program": [
       {
         "stage": "Applications",
@@ -112050,26 +112006,70 @@
         "conversionRate": 0.0
       }
     ],
-    "Select Professional Online": [
+    "Corporate": [
       {
         "stage": "Applications",
-        "count": 97,
+        "count": 400,
         "conversionRate": 100
       },
       {
         "stage": "Admits",
-        "count": 79,
-        "conversionRate": 81.4
+        "count": 378,
+        "conversionRate": 94.5
       },
       {
         "stage": "Accepted",
-        "count": 33,
-        "conversionRate": 41.8
+        "count": 347,
+        "conversionRate": 91.8
       },
       {
         "stage": "Enrolled",
+        "count": 316,
+        "conversionRate": 91.1
+      }
+    ],
+    "CPE": [
+      {
+        "stage": "Applications",
+        "count": 152,
+        "conversionRate": 100
+      },
+      {
+        "stage": "Admits",
+        "count": 143,
+        "conversionRate": 94.1
+      },
+      {
+        "stage": "Accepted",
+        "count": 100,
+        "conversionRate": 69.9
+      },
+      {
+        "stage": "Enrolled",
+        "count": 79,
+        "conversionRate": 79.0
+      }
+    ],
+    "ASAP": [
+      {
+        "stage": "Applications",
+        "count": 96,
+        "conversionRate": 100
+      },
+      {
+        "stage": "Admits",
+        "count": 91,
+        "conversionRate": 94.8
+      },
+      {
+        "stage": "Accepted",
         "count": 32,
-        "conversionRate": 97.0
+        "conversionRate": 35.2
+      },
+      {
+        "stage": "Enrolled",
+        "count": 24,
+        "conversionRate": 75.0
       }
     ]
   },

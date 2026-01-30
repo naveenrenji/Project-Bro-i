@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-01-29T20:14:01.949413Z",
+  "lastUpdated": "2026-01-29T23:16:44.390545Z",
   "semester": "2026S",
   "students": [
     {
@@ -111918,28 +111918,6 @@
     }
   ],
   "funnelByCategory": {
-    "Beacon": [
-      {
-        "stage": "Applications",
-        "count": 48,
-        "conversionRate": 100
-      },
-      {
-        "stage": "Admits",
-        "count": 46,
-        "conversionRate": 95.8
-      },
-      {
-        "stage": "Accepted",
-        "count": 32,
-        "conversionRate": 69.6
-      },
-      {
-        "stage": "Enrolled",
-        "count": 26,
-        "conversionRate": 81.2
-      }
-    ],
     "CPE": [
       {
         "stage": "Applications",
@@ -111960,50 +111938,6 @@
         "stage": "Enrolled",
         "count": 79,
         "conversionRate": 79.0
-      }
-    ],
-    "Retail": [
-      {
-        "stage": "Applications",
-        "count": 89,
-        "conversionRate": 100
-      },
-      {
-        "stage": "Admits",
-        "count": 69,
-        "conversionRate": 77.5
-      },
-      {
-        "stage": "Accepted",
-        "count": 35,
-        "conversionRate": 50.7
-      },
-      {
-        "stage": "Enrolled",
-        "count": 29,
-        "conversionRate": 82.9
-      }
-    ],
-    "ASAP": [
-      {
-        "stage": "Applications",
-        "count": 96,
-        "conversionRate": 100
-      },
-      {
-        "stage": "Admits",
-        "count": 91,
-        "conversionRate": 94.8
-      },
-      {
-        "stage": "Accepted",
-        "count": 32,
-        "conversionRate": 35.2
-      },
-      {
-        "stage": "Enrolled",
-        "count": 24,
-        "conversionRate": 75.0
       }
     ],
     "Corporate": [
@@ -112028,26 +111962,70 @@
         "conversionRate": 91.1
       }
     ],
-    "Select Professional Online": [
+    "Beacon": [
       {
         "stage": "Applications",
-        "count": 97,
+        "count": 48,
         "conversionRate": 100
       },
       {
         "stage": "Admits",
-        "count": 79,
-        "conversionRate": 81.4
+        "count": 46,
+        "conversionRate": 95.8
       },
       {
         "stage": "Accepted",
-        "count": 33,
-        "conversionRate": 41.8
+        "count": 32,
+        "conversionRate": 69.6
       },
       {
         "stage": "Enrolled",
+        "count": 26,
+        "conversionRate": 81.2
+      }
+    ],
+    "ASAP": [
+      {
+        "stage": "Applications",
+        "count": 96,
+        "conversionRate": 100
+      },
+      {
+        "stage": "Admits",
+        "count": 91,
+        "conversionRate": 94.8
+      },
+      {
+        "stage": "Accepted",
         "count": 32,
-        "conversionRate": 97.0
+        "conversionRate": 35.2
+      },
+      {
+        "stage": "Enrolled",
+        "count": 24,
+        "conversionRate": 75.0
+      }
+    ],
+    "Retail": [
+      {
+        "stage": "Applications",
+        "count": 89,
+        "conversionRate": 100
+      },
+      {
+        "stage": "Admits",
+        "count": 69,
+        "conversionRate": 77.5
+      },
+      {
+        "stage": "Accepted",
+        "count": 35,
+        "conversionRate": 50.7
+      },
+      {
+        "stage": "Enrolled",
+        "count": 29,
+        "conversionRate": 82.9
       }
     ],
     "Special Program": [
@@ -112070,6 +112048,28 @@
         "stage": "Enrolled",
         "count": 0,
         "conversionRate": 0.0
+      }
+    ],
+    "Select Professional Online": [
+      {
+        "stage": "Applications",
+        "count": 97,
+        "conversionRate": 100
+      },
+      {
+        "stage": "Admits",
+        "count": 79,
+        "conversionRate": 81.4
+      },
+      {
+        "stage": "Accepted",
+        "count": 33,
+        "conversionRate": 41.8
+      },
+      {
+        "stage": "Enrolled",
+        "count": 32,
+        "conversionRate": 97.0
       }
     ]
   },

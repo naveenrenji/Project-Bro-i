@@ -387,25 +387,32 @@ function SegmentTab({ data }: { data: NonNullable<ReturnType<typeof useData>['da
               <tr className="border-b border-[var(--color-border-subtle)]">
                 <th className="text-left py-3 text-[var(--color-text-muted)] font-medium">Program</th>
                 <th className="text-left py-3 text-[var(--color-text-muted)] font-medium">School</th>
-                <th className="text-right py-3 text-[var(--color-text-muted)] font-medium">Apps</th>
                 <th className="text-right py-3 text-[var(--color-text-muted)] font-medium">Enrolled</th>
+                <th className="text-right py-3 text-[var(--color-text-muted)] font-medium">vs 2025</th>
                 <th className="text-right py-3 text-[var(--color-text-muted)] font-medium">vs 2024</th>
               </tr>
             </thead>
             <tbody>
               {programsToShow.map((prog, i) => {
-                const yoyChange = (prog as { yoyEnrollChange?: number }).yoyEnrollChange ?? prog.yoyChange ?? 0
+                const progData = prog as { vs2025?: number; vs2024?: number; yoyEnrollChange?: number }
+                const vs2025 = progData.vs2025 ?? prog.yoyChange ?? 0
+                const vs2024 = progData.vs2024 ?? progData.yoyEnrollChange ?? 0
                 return (
                   <tr key={i} className="border-b border-[var(--color-border-subtle)] hover:bg-[var(--color-bg-elevated)]">
                     <td className="py-3 text-white">{prog.program}</td>
                     <td className="py-3 text-[var(--color-text-secondary)]">{prog.school}</td>
-                    <td className="py-3 text-right text-white tabular-nums">{prog.applications}</td>
                     <td className="py-3 text-right text-white tabular-nums">{prog.enrollments}</td>
                     <td className={cn(
                       'py-3 text-right font-medium tabular-nums',
-                      yoyChange >= 0 ? 'text-[var(--color-success)]' : 'text-[var(--color-danger)]'
+                      vs2025 >= 0 ? 'text-[var(--color-success)]' : 'text-[var(--color-danger)]'
                     )}>
-                      {yoyChange >= 0 ? '+' : ''}{yoyChange}%
+                      {vs2025 >= 0 ? '+' : ''}{vs2025}%
+                    </td>
+                    <td className={cn(
+                      'py-3 text-right font-medium tabular-nums',
+                      vs2024 >= 0 ? 'text-[var(--color-success)]' : 'text-[var(--color-danger)]'
+                    )}>
+                      {vs2024 >= 0 ? '+' : ''}{vs2024}%
                     </td>
                   </tr>
                 )

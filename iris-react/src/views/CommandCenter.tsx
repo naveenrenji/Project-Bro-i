@@ -77,18 +77,30 @@ export function CommandCenter() {
         />
         <KPICard 
           data={isFiltered ? {
-            ...data.kpis.enrolled,
-            value: filteredMetrics.funnel.enrollments,
-            label: 'Filtered Enrolled',
-          } : data.kpis.enrolled} 
+            label: 'Total Students',
+            value: filteredNTR?.totalStudents ?? 0,
+            previousValue: data.enrollmentBreakdown?.total,
+            format: 'number' as const,
+          } : {
+            label: 'Total Students',
+            value: data.enrollmentBreakdown?.total ?? 0,
+            previousValue: data.historicalCensus?.stats?.['2025']?.total ?? 0,
+            format: 'number' as const,
+          }} 
           delay={1} 
         />
         <KPICard 
           data={isFiltered ? {
-            ...data.kpis.yield,
-            value: Math.round(filteredMetrics.funnel.yieldRate),
-            label: 'Filtered Yield',
-          } : data.kpis.yield} 
+            label: 'New Students',
+            value: filteredMetrics.funnel.enrollments,
+            previousValue: data.enrollmentBreakdown?.newSlate,
+            format: 'number' as const,
+          } : {
+            label: 'New Students',
+            value: data.enrollmentBreakdown?.newSlate ?? 0,
+            previousValue: data.historicalCensus?.stats?.['2025']?.new ?? 0,
+            format: 'number' as const,
+          }} 
           delay={2} 
         />
         <KPICard data={data.kpis.yoyChange} delay={3} />

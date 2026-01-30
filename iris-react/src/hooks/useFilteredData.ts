@@ -491,7 +491,7 @@ function titleCaseProgram(name: string): string {
 
 /**
  * Hook to get filtered programs with metrics (current year only)
- * Calculates YoY enrollment change vs 2024 Spring Final Census
+ * Calculates YoY enrollment change vs 2024 and 2025 Spring Final Census
  */
 export function useFilteredPrograms() {
   const allStudents = useFilteredStudents() // All years
@@ -506,20 +506,29 @@ export function useFilteredPrograms() {
       }
     }
     
-    // Get students for current year (2026) and 2024 for YoY comparison
+    // Get students for current year (2026) and 2024/2025 for YoY comparison
     const students2026 = allStudents.filter(s => s.year === '2026')
+    const students2025 = allStudents.filter(s => s.year === '2025')
     const students2024 = allStudents.filter(s => s.year === '2024')
     
     // Group students by program
     const slateStudents = students2026.filter(s => s.source === 'slate')
     const censusStudents2026 = students2026.filter(s => s.source === 'census')
+    const censusStudents2025 = students2025.filter(s => s.source === 'census')
     const censusStudents2024 = students2024.filter(s => s.source === 'census')
     
-    // Build 2024 enrollment lookup by program (normalized key)
+    // Build enrollment lookup by program (normalized key)
     const enrollments2024: Record<string, number> = {}
+    const enrollments2025: Record<string, number> = {}
+    
     censusStudents2024.forEach(s => {
       const progKey = normalizeProgram(s.program || '')
       enrollments2024[progKey] = (enrollments2024[progKey] || 0) + 1
+    })
+    
+    censusStudents2025.forEach(s => {
+      const progKey = normalizeProgram(s.program || '')
+      enrollments2025[progKey] = (enrollments2025[progKey] || 0) + 1
     })
     
     // Build program metrics from filtered data
@@ -534,7 +543,9 @@ export function useFilteredPrograms() {
       accepted: number
       enrollments: number
       enrollments2024: number
-      yoyEnrollChange: number
+      enrollments2025: number
+      vs2024: number
+      vs2025: number
     }> = {}
     
     // Aggregate Slate data (applications, admits, accepted)
@@ -553,7 +564,9 @@ export function useFilteredPrograms() {
           accepted: 0,
           enrollments: 0,
           enrollments2024: enrollments2024[progKey] || 0,
-          yoyEnrollChange: 0,
+          enrollments2025: enrollments2025[progKey] || 0,
+          vs2024: 0,
+          vs2025: 0,
         }
       }
       
@@ -582,7 +595,9 @@ export function useFilteredPrograms() {
           accepted: 0,
           enrollments: 0,
           enrollments2024: enrollments2024[progKey] || 0,
-          yoyEnrollChange: 0,
+          enrollments2025: enrollments2025[progKey] || 0,
+          vs2024: 0,
+          vs2025: 0,
         }
       }
       
@@ -593,17 +608,18 @@ export function useFilteredPrograms() {
       if (!programMap[progKey].category && s.category) programMap[progKey].category = s.category
     })
     
-    // Calculate YoY enrollment change vs 2024 for each program
+    // Calculate YoY enrollment change vs 2024 and 2025 for each program
+    const calcChange = (curr: number, prev: number) => {
+      if (prev > 0) return Math.round(((curr - prev) / prev) * 100)
+      return curr > 0 ? 100 : 0 // New program = 100% growth, or 0 if no enrollments
+    }
+    
     const programsAll = Object.values(programMap)
-      .map(p => {
-        const yoyChange = p.enrollments2024 > 0 
-          ? Math.round(((p.enrollments - p.enrollments2024) / p.enrollments2024) * 100)
-          : (p.enrollments > 0 ? 100 : 0) // New program = 100% growth, or 0 if no enrollments
-        return {
-          ...p,
-          yoyEnrollChange: yoyChange,
-        }
-      })
+      .map(p => ({
+        ...p,
+        vs2024: calcChange(p.enrollments, p.enrollments2024),
+        vs2025: calcChange(p.enrollments, p.enrollments2025),
+      }))
       .filter(p => p.program && p.program.toLowerCase() !== 'unknown')
       .sort((a, b) => b.enrollments - a.enrollments)
     

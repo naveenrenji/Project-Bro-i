@@ -1599,6 +1599,19 @@ def calculate_enrollment_breakdown(census_df: pd.DataFrame) -> Dict:
 # STUDENT-LEVEL DATA EXPORT (for client-side filtering)
 # ============================================================================
 
+def parse_date_safely(date_val) -> Optional[str]:
+    """Parse a date value and return ISO format string or None."""
+    if pd.isna(date_val) or str(date_val).strip() == '':
+        return None
+    try:
+        parsed = pd.to_datetime(date_val, errors='coerce')
+        if pd.isna(parsed):
+            return None
+        return parsed.strftime('%Y-%m-%d')
+    except:
+        return None
+
+
 def generate_student_records(apps_df: pd.DataFrame, census_df: pd.DataFrame, year_dfs: Dict = None) -> List[Dict]:
     """
     Generate student-level records for client-side filtering.
@@ -1624,6 +1637,10 @@ def generate_student_records(apps_df: pd.DataFrame, census_df: pd.DataFrame, yea
                     elif row.get('Admit Status') == 'admitted':
                         funnel_stage = 'admitted'
                     
+                    # Parse dates
+                    submitted_date = parse_date_safely(row.get('Submitted'))
+                    enrollment_date = parse_date_safely(row.get('Date of Enrollment'))
+                    
                     student = {
                         "id": f"slate_{year}_{idx}",
                         "source": "slate",
@@ -1636,6 +1653,8 @@ def generate_student_records(apps_df: pd.DataFrame, census_df: pd.DataFrame, yea
                         "studentStatus": "New",
                         "funnelStage": funnel_stage,
                         "company": str(row.get('Sponsoring Company', '')) if row.get('Sponsoring Company') else None,
+                        "submittedDate": submitted_date,
+                        "enrollmentDate": enrollment_date,
                     }
                     students.append(student)
     elif apps_df is not None and not apps_df.empty:
@@ -1649,6 +1668,10 @@ def generate_student_records(apps_df: pd.DataFrame, census_df: pd.DataFrame, yea
             elif row.get('Admit Status') == 'admitted':
                 funnel_stage = 'admitted'
             
+            # Parse dates
+            submitted_date = parse_date_safely(row.get('Submitted'))
+            enrollment_date = parse_date_safely(row.get('Date of Enrollment'))
+            
             student = {
                 "id": f"slate_{idx}",
                 "source": "slate",
@@ -1661,6 +1684,8 @@ def generate_student_records(apps_df: pd.DataFrame, census_df: pd.DataFrame, yea
                 "studentStatus": "New",
                 "funnelStage": funnel_stage,
                 "company": str(row.get('Sponsoring Company', '')) if row.get('Sponsoring Company') else None,
+                "submittedDate": submitted_date,
+                "enrollmentDate": enrollment_date,
             }
             students.append(student)
     
@@ -1783,6 +1808,143 @@ def generate_summaries(apps_df: pd.DataFrame, census_df: pd.DataFrame, year_dfs:
                 summaries["byProgram"][prog] = get_funnel_summary(prog_df)
     
     return summaries
+
+
+def generate_timeline_data(year_dfs: Dict) -> Dict:
+    """
+    Generate time-series data for applications and enrollments by date.
+    Aggregates by week and month for charting.
+    """
+    timeline = {
+        "applications": {
+            "byDay": [],
+            "byWeek": [],
+            "byMonth": [],
+        },
+        "enrollments": {
+            "byDay": [],
+            "byWeek": [],
+            "byMonth": [],
+        },
+        "dateRange": {
+            "minDate": None,
+            "maxDate": None,
+        }
+    }
+    
+    # Collect all application dates from all years
+    app_dates = []
+    enroll_dates = []
+    
+    for year_key in ['two_years_ago', 'previous', 'current']:
+        df = year_dfs.get(year_key)
+        if df is None or df.empty:
+            continue
+        
+        # Get application submission dates
+        if 'Submitted' in df.columns:
+            for _, row in df.iterrows():
+                date_str = parse_date_safely(row.get('Submitted'))
+                if date_str:
+                    category = str(row.get('Application Category', '')).replace('Stevens Online (', '').replace(')', '')
+                    degree_type = str(row.get('Degree Type', ''))
+                    app_dates.append({
+                        'date': date_str,
+                        'category': category,
+                        'degreeType': degree_type,
+                    })
+        
+        # Get enrollment dates
+        if 'Date of Enrollment' in df.columns:
+            for _, row in df.iterrows():
+                if row.get('Enrolled') == 'yes':
+                    date_str = parse_date_safely(row.get('Date of Enrollment'))
+                    if date_str:
+                        category = str(row.get('Application Category', '')).replace('Stevens Online (', '').replace(')', '')
+                        degree_type = str(row.get('Degree Type', ''))
+                        enroll_dates.append({
+                            'date': date_str,
+                            'category': category,
+                            'degreeType': degree_type,
+                        })
+    
+    if not app_dates and not enroll_dates:
+        return timeline
+    
+    # Convert to DataFrames for aggregation
+    if app_dates:
+        app_df = pd.DataFrame(app_dates)
+        app_df['date'] = pd.to_datetime(app_df['date'])
+        
+        # By day
+        daily_apps = app_df.groupby(app_df['date'].dt.strftime('%Y-%m-%d')).size().reset_index()
+        daily_apps.columns = ['date', 'count']
+        timeline['applications']['byDay'] = daily_apps.to_dict('records')
+        
+        # By week
+        weekly_apps = app_df.groupby(app_df['date'].dt.to_period('W').apply(lambda r: r.start_time.strftime('%Y-%m-%d'))).size().reset_index()
+        weekly_apps.columns = ['date', 'count']
+        timeline['applications']['byWeek'] = weekly_apps.to_dict('records')
+        
+        # By month
+        monthly_apps = app_df.groupby(app_df['date'].dt.strftime('%Y-%m')).size().reset_index()
+        monthly_apps.columns = ['date', 'count']
+        timeline['applications']['byMonth'] = monthly_apps.to_dict('records')
+        
+        # By category and month
+        cat_monthly = app_df.groupby([app_df['date'].dt.strftime('%Y-%m'), 'category']).size().unstack(fill_value=0)
+        timeline['applications']['byCategoryMonth'] = []
+        for date_str in cat_monthly.index:
+            row = {'date': date_str}
+            for cat in cat_monthly.columns:
+                row[cat] = int(cat_monthly.loc[date_str, cat])
+            timeline['applications']['byCategoryMonth'].append(row)
+        
+        timeline['dateRange']['minDate'] = app_df['date'].min().strftime('%Y-%m-%d')
+        timeline['dateRange']['maxDate'] = app_df['date'].max().strftime('%Y-%m-%d')
+    
+    if enroll_dates:
+        enroll_df = pd.DataFrame(enroll_dates)
+        enroll_df['date'] = pd.to_datetime(enroll_df['date'])
+        
+        # By day
+        daily_enroll = enroll_df.groupby(enroll_df['date'].dt.strftime('%Y-%m-%d')).size().reset_index()
+        daily_enroll.columns = ['date', 'count']
+        timeline['enrollments']['byDay'] = daily_enroll.to_dict('records')
+        
+        # By week
+        weekly_enroll = enroll_df.groupby(enroll_df['date'].dt.to_period('W').apply(lambda r: r.start_time.strftime('%Y-%m-%d'))).size().reset_index()
+        weekly_enroll.columns = ['date', 'count']
+        timeline['enrollments']['byWeek'] = weekly_enroll.to_dict('records')
+        
+        # By month
+        monthly_enroll = enroll_df.groupby(enroll_df['date'].dt.strftime('%Y-%m')).size().reset_index()
+        monthly_enroll.columns = ['date', 'count']
+        timeline['enrollments']['byMonth'] = monthly_enroll.to_dict('records')
+        
+        # By category and month
+        cat_monthly = enroll_df.groupby([enroll_df['date'].dt.strftime('%Y-%m'), 'category']).size().unstack(fill_value=0)
+        timeline['enrollments']['byCategoryMonth'] = []
+        for date_str in cat_monthly.index:
+            row = {'date': date_str}
+            for cat in cat_monthly.columns:
+                row[cat] = int(cat_monthly.loc[date_str, cat])
+            timeline['enrollments']['byCategoryMonth'].append(row)
+        
+        # Update date range
+        if timeline['dateRange']['minDate']:
+            min_date = min(pd.to_datetime(timeline['dateRange']['minDate']), enroll_df['date'].min())
+            timeline['dateRange']['minDate'] = min_date.strftime('%Y-%m-%d')
+        else:
+            timeline['dateRange']['minDate'] = enroll_df['date'].min().strftime('%Y-%m-%d')
+        
+        if timeline['dateRange']['maxDate']:
+            max_date = max(pd.to_datetime(timeline['dateRange']['maxDate']), enroll_df['date'].max())
+            timeline['dateRange']['maxDate'] = max_date.strftime('%Y-%m-%d')
+        else:
+            timeline['dateRange']['maxDate'] = enroll_df['date'].max().strftime('%Y-%m-%d')
+    
+    return timeline
 
 
 def generate_historical_by_category(year_dfs: Dict) -> Dict:
@@ -2115,6 +2277,11 @@ def process_data():
     # Generate historical data by category for projections
     historical_by_category = generate_historical_by_category(year_dfs)
     
+    # Generate timeline data for time-series charts
+    print("   Generating timeline data...")
+    timeline = generate_timeline_data(year_dfs)
+    print(f"   Timeline: {len(timeline['applications']['byMonth'])} months of apps, {len(timeline['enrollments']['byMonth'])} months of enrollments")
+    
     # Build dashboard data structure
     dashboard_data = {
         # Metadata
@@ -2142,6 +2309,7 @@ def process_data():
         "historicalCensus": historical_census,              # From Census (overall enrollment)
         "historical": historical_new_students,              # Backward compat - alias to new students
         "historicalByCategory": historical_by_category,
+        "timeline": timeline,
         
         "enrollmentBreakdown": enrollment_breakdown,
         "graduation": graduation,

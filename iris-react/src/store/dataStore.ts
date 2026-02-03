@@ -226,6 +226,7 @@ export interface CPCRate {
 export interface StudentRecord {
   id: string
   source: 'slate' | 'census'
+  year?: string  // '2024', '2025', '2026'
   category: string
   school: string
   degreeType: string
@@ -245,6 +246,9 @@ export interface StudentRecord {
   canvasLastLogin?: string
   canvasWeeksSinceLogin?: number
   company?: string
+  // Date fields for timeline
+  submittedDate?: string | null
+  enrollmentDate?: string | null
 }
 
 export interface DashboardData {
@@ -310,6 +314,26 @@ export interface DashboardData {
     applications: number[]
     enrollments: number[]
   }>
+  
+  // Timeline data for time-series charts
+  timeline?: {
+    applications: {
+      byDay: Array<{ date: string; count: number }>
+      byWeek: Array<{ date: string; count: number }>
+      byMonth: Array<{ date: string; count: number }>
+      byCategoryMonth?: Array<Record<string, any>>
+    }
+    enrollments: {
+      byDay: Array<{ date: string; count: number }>
+      byWeek: Array<{ date: string; count: number }>
+      byMonth: Array<{ date: string; count: number }>
+      byCategoryMonth?: Array<Record<string, any>>
+    }
+    dateRange: {
+      minDate: string | null
+      maxDate: string | null
+    }
+  }
   
   // Enrollment Breakdown
   enrollmentBreakdown: {

@@ -631,6 +631,86 @@ export function useFilteredPrograms() {
 }
 
 /**
+ * Hook to get pipeline programs using ONLY Slate data (current year)
+ * Uses Term of Enrollment / YOY Status for enrolled count
+ */
+export function usePipelinePrograms() {
+  const allStudents = useFilteredStudents()
+  const hasFilters = useFilterStore((state) => state.hasActiveFilters())
+  const data = useDataStore((state) => state.data)
+  
+  return useMemo(() => {
+    // Get only Slate students for current year (2026)
+    const slateStudents2026 = allStudents.filter(s => s.source === 'slate' && s.year === '2026')
+    
+    if (slateStudents2026.length === 0 && !hasFilters) {
+      // Fall back to raw data if no filtered students
+      return {
+        programs: data?.programs ?? [],
+        programsAll: data?.programsAll ?? data?.programs ?? [],
+      }
+    }
+    
+    // Build program metrics from Slate data only
+    const programMap: Record<string, {
+      program: string
+      school: string
+      degreeType: string
+      category: string
+      applications: number
+      admits: number
+      accepted: number
+      enrollments: number // This is from Slate's enrolled field (Term of Enrollment)
+    }> = {}
+    
+    slateStudents2026.forEach(s => {
+      const progRaw = s.program || 'Unknown'
+      const progKey = normalizeProgram(progRaw)
+      
+      if (!programMap[progKey]) {
+        programMap[progKey] = {
+          program: titleCaseProgram(progRaw),
+          school: s.school || '',
+          degreeType: s.degreeType || '',
+          category: s.category || '',
+          applications: 0,
+          admits: 0,
+          accepted: 0,
+          enrollments: 0,
+        }
+      }
+      
+      // Count applications (all Slate records are applications)
+      programMap[progKey].applications++
+      
+      // Count admits
+      if (s.funnelStage === 'admitted' || s.funnelStage === 'accepted' || s.funnelStage === 'enrolled') {
+        programMap[progKey].admits++
+      }
+      
+      // Count accepted
+      if (s.funnelStage === 'accepted' || s.funnelStage === 'enrolled') {
+        programMap[progKey].accepted++
+      }
+      
+      // Count enrolled (from Slate's YOY Status / Term of Enrollment)
+      if (s.funnelStage === 'enrolled') {
+        programMap[progKey].enrollments++
+      }
+    })
+    
+    const programsAll = Object.values(programMap)
+      .filter(p => p.program && p.program.toLowerCase() !== 'unknown')
+      .sort((a, b) => b.applications - a.applications)
+    
+    return {
+      programs: programsAll.slice(0, 15),
+      programsAll,
+    }
+  }, [allStudents, hasFilters, data?.programs, data?.programsAll])
+}
+
+/**
  * Hook to get average credits per student by category (current year only)
  */
 export function useAverageCredits() {

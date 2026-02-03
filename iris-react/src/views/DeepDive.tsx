@@ -4,12 +4,13 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recha
 import { cn, formatCurrency, formatNumber, formatPercent } from '@/lib/utils'
 import { useUIStore } from '@/store/uiStore'
 import { useData, useNTR, useNTRBreakdown, useNTRByStudentType, useGraduation, useDemographics, useYoY, useBySchool, useByDegree } from '@/hooks/useData'
-import { useFilteredNTR, useFilteredGraduation, useFilteredCategories, useFilteredMetrics, useFilteredDemographics, useFilteredHistorical, useFilteredPrograms, useAverageCredits, useIsFiltered, useFilterSummary } from '@/hooks/useFilteredData'
+import { useFilteredNTR, useFilteredGraduation, useFilteredCategories, useFilteredMetrics, useFilteredDemographics, useFilteredHistorical, useFilteredPrograms, usePipelinePrograms, useAverageCredits, useIsFiltered, useFilterSummary } from '@/hooks/useFilteredData'
 import { DEEP_DIVE_TABS } from '@/lib/constants'
 import { GlassCard } from '@/components/shared/GlassCard'
 import { GaugeChart } from '@/components/charts/GaugeChart'
 import { SankeyFlow } from '@/components/charts/SankeyFlow'
 import { NTRBarChart, NTRPieChart, NTRSummaryCards, NTRBreakdownTable, AvgCreditsChart } from '@/components/charts/NTRBreakdown'
+import { TimelineChart } from '@/components/charts/TimelineChart'
 import { NavsInput } from '@/components/navs/NavsInput'
 import { ChartSkeleton } from '@/components/shared/SkeletonLoader'
 import { useState } from 'react'
@@ -219,6 +220,47 @@ function RevenueTab({ data: _data }: { data: NonNullable<ReturnType<typeof useDa
 // Pipeline Tab
 function PipelineTab({ data }: { data: NonNullable<ReturnType<typeof useData>['data']> }) {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
+  const [selectedDegree, setSelectedDegree] = useState<string | null>(null)
+  const [showAllPrograms, setShowAllPrograms] = useState(false)
+  const { programsAll: pipelinePrograms } = usePipelinePrograms()
+  
+  // Get unique degree types from programs
+  const degreeTypes = [...new Set(pipelinePrograms.map(p => p.degreeType).filter(Boolean))].sort()
+  
+  // Get programs with pipeline data from Slate only - filter by category and degree type
+  const programsWithPipeline = pipelinePrograms
+    .filter(p => p.applications > 0)
+    .filter(p => !selectedCategory || p.category === selectedCategory)
+    .filter(p => !selectedDegree || p.degreeType === selectedDegree)
+    .sort((a, b) => b.applications - a.applications)
+  
+  const programsToShow = showAllPrograms 
+    ? programsWithPipeline 
+    : programsWithPipeline.slice(0, 15)
+  
+  // Calculate filtered funnel metrics from programs
+  const filteredFunnelMetrics = {
+    applications: programsWithPipeline.reduce((sum, p) => sum + p.applications, 0),
+    admits: programsWithPipeline.reduce((sum, p) => sum + p.admits, 0),
+    accepted: programsWithPipeline.reduce((sum, p) => sum + p.accepted, 0),
+    enrolled: programsWithPipeline.reduce((sum, p) => sum + p.enrollments, 0),
+  }
+  
+  // Build display funnel based on filters
+  const displayFunnel = (selectedCategory || selectedDegree) ? [
+    { stage: 'Applications', count: filteredFunnelMetrics.applications, conversionRate: 100 },
+    { stage: 'Admits', count: filteredFunnelMetrics.admits, conversionRate: filteredFunnelMetrics.applications > 0 ? Math.round((filteredFunnelMetrics.admits / filteredFunnelMetrics.applications) * 100 * 10) / 10 : 0 },
+    { stage: 'Accepted', count: filteredFunnelMetrics.accepted, conversionRate: filteredFunnelMetrics.admits > 0 ? Math.round((filteredFunnelMetrics.accepted / filteredFunnelMetrics.admits) * 100 * 10) / 10 : 0 },
+    { stage: 'Enrolled', count: filteredFunnelMetrics.enrolled, conversionRate: filteredFunnelMetrics.accepted > 0 ? Math.round((filteredFunnelMetrics.enrolled / filteredFunnelMetrics.accepted) * 100 * 10) / 10 : 0 },
+  ] : data.funnel
+  
+  // Build title based on selections
+  const getTitle = () => {
+    const parts = []
+    if (selectedCategory) parts.push(selectedCategory)
+    if (selectedDegree) parts.push(selectedDegree)
+    return parts.length > 0 ? `${parts.join(' · ')} Pipeline` : 'Enrollment Pipeline'
+  }
   
   return (
     <div className="space-y-6">
@@ -230,56 +272,89 @@ function PipelineTab({ data }: { data: NonNullable<ReturnType<typeof useData>['d
           <div>
             <h3 className="font-semibold text-white mb-1">Navs Summary</h3>
             <p className="text-[var(--color-text-secondary)]">
-              Pipeline shows <strong className="text-white">{formatNumber(data.funnel[0]?.count || 0)}</strong> applications. 
-              Admit rate is <strong className="text-white">{data.funnel[1]?.conversionRate || 0}%</strong>. 
-              Overall yield at <strong className="text-white">{data.funnel[3]?.conversionRate || 0}%</strong>.
+              Pipeline shows <strong className="text-white">{formatNumber(displayFunnel[0]?.count || 0)}</strong> applications. 
+              Admit rate is <strong className="text-white">{displayFunnel[1]?.conversionRate || 0}%</strong>. 
+              Overall yield at <strong className="text-white">{displayFunnel[3]?.conversionRate || 0}%</strong>.
             </p>
           </div>
         </div>
       </GlassCard>
       
-      {/* Category Filter */}
-      {data.funnelByCategory && Object.keys(data.funnelByCategory).length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => setSelectedCategory(null)}
-            className={cn(
-              'px-3 py-1.5 rounded-lg text-sm transition-all',
-              !selectedCategory
-                ? 'bg-[var(--color-accent-primary)] text-white'
-                : 'bg-[var(--color-bg-surface)] text-[var(--color-text-secondary)] hover:text-white'
-            )}
-          >
-            All Categories
-          </button>
-          {Object.keys(data.funnelByCategory).map((cat) => (
+      {/* Filters */}
+      <div className="space-y-3">
+        {/* Category Filter */}
+        {data.funnelByCategory && Object.keys(data.funnelByCategory).length > 0 && (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider w-20">Category:</span>
             <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
+              onClick={() => setSelectedCategory(null)}
               className={cn(
                 'px-3 py-1.5 rounded-lg text-sm transition-all',
-                selectedCategory === cat
+                !selectedCategory
                   ? 'bg-[var(--color-accent-primary)] text-white'
                   : 'bg-[var(--color-bg-surface)] text-[var(--color-text-secondary)] hover:text-white'
               )}
             >
-              {cat}
+              All
             </button>
-          ))}
-        </div>
-      )}
+            {Object.keys(data.funnelByCategory).map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(cat)}
+                className={cn(
+                  'px-3 py-1.5 rounded-lg text-sm transition-all',
+                  selectedCategory === cat
+                    ? 'bg-[var(--color-accent-primary)] text-white'
+                    : 'bg-[var(--color-bg-surface)] text-[var(--color-text-secondary)] hover:text-white'
+                )}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+        )}
+        
+        {/* Degree Type Filter */}
+        {degreeTypes.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider w-20">Degree:</span>
+            <button
+              onClick={() => setSelectedDegree(null)}
+              className={cn(
+                'px-3 py-1.5 rounded-lg text-sm transition-all',
+                !selectedDegree
+                  ? 'bg-[var(--color-success)] text-white'
+                  : 'bg-[var(--color-bg-surface)] text-[var(--color-text-secondary)] hover:text-white'
+              )}
+            >
+              All
+            </button>
+            {degreeTypes.map((deg) => (
+              <button
+                key={deg}
+                onClick={() => setSelectedDegree(deg)}
+                className={cn(
+                  'px-3 py-1.5 rounded-lg text-sm transition-all',
+                  selectedDegree === deg
+                    ? 'bg-[var(--color-success)] text-white'
+                    : 'bg-[var(--color-bg-surface)] text-[var(--color-text-secondary)] hover:text-white'
+                )}
+              >
+                {deg}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
       
       <SankeyFlow 
-        data={selectedCategory && data.funnelByCategory?.[selectedCategory] 
-          ? data.funnelByCategory[selectedCategory] 
-          : data.funnel
-        } 
-        title={selectedCategory ? `${selectedCategory} Pipeline` : "Enrollment Pipeline"} 
+        data={displayFunnel} 
+        title={getTitle()} 
       />
       
       {/* Funnel Metrics Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {data.funnel.map((stage, i) => (
+        {displayFunnel.map((stage, i) => (
           <GlassCard key={stage.stage} padding="sm">
             <div className="text-xs text-[var(--color-text-muted)] uppercase tracking-wider mb-1">{stage.stage}</div>
             <div className="text-2xl font-bold text-white">{formatNumber(stage.count)}</div>
@@ -291,6 +366,105 @@ function PipelineTab({ data }: { data: NonNullable<ReturnType<typeof useData>['d
           </GlassCard>
         ))}
       </div>
+      
+      {/* Program-wise Pipeline Table */}
+      <GlassCard>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <GitBranch className="h-5 w-5 text-[var(--color-accent-primary)]" />
+            <h3 className="text-lg font-semibold text-white">
+              Pipeline by Program
+              {(selectedCategory || selectedDegree) && (
+                <span className="ml-2 text-sm font-normal text-[var(--color-accent-primary)]">
+                  ({[selectedCategory, selectedDegree].filter(Boolean).join(' · ')})
+                </span>
+              )}
+            </h3>
+          </div>
+          <button
+            onClick={() => setShowAllPrograms(!showAllPrograms)}
+            className="text-sm text-[var(--color-accent-primary)] hover:text-[var(--color-accent-glow)]"
+          >
+            {showAllPrograms ? 'Show Less' : `Show All (${programsWithPipeline.length})`}
+          </button>
+        </div>
+        
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-[var(--color-border-subtle)]">
+                <th className="text-left py-3 text-[var(--color-text-muted)] font-medium">Program</th>
+                <th className="text-right py-3 text-[var(--color-text-muted)] font-medium">Apps</th>
+                <th className="text-right py-3 text-[var(--color-text-muted)] font-medium">Admits</th>
+                <th className="text-right py-3 text-[var(--color-text-muted)] font-medium">Admit %</th>
+                <th className="text-right py-3 text-[var(--color-text-muted)] font-medium">Enrolled</th>
+                <th className="text-right py-3 text-[var(--color-text-muted)] font-medium">Yield %</th>
+              </tr>
+            </thead>
+            <tbody>
+              {programsToShow.map((prog, i) => {
+                const admitRate = prog.applications > 0 
+                  ? Math.round((prog.admits / prog.applications) * 100) 
+                  : 0
+                const yieldRate = prog.admits > 0 
+                  ? Math.round((prog.enrollments / prog.admits) * 100) 
+                  : 0
+                
+                return (
+                  <tr key={i} className="border-b border-[var(--color-border-subtle)] hover:bg-[var(--color-bg-elevated)]">
+                    <td className="py-3 text-white max-w-[200px] truncate" title={prog.program}>
+                      {prog.program}
+                    </td>
+                    <td className="py-3 text-right text-white tabular-nums">{prog.applications}</td>
+                    <td className="py-3 text-right text-white tabular-nums">{prog.admits}</td>
+                    <td className={cn(
+                      'py-3 text-right tabular-nums',
+                      admitRate >= 80 ? 'text-[var(--color-success)]' : 
+                      admitRate >= 50 ? 'text-[var(--color-warning)]' : 'text-[var(--color-text-secondary)]'
+                    )}>
+                      {admitRate}%
+                    </td>
+                    <td className="py-3 text-right text-white font-medium tabular-nums">{prog.enrollments}</td>
+                    <td className={cn(
+                      'py-3 text-right font-medium tabular-nums',
+                      yieldRate >= 50 ? 'text-[var(--color-success)]' : 
+                      yieldRate >= 30 ? 'text-[var(--color-warning)]' : 'text-[var(--color-danger)]'
+                    )}>
+                      {yieldRate}%
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+            {/* Summary Row */}
+            <tfoot>
+              <tr className="bg-[var(--color-bg-elevated)] font-semibold">
+                <td className="py-3 text-white">Total</td>
+                <td className="py-3 text-right text-white tabular-nums">
+                  {formatNumber(programsWithPipeline.reduce((sum, p) => sum + p.applications, 0))}
+                </td>
+                <td className="py-3 text-right text-white tabular-nums">
+                  {formatNumber(programsWithPipeline.reduce((sum, p) => sum + p.admits, 0))}
+                </td>
+                <td className="py-3 text-right text-[var(--color-text-muted)]">—</td>
+                <td className="py-3 text-right text-[var(--color-accent-primary)] font-bold tabular-nums">
+                  {formatNumber(programsWithPipeline.reduce((sum, p) => sum + p.enrollments, 0))}
+                </td>
+                <td className="py-3 text-right text-[var(--color-text-muted)]">—</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </GlassCard>
+      
+      {/* Timeline Chart */}
+      {data.timeline && (
+        <TimelineChart 
+          data={data.timeline} 
+          selectedCategory={selectedCategory}
+          selectedDegree={selectedDegree}
+        />
+      )}
     </div>
   )
 }

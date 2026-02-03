@@ -397,3 +397,161 @@ export function NTRBreakdownTable({ data, title = 'NTR Detailed Breakdown' }: NT
     </GlassCard>
   )
 }
+
+// Average Credits by Category Chart
+interface AvgCreditsCategoryData {
+  category: string
+  avgCredits: number
+  totalCredits: number
+  students: number
+}
+
+interface AvgCreditsTypeData {
+  type: string
+  avgCredits: number
+  totalCredits: number
+  students: number
+}
+
+interface AvgCreditsChartProps {
+  byCategory: AvgCreditsCategoryData[]
+  byStudentType: AvgCreditsTypeData[]
+  overall: number
+  title?: string
+}
+
+export function AvgCreditsChart({ byCategory, byStudentType, overall, title = 'Average Credits per Student' }: AvgCreditsChartProps) {
+  const CATEGORY_COLORS = ['#a41034', '#3b82f6', '#22c55e', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4']
+  const TYPE_COLORS = ['#3b82f6', '#22c55e']
+  
+  return (
+    <GlassCard>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <CreditCard className="h-5 w-5 text-[var(--color-accent-primary)]" />
+          <h3 className="text-lg font-semibold text-white">{title}</h3>
+        </div>
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[var(--color-bg-elevated)]">
+          <span className="text-xs text-[var(--color-text-muted)]">Overall Avg:</span>
+          <span className="text-lg font-bold text-[var(--color-accent-primary)]">{overall}</span>
+          <span className="text-xs text-[var(--color-text-muted)]">credits</span>
+        </div>
+      </div>
+      
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* By Category - Horizontal Bar Chart */}
+        <div>
+          <h4 className="text-sm font-medium text-[var(--color-text-muted)] mb-3">By Category</h4>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={byCategory} layout="vertical" margin={{ left: 10, right: 50 }}>
+                <XAxis 
+                  type="number" 
+                  tick={{ fill: 'rgba(255,255,255,0.6)', fontSize: 11 }}
+                  axisLine={{ stroke: 'rgba(255,255,255,0.1)' }}
+                  domain={[0, 'dataMax + 1']}
+                />
+                <YAxis 
+                  type="category" 
+                  dataKey="category" 
+                  width={90}
+                  tick={{ fill: 'rgba(255,255,255,0.8)', fontSize: 11 }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: 'rgba(20, 24, 36, 0.98)',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    borderRadius: '8px',
+                    color: '#fff',
+                  }}
+                  itemStyle={{ color: '#fff' }}
+                  labelStyle={{ color: '#fff', fontWeight: 600 }}
+                  formatter={(value: number, _name: string, props: { payload: AvgCreditsCategoryData }) => [
+                    `${value} avg credits (${formatNumber(props.payload.students)} students)`,
+                    ''
+                  ]}
+                />
+                <Bar dataKey="avgCredits" radius={[0, 4, 4, 0]}>
+                  {byCategory.map((_, index) => (
+                    <Cell key={`cell-${index}`} fill={CATEGORY_COLORS[index % CATEGORY_COLORS.length]} />
+                  ))}
+                  <LabelList 
+                    dataKey="avgCredits" 
+                    position="right" 
+                    formatter={(value: number) => value.toFixed(1)}
+                    style={{ fill: '#fff', fontSize: 11, fontWeight: 600 }}
+                  />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+        
+        {/* By Student Type - Cards + Mini Bar */}
+        <div>
+          <h4 className="text-sm font-medium text-[var(--color-text-muted)] mb-3">By Student Type</h4>
+          <div className="space-y-4">
+            {byStudentType.map((item, index) => {
+              const maxCredits = Math.max(...byStudentType.map(t => t.avgCredits))
+              const barWidth = (item.avgCredits / maxCredits) * 100
+              
+              return (
+                <motion.div
+                  key={item.type}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  className="p-4 rounded-lg bg-[var(--color-bg-elevated)]"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <div 
+                        className="w-3 h-3 rounded-full" 
+                        style={{ backgroundColor: TYPE_COLORS[index] }}
+                      />
+                      <span className="font-medium text-white">{item.type} Students</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-2xl font-bold text-white">{item.avgCredits}</span>
+                      <span className="text-xs text-[var(--color-text-muted)] ml-1">avg</span>
+                    </div>
+                  </div>
+                  
+                  {/* Progress bar */}
+                  <div className="h-2 bg-[var(--color-bg-base)] rounded-full overflow-hidden mb-2">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${barWidth}%` }}
+                      transition={{ duration: 0.8, ease: 'easeOut' }}
+                      className="h-full rounded-full"
+                      style={{ backgroundColor: TYPE_COLORS[index] }}
+                    />
+                  </div>
+                  
+                  <div className="flex justify-between text-xs text-[var(--color-text-muted)]">
+                    <span>{formatNumber(item.students)} students</span>
+                    <span>{formatNumber(item.totalCredits)} total credits</span>
+                  </div>
+                </motion.div>
+              )
+            })}
+          </div>
+          
+          {/* Overall Summary */}
+          <div className="mt-4 p-4 rounded-lg bg-gradient-to-r from-[var(--color-accent-primary)]/20 to-transparent border border-[var(--color-accent-primary)]/30">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-[var(--color-text-secondary)]">
+                Total enrolled students taking credits
+              </span>
+              <span className="text-lg font-bold text-white">
+                {formatNumber(byStudentType.reduce((sum, t) => sum + t.students, 0))}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </GlassCard>
+  )
+}

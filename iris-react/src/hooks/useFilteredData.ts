@@ -631,6 +631,80 @@ export function useFilteredPrograms() {
 }
 
 /**
+ * Hook to get average credits per student by category (current year only)
+ */
+export function useAverageCredits() {
+  const students = useFilteredStudentsCurrentYear()
+  const hasFilters = useFilterStore((state) => state.hasActiveFilters())
+  
+  return useMemo(() => {
+    // Only use census students (they have credit data)
+    const censusStudents = students.filter(s => s.source === 'census' && (s.credits || 0) > 0)
+    
+    if (censusStudents.length === 0) {
+      return {
+        overall: 0,
+        byCategory: [],
+        byStudentType: [],
+      }
+    }
+    
+    // Overall average
+    const totalCredits = censusStudents.reduce((sum, s) => sum + (s.credits || 0), 0)
+    const overallAvg = totalCredits / censusStudents.length
+    
+    // By category
+    const categoryMap: Record<string, { credits: number; count: number }> = {}
+    censusStudents.forEach(s => {
+      const cat = s.category || 'Unknown'
+      if (!categoryMap[cat]) {
+        categoryMap[cat] = { credits: 0, count: 0 }
+      }
+      categoryMap[cat].credits += s.credits || 0
+      categoryMap[cat].count++
+    })
+    
+    const byCategory = Object.entries(categoryMap)
+      .filter(([cat]) => cat && cat !== 'Unknown' && cat !== 'Uncategorized')
+      .map(([category, data]) => ({
+        category,
+        avgCredits: Math.round((data.credits / data.count) * 10) / 10,
+        totalCredits: data.credits,
+        students: data.count,
+      }))
+      .sort((a, b) => b.avgCredits - a.avgCredits)
+    
+    // By student type (New vs Current)
+    const typeMap: Record<string, { credits: number; count: number }> = {}
+    censusStudents.forEach(s => {
+      const type = s.studentType || 'Unknown'
+      if (!typeMap[type]) {
+        typeMap[type] = { credits: 0, count: 0 }
+      }
+      typeMap[type].credits += s.credits || 0
+      typeMap[type].count++
+    })
+    
+    const byStudentType = Object.entries(typeMap)
+      .filter(([type]) => type && type !== 'Unknown')
+      .map(([type, data]) => ({
+        type,
+        avgCredits: Math.round((data.credits / data.count) * 10) / 10,
+        totalCredits: data.credits,
+        students: data.count,
+      }))
+      .sort((a, b) => b.avgCredits - a.avgCredits)
+    
+    return {
+      overall: Math.round(overallAvg * 10) / 10,
+      byCategory,
+      byStudentType,
+      isFiltered: hasFilters,
+    }
+  }, [students, hasFilters])
+}
+
+/**
  * Hook to check if data is being filtered
  */
 export function useIsFiltered() {

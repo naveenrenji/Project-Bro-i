@@ -4,12 +4,12 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recha
 import { cn, formatCurrency, formatNumber, formatPercent } from '@/lib/utils'
 import { useUIStore } from '@/store/uiStore'
 import { useData, useNTR, useNTRBreakdown, useNTRByStudentType, useGraduation, useDemographics, useYoY, useBySchool, useByDegree } from '@/hooks/useData'
-import { useFilteredNTR, useFilteredGraduation, useFilteredCategories, useFilteredMetrics, useFilteredDemographics, useFilteredHistorical, useFilteredPrograms, useIsFiltered, useFilterSummary } from '@/hooks/useFilteredData'
+import { useFilteredNTR, useFilteredGraduation, useFilteredCategories, useFilteredMetrics, useFilteredDemographics, useFilteredHistorical, useFilteredPrograms, useAverageCredits, useIsFiltered, useFilterSummary } from '@/hooks/useFilteredData'
 import { DEEP_DIVE_TABS } from '@/lib/constants'
 import { GlassCard } from '@/components/shared/GlassCard'
 import { GaugeChart } from '@/components/charts/GaugeChart'
 import { SankeyFlow } from '@/components/charts/SankeyFlow'
-import { NTRBarChart, NTRPieChart, NTRSummaryCards, NTRBreakdownTable } from '@/components/charts/NTRBreakdown'
+import { NTRBarChart, NTRPieChart, NTRSummaryCards, NTRBreakdownTable, AvgCreditsChart } from '@/components/charts/NTRBreakdown'
 import { NavsInput } from '@/components/navs/NavsInput'
 import { ChartSkeleton } from '@/components/shared/SkeletonLoader'
 import { useState } from 'react'
@@ -127,6 +127,7 @@ function RevenueTab({ data: _data }: { data: NonNullable<ReturnType<typeof useDa
   const ntr = useNTR()
   const breakdown = useNTRBreakdown()
   const byStudentType = useNTRByStudentType()
+  const avgCredits = useAverageCredits()
   const [showBreakdown, setShowBreakdown] = useState(false)
   
   // Use hooks for data instead of prop
@@ -147,6 +148,9 @@ function RevenueTab({ data: _data }: { data: NonNullable<ReturnType<typeof useDa
               NTR is at <strong className="text-white">{formatCurrency(ntr.total, true)}</strong> ({formatPercent(ntr.percentOfGoal || (ntr.total / ntr.goal) * 100)} of goal). 
               New students contribute <strong className="text-white">{formatCurrency(ntr.newNTR, true)}</strong> ({formatPercent((ntr.newNTR / ntr.total) * 100)}). 
               Gap to goal: <strong className="text-[var(--color-warning)]">{formatCurrency(ntr.gapToGoal || (ntr.goal - ntr.total), true)}</strong>.
+              {avgCredits.overall > 0 && (
+                <> Average credits per student: <strong className="text-white">{avgCredits.overall}</strong>.</>
+              )}
             </p>
           </div>
         </div>
@@ -174,6 +178,15 @@ function RevenueTab({ data: _data }: { data: NonNullable<ReturnType<typeof useDa
       {/* NTR by Category Bar Chart */}
       {ntr.byCategory?.length > 0 && (
         <NTRBarChart data={ntr.byCategory} title="NTR by Category" />
+      )}
+      
+      {/* Average Credits per Student */}
+      {avgCredits.byCategory.length > 0 && (
+        <AvgCreditsChart 
+          byCategory={avgCredits.byCategory}
+          byStudentType={avgCredits.byStudentType}
+          overall={avgCredits.overall}
+        />
       )}
       
       {/* Expandable Detailed Breakdown */}

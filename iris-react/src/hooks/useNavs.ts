@@ -1,6 +1,7 @@
 import { useCallback } from 'react'
 import { useNavsStore } from '@/store/navsStore'
 import { NAVS_PERSONA } from '@/lib/navs-persona'
+import type { ProviderType } from '@/lib/llm-provider'
 
 /**
  * Hook for interacting with Navs AI
@@ -9,10 +10,13 @@ export function useNavs() {
   const {
     messages,
     isTyping,
-    currentModel,
+    provider,
+    model,
     sendMessage,
     clearMessages,
+    setProvider,
     setModel,
+    stopGeneration,
   } = useNavsStore()
   
   const ask = useCallback(async (question: string) => {
@@ -23,17 +27,28 @@ export function useNavs() {
     clearMessages()
   }, [clearMessages])
   
-  const changeModel = useCallback((model: 'gemini' | 'gpt-4o' | 'claude') => {
-    setModel(model)
+  const changeProvider = useCallback((newProvider: ProviderType) => {
+    setProvider(newProvider)
+  }, [setProvider])
+  
+  const changeModel = useCallback((newModel: string) => {
+    setModel(newModel)
   }, [setModel])
+  
+  const stop = useCallback(() => {
+    stopGeneration()
+  }, [stopGeneration])
   
   return {
     messages,
     isTyping,
-    currentModel,
+    provider,
+    model,
     ask,
     clear,
+    changeProvider,
     changeModel,
+    stop,
     persona: NAVS_PERSONA,
   }
 }

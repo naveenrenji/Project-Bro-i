@@ -2,9 +2,13 @@ import { Outlet, useLocation } from 'react-router-dom'
 import { Navigation } from './Navigation'
 import { NavsWidget } from '../navs/NavsWidget'
 import { GlobalFilterBar } from '../filters/GlobalFilterBar'
+import { useData } from '@/hooks/useData'
 
 export function AppShell() {
   const location = useLocation()
+  
+  // Load data at app level so it's available for all routes
+  useData()
   
   // Show filter bar on data-heavy pages (not on AskNavs)
   const showFilterBar = location.pathname !== '/ask-navs'

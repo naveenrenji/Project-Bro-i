@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-02-03T23:48:39.800771Z",
+  "lastUpdated": "2026-02-04T01:33:39.218228Z",
   "semester": "2026S",
   "students": [
     {
@@ -116754,94 +116754,6 @@
     }
   ],
   "funnelByCategory": {
-    "Select Professional Online": [
-      {
-        "stage": "Applications",
-        "count": 97,
-        "conversionRate": 100
-      },
-      {
-        "stage": "Admits",
-        "count": 79,
-        "conversionRate": 81.4
-      },
-      {
-        "stage": "Accepted",
-        "count": 33,
-        "conversionRate": 41.8
-      },
-      {
-        "stage": "Enrolled",
-        "count": 30,
-        "conversionRate": 90.9
-      }
-    ],
-    "Corporate": [
-      {
-        "stage": "Applications",
-        "count": 400,
-        "conversionRate": 100
-      },
-      {
-        "stage": "Admits",
-        "count": 378,
-        "conversionRate": 94.5
-      },
-      {
-        "stage": "Accepted",
-        "count": 343,
-        "conversionRate": 90.7
-      },
-      {
-        "stage": "Enrolled",
-        "count": 313,
-        "conversionRate": 91.3
-      }
-    ],
-    "Beacon": [
-      {
-        "stage": "Applications",
-        "count": 48,
-        "conversionRate": 100
-      },
-      {
-        "stage": "Admits",
-        "count": 46,
-        "conversionRate": 95.8
-      },
-      {
-        "stage": "Accepted",
-        "count": 32,
-        "conversionRate": 69.6
-      },
-      {
-        "stage": "Enrolled",
-        "count": 30,
-        "conversionRate": 93.8
-      }
-    ],
-    "ASAP": [
-      {
-        "stage": "Applications",
-        "count": 96,
-        "conversionRate": 100
-      },
-      {
-        "stage": "Admits",
-        "count": 49,
-        "conversionRate": 51.0
-      },
-      {
-        "stage": "Accepted",
-        "count": 32,
-        "conversionRate": 65.3
-      },
-      {
-        "stage": "Enrolled",
-        "count": 23,
-        "conversionRate": 71.9
-      }
-    ],
     "Retail": [
       {
         "stage": "Applications",
@@ -116886,6 +116798,50 @@
         "conversionRate": 0.0
       }
     ],
+    "Corporate": [
+      {
+        "stage": "Applications",
+        "count": 400,
+        "conversionRate": 100
+      },
+      {
+        "stage": "Admits",
+        "count": 378,
+        "conversionRate": 94.5
+      },
+      {
+        "stage": "Accepted",
+        "count": 343,
+        "conversionRate": 90.7
+      },
+      {
+        "stage": "Enrolled",
+        "count": 313,
+        "conversionRate": 91.3
+      }
+    ],
+    "ASAP": [
+      {
+        "stage": "Applications",
+        "count": 96,
+        "conversionRate": 100
+      },
+      {
+        "stage": "Admits",
+        "count": 49,
+        "conversionRate": 51.0
+      },
+      {
+        "stage": "Accepted",
+        "count": 32,
+        "conversionRate": 65.3
+      },
+      {
+        "stage": "Enrolled",
+        "count": 23,
+        "conversionRate": 71.9
+      }
+    ],
     "CPE": [
       {
         "stage": "Applications",
@@ -116906,6 +116862,50 @@
         "stage": "Enrolled",
         "count": 82,
         "conversionRate": 59.0
+      }
+    ],
+    "Select Professional Online": [
+      {
+        "stage": "Applications",
+        "count": 97,
+        "conversionRate": 100
+      },
+      {
+        "stage": "Admits",
+        "count": 79,
+        "conversionRate": 81.4
+      },
+      {
+        "stage": "Accepted",
+        "count": 33,
+        "conversionRate": 41.8
+      },
+      {
+        "stage": "Enrolled",
+        "count": 30,
+        "conversionRate": 90.9
+      }
+    ],
+    "Beacon": [
+      {
+        "stage": "Applications",
+        "count": 48,
+        "conversionRate": 100
+      },
+      {
+        "stage": "Admits",
+        "count": 46,
+        "conversionRate": 95.8
+      },
+      {
+        "stage": "Accepted",
+        "count": 32,
+        "conversionRate": 69.6
+      },
+      {
+        "stage": "Enrolled",
+        "count": 30,
+        "conversionRate": 93.8
       }
     ]
   },

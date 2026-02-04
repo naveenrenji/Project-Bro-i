@@ -1,9 +1,41 @@
+/**
+ * Navs Store - Two-Tier AI Response System
+ * Supports both cloud (Gemini) and local (Ollama) LLM providers
+ * with intelligent fallback to code execution for complex queries
+ * Enhanced with human-readable thinking, abort control, and analysis caching
+ */
+
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { GoogleGenerativeAI } from '@google/generative-ai'
 import { NAVS_PERSONA } from '@/lib/navs-persona'
-import { useDataStore, type DashboardData } from './dataStore'
+import { useDataStore, type DashboardData, type StudentRecord } from './dataStore'
 import { formatCurrency, formatNumber } from '@/lib/utils'
+import { 
+  type ProviderType, 
+  generateWithProvider,
+  isAbortError,
+  DEFAULT_GEMINI_MODEL,
+  getModelFamily
+} from '@/lib/llm-provider'
+import { 
+  buildTier1Prompt, 
+  buildTier2Prompt, 
+  buildFormattingPrompt,
+  ERROR_MESSAGES
+} from '@/lib/navs-prompts'
+import { 
+  parseTier1Response, 
+  needsTier2Fallback, 
+  extractCodeBlock,
+  extractR1Reasoning,
+  generateThinkingSummary
+} from '@/lib/code-utils'
+import { executeInSandbox, validateCode } from '@/lib/code-sandbox'
+import type { ThinkingStep, StepType, StepStatus, ThinkingStepExpandable } from '@/components/navs/ThinkingSteps'
+
+// =============================================================================
+// TYPES
+// =============================================================================
 
 export interface ChatMessage {
   id: string
@@ -11,19 +43,46 @@ export interface ChatMessage {
   content: string
   timestamp: Date
   model?: string
+  provider?: ProviderType
   charts?: Array<{
     type: string
     data: unknown
     title: string
   }>
   suggestions?: string[]
+  thinkingSteps?: ThinkingStep[]
+  executedCode?: string
+  executionResult?: {
+    success: boolean
+    result?: unknown
+    error?: string
+    duration: number
+  }
+  tier?: 'tier1' | 'tier2'
+}
+
+export interface AnalysisResult {
+  question: string
+  answer: unknown
+  explanation?: string
+  code?: string
+  timestamp: Date
 }
 
 export interface NavsState {
   // Chat
   messages: ChatMessage[]
   isTyping: boolean
-  currentModel: 'gemini' | 'gpt-4o' | 'claude'
+  
+  // LLM Provider
+  provider: ProviderType
+  model: string
+  
+  // Abort control
+  abortController: AbortController | null
+  
+  // Analysis cache for context
+  analysisCache: AnalysisResult[]
   
   // Context
   currentPage: string
@@ -34,22 +93,81 @@ export interface NavsState {
   
   // Actions
   addMessage: (message: Omit<ChatMessage, 'id' | 'timestamp'>) => void
+  updateMessage: (id: string, updates: Partial<ChatMessage>) => void
   setTyping: (isTyping: boolean) => void
-  setModel: (model: 'gemini' | 'gpt-4o' | 'claude') => void
+  setProvider: (provider: ProviderType) => void
+  setModel: (model: string) => void
   setCurrentPage: (page: string) => void
   setSelectedContext: (context: string[]) => void
   setSummary: (summary: string | null) => void
   clearMessages: () => void
+  stopGeneration: () => void
   sendMessage: (content: string) => Promise<void>
 }
 
-// Get API key from environment
-const getApiKey = (): string => {
-  return import.meta.env.VITE_GEMINI_API_KEY || ''
+// =============================================================================
+// HELPER FUNCTIONS
+// =============================================================================
+
+let stepCounter = 0
+
+function createStep(
+  type: StepType,
+  title: string,
+  options?: { 
+    thinking?: string
+    expandable?: ThinkingStepExpandable 
+  }
+): ThinkingStep {
+  return {
+    id: `step-${++stepCounter}-${Date.now()}`,
+    type,
+    status: 'active' as StepStatus,
+    title,
+    thinking: options?.thinking,
+    expandable: options?.expandable,
+    timestamp: new Date(),
+  }
+}
+
+function updateStepInArray(
+  steps: ThinkingStep[],
+  stepId: string,
+  updates: Partial<ThinkingStep>
+): ThinkingStep[] {
+  return steps.map(step => 
+    step.id === stepId ? { ...step, ...updates } : step
+  )
+}
+
+// Detect question type for thinking summary
+function analyzeQuestion(question: string): string {
+  const q = question.toLowerCase()
+  
+  if (q.includes('percentage') || q.includes('percent') || q.includes('%')) {
+    return `You're asking for a percentage calculation...`
+  }
+  if (q.includes('how many') || q.includes('count') || q.includes('number of')) {
+    return `You want to know a count...`
+  }
+  if (q.includes('compare') || q.includes('vs') || q.includes('versus')) {
+    return `You're looking for a comparison...`
+  }
+  if (q.includes('trend') || q.includes('over time') || q.includes('yoy')) {
+    return `You want to see a trend analysis...`
+  }
+  if (q.includes('top') || q.includes('best') || q.includes('highest')) {
+    return `You want to find the top performers...`
+  }
+  if (q.includes('breakdown') || q.includes('by category') || q.includes('split')) {
+    return `You want a breakdown by category...`
+  }
+  
+  return `Let me understand what you're looking for...`
 }
 
 // Build context from dashboard data
-function buildContext(data: DashboardData | null): string {
+function buildContext(data: DashboardData | null, analysisCache: AnalysisResult[] = []): string {
   if (!data) return 'Dashboard data is currently unavailable.'
   
   const lines: string[] = []
@@ -80,7 +198,6 @@ function buildContext(data: DashboardData | null): string {
     lines.push(`- Total Credits: ${formatNumber(data.ntr.totalCredits || 0)}`)
     lines.push('')
     
-    // NTR by Category
     if (data.ntr.byCategory?.length) {
       lines.push('### NTR by Category:')
       for (const cat of data.ntr.byCategory.slice(0, 8)) {
@@ -146,18 +263,6 @@ function buildContext(data: DashboardData | null): string {
     lines.push(`- Within 20 Credits: ${formatNumber(data.graduation.within20Credits || 0)}`)
     lines.push(`- 20+ Credits Remaining: ${formatNumber(data.graduation.credits20Plus)}`)
     lines.push(`- Total Students: ${formatNumber(data.graduation.totalStudents || 0)}`)
-    if (data.graduation.retentionRate) {
-      lines.push(`- Estimated Retention Rate: ${(data.graduation.retentionRate * 100).toFixed(1)}%`)
-      lines.push(`- Projected Continuing: ${formatNumber(data.graduation.projectedContinuing || 0)}`)
-    }
-    
-    // Graduation by category
-    if (data.graduation.byCategory?.length) {
-      lines.push('### Graduation by Category:')
-      for (const cat of data.graduation.byCategory) {
-        lines.push(`- ${cat.category}: ${cat.graduating} graduating, ${cat.continuing} continuing (${cat.total} total)`)
-      }
-    }
     lines.push('')
   }
   
@@ -179,15 +284,11 @@ function buildContext(data: DashboardData | null): string {
     lines.push('')
   }
   
-  // Historical by category (for projections)
-  if (data.historicalByCategory) {
-    lines.push('## Historical Enrollments by Category')
-    const histByCat = data.historicalByCategory as Record<string, { years: number[]; enrollments: number[] }>
-    for (const [category, hist] of Object.entries(histByCat)) {
-      if (hist.enrollments?.length) {
-        const enrollStr = hist.years?.map((y, i) => `${y}:${hist.enrollments[i]}`).join(', ') || hist.enrollments.join(', ')
-        lines.push(`- ${category}: ${enrollStr}`)
-      }
+  // Include recent analysis results
+  if (analysisCache.length > 0) {
+    lines.push('## Recent Analysis Results')
+    for (const analysis of analysisCache.slice(-5)) {
+      lines.push(`- Q: "${analysis.question}" → A: ${JSON.stringify(analysis.answer)}`)
     }
     lines.push('')
   }
@@ -199,7 +300,7 @@ function buildContext(data: DashboardData | null): string {
   return lines.join('\n')
 }
 
-// Generate follow-up suggestions based on the question
+// Generate follow-up suggestions
 function generateSuggestions(question: string): string[] {
   const q = question.toLowerCase()
   
@@ -208,14 +309,6 @@ function generateSuggestions(question: string): string[] {
       'Break down NTR by student type',
       'Which categories drive the most NTR?',
       'How can we close the gap to goal?',
-    ]
-  }
-  
-  if (q.includes('projection') || q.includes('next term') || q.includes('forecast')) {
-    return [
-      'Are my new student targets realistic?',
-      'What attrition rate should I use?',
-      'Which categories should I focus on for growth?',
     ]
   }
   
@@ -243,19 +336,11 @@ function generateSuggestions(question: string): string[] {
     ]
   }
   
-  if (q.includes('corporate') || q.includes('cohort')) {
+  if (q.includes('corporate') || q.includes('cohort') || q.includes('international')) {
     return [
       'Which companies have the most students?',
       'How are corporate cohorts performing?',
       'New vs continuing corporate students',
-    ]
-  }
-  
-  if (q.includes('cpe') || q.includes('professional education')) {
-    return [
-      'How is CPE performing vs other categories?',
-      'What is the CPE NTR contribution?',
-      'Show CPE graduation trends',
     ]
   }
   
@@ -266,73 +351,19 @@ function generateSuggestions(question: string): string[] {
   ]
 }
 
-// Call Gemini API
-async function callGemini(
-  question: string,
-  context: string,
-  history: ChatMessage[]
-): Promise<string> {
-  const apiKey = getApiKey()
-  
-  if (!apiKey) {
-    throw new Error('VITE_GEMINI_API_KEY not configured. Please add it to your .env file.')
-  }
-  
-  const genAI = new GoogleGenerativeAI(apiKey)
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' })
-  
-  // Build conversation history
-  const historyStr = history.slice(-6).map(m => 
-    `${m.role === 'user' ? 'User' : 'Navs'}: ${m.content}`
-  ).join('\n\n')
-  
-  const prompt = `${NAVS_PERSONA.systemPrompt}
-
-${context}
-
-${historyStr ? `\n--- Previous conversation ---\n${historyStr}\n---` : ''}
-
-User: ${question}
-
-Navs:`
-
-  // Retry logic
-  let lastError: Error | null = null
-  for (let attempt = 0; attempt < 3; attempt++) {
-    try {
-      const result = await model.generateContent(prompt)
-      const response = result.response
-      const text = response.text()
-      
-      if (!text) {
-        throw new Error('Empty response from AI service')
-      }
-      
-      return text
-    } catch (error) {
-      lastError = error as Error
-      const errorStr = String(error)
-      
-      // Rate limit - wait and retry
-      if (errorStr.includes('429') || errorStr.includes('Too Many Requests')) {
-        await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)))
-        continue
-      }
-      
-      // Other errors - throw immediately
-      throw error
-    }
-  }
-  
-  throw lastError || new Error('AI service unavailable')
-}
+// =============================================================================
+// STORE
+// =============================================================================
 
 export const useNavsStore = create<NavsState>()(
   persist(
     (set, get) => ({
       messages: [],
       isTyping: false,
-      currentModel: 'gemini',
+      provider: 'gemini',
+      model: DEFAULT_GEMINI_MODEL,
+      abortController: null,
+      analysisCache: [],
       currentPage: 'command-center',
       selectedContext: [],
       conversationSummary: null,
@@ -346,75 +377,448 @@ export const useNavsStore = create<NavsState>()(
         set((state) => ({
           messages: [...state.messages, newMessage],
         }))
+        return newMessage.id
+      },
+      
+      updateMessage: (id, updates) => {
+        set((state) => ({
+          messages: state.messages.map(msg =>
+            msg.id === id ? { ...msg, ...updates } : msg
+          ),
+        }))
       },
       
       setTyping: (isTyping) => set({ isTyping }),
-      setModel: (currentModel) => set({ currentModel }),
+      setProvider: (provider) => set({ provider }),
+      setModel: (model) => set({ model }),
       setCurrentPage: (currentPage) => set({ currentPage }),
       setSelectedContext: (selectedContext) => set({ selectedContext }),
       setSummary: (conversationSummary) => set({ conversationSummary }),
       
       clearMessages: () => set({ 
         messages: [], 
-        conversationSummary: null 
+        conversationSummary: null,
+        analysisCache: []
       }),
       
+      stopGeneration: () => {
+        const { abortController } = get()
+        if (abortController) {
+          abortController.abort()
+          set({ abortController: null })
+        }
+      },
+      
+      /**
+       * Send a message using the two-tier AI response system
+       */
       sendMessage: async (content) => {
-        const { addMessage, setTyping, messages, currentModel } = get()
+        const { addMessage, updateMessage, setTyping, messages, provider, model, analysisCache } = get()
+        
+        // Create abort controller for this request
+        const abortController = new AbortController()
+        set({ abortController })
         
         // Add user message
         addMessage({ role: 'user', content })
         
-        // Set typing indicator
-        setTyping(true)
+        // Create placeholder for assistant message
+        const steps: ThinkingStep[] = []
+        const assistantMsgId = Math.random().toString(36).substring(2, 9)
+        const isR1Model = getModelFamily(model) === 'deepseek-r1'
+        
+        set((state) => ({
+          messages: [...state.messages, {
+            id: assistantMsgId,
+            role: 'assistant',
+            content: '',
+            timestamp: new Date(),
+            provider,
+            model,
+            thinkingSteps: steps,
+          }],
+          isTyping: true,
+        }))
+        
+        const updateSteps = (newSteps: ThinkingStep[]) => {
+          updateMessage(assistantMsgId, { thinkingSteps: [...newSteps] })
+        }
         
         try {
-          // Get dashboard data from data store
+          // Get dashboard data
           const data = useDataStore.getState().data
+          const context = buildContext(data, analysisCache)
+          const students = data?.students || []
           
-          // Build context
-          const context = buildContext(data)
+          // Build conversation history with analysis results
+          const historyStr = messages.slice(-6).map(m => {
+            if (m.role === 'assistant' && m.executionResult?.result) {
+              return `Navs: [Computed: ${JSON.stringify(m.executionResult.result)}] ${m.content}`
+            }
+            return `${m.role === 'user' ? 'User' : 'Navs'}: ${m.content}`
+          }).join('\n\n')
           
-          // Call Gemini API
-          const response = await callGemini(content, context, messages)
-          
-          // Generate suggestions
-          const suggestions = generateSuggestions(content)
-          
-          addMessage({
-            role: 'assistant',
-            content: response,
-            model: currentModel,
-            suggestions,
+          // =================================================================
+          // STEP 1: Analyzing the question
+          // =================================================================
+          const step1 = createStep('analyzing', 'Looking at your question...', {
+            thinking: analyzeQuestion(content)
           })
+          steps.push(step1)
+          updateSteps(steps)
+          
+          await new Promise(r => setTimeout(r, 100))
+          steps[0] = { ...steps[0], status: 'complete', duration: 100 }
+          updateSteps(steps)
+          
+          // Check if aborted
+          if (abortController.signal.aborted) throw new DOMException('Stopped', 'AbortError')
+          
+          // =================================================================
+          // STEP 2: Try Tier 1 (Context-based)
+          // =================================================================
+          const step2 = createStep('searchingContext', 'Checking my summary data...', {
+            thinking: 'Looking through NTR breakdown, enrollment counts, category performance...'
+          })
+          steps.push(step2)
+          updateSteps(steps)
+          
+          const tier1Start = Date.now()
+          let tier1Response: string = ''
+          let tier1Parsed
+          let useTier2 = false
+          let tier1Reasoning: string | undefined
+          
+          try {
+            const tier1Prompt = buildTier1Prompt(content, context, historyStr)
+            const rawResponse = await generateWithProvider(tier1Prompt, provider, model, abortController.signal)
+            
+            // Extract R1 reasoning if applicable
+            if (isR1Model) {
+              const parsed = extractR1Reasoning(rawResponse)
+              tier1Reasoning = parsed.reasoning
+              tier1Response = parsed.content
+            } else {
+              tier1Response = rawResponse
+            }
+            
+            tier1Parsed = parseTier1Response(tier1Response)
+            useTier2 = needsTier2Fallback(tier1Parsed)
+            
+            const thinking = tier1Parsed?.canAnswer 
+              ? `Found what you need in my pre-calculated data...`
+              : tier1Parsed?.reason || `This needs a deeper look into the raw records...`
+            
+            steps[1] = { 
+              ...steps[1], 
+              status: 'complete', 
+              duration: Date.now() - tier1Start,
+              thinking,
+              expandable: tier1Reasoning ? { llmReasoning: tier1Reasoning } : undefined
+            }
+            updateSteps(steps)
+          } catch (error) {
+            if (isAbortError(error)) throw error
+            console.error('Tier 1 error:', error)
+            useTier2 = true
+            steps[1] = { 
+              ...steps[1], 
+              status: 'error', 
+              duration: Date.now() - tier1Start,
+              thinking: 'Context search had an issue, switching to data analysis...'
+            }
+            updateSteps(steps)
+          }
+          
+          // =================================================================
+          // TIER 1 SUCCESS - Use context answer
+          // =================================================================
+          if (!useTier2 && tier1Parsed?.canAnswer && tier1Parsed.answer) {
+            const step3 = createStep('foundInContext', 'Got it from the summary!', {
+              thinking: 'The answer was in my pre-aggregated data.'
+            })
+            step3.status = 'complete'
+            step3.duration = 0
+            steps.push(step3)
+            
+            const stepComplete = createStep('complete', 'Done!')
+            stepComplete.status = 'complete'
+            steps.push(stepComplete)
+            updateSteps(steps)
+            
+            updateMessage(assistantMsgId, {
+              content: tier1Parsed.answer,
+              tier: 'tier1',
+              suggestions: generateSuggestions(content),
+              thinkingSteps: steps,
+            })
+            
+            set({ isTyping: false, abortController: null })
+            return
+          }
+          
+          // Check if aborted
+          if (abortController.signal.aborted) throw new DOMException('Stopped', 'AbortError')
+          
+          // =================================================================
+          // TIER 2: Code Execution Fallback
+          // =================================================================
+          const step3 = createStep('needsDeepDive', 'Need to dig into the raw records...', {
+            thinking: tier1Parsed?.reason || 'This requires filtering and analyzing individual student records...'
+          })
+          step3.status = 'complete'
+          step3.duration = 0
+          steps.push(step3)
+          updateSteps(steps)
+          
+          // Step 4: Generate code
+          const step4 = createStep('generatingCode', 'Writing analysis code...', {
+            thinking: 'Let me write some code to filter and calculate this...'
+          })
+          steps.push(step4)
+          updateSteps(steps)
+          
+          const tier2Start = Date.now()
+          let generatedCode: string | null = null
+          let tier2Reasoning: string | undefined
+          
+          try {
+            const tier2Prompt = buildTier2Prompt(content)
+            const rawResponse = await generateWithProvider(tier2Prompt, provider, model, abortController.signal)
+            
+            // Extract R1 reasoning if applicable
+            if (isR1Model) {
+              const parsed = extractR1Reasoning(rawResponse)
+              tier2Reasoning = parsed.reasoning
+              generatedCode = extractCodeBlock(parsed.content)
+              
+              // Generate thinking summary from R1 reasoning
+              const thinkingSummary = tier2Reasoning 
+                ? generateThinkingSummary(tier2Reasoning)
+                : 'Generated analysis code...'
+              
+              steps[3] = {
+                ...steps[3],
+                thinking: thinkingSummary
+              }
+            } else {
+              generatedCode = extractCodeBlock(rawResponse)
+            }
+            
+            steps[3] = {
+              ...steps[3],
+              status: 'complete',
+              duration: Date.now() - tier2Start,
+              thinking: steps[3].thinking || 'Generated the analysis code...',
+              expandable: {
+                code: generatedCode || 'No code extracted',
+                llmReasoning: tier2Reasoning
+              }
+            }
+            updateSteps(steps)
+          } catch (error) {
+            if (isAbortError(error)) throw error
+            console.error('Code generation error:', error)
+            steps[3] = {
+              ...steps[3],
+              status: 'error',
+              duration: Date.now() - tier2Start,
+              thinking: 'Failed to generate analysis code...',
+              expandable: { error: String(error) }
+            }
+            updateSteps(steps)
+            throw new Error(ERROR_MESSAGES.tier2CodeError(String(error)))
+          }
+          
+          if (!generatedCode) {
+            throw new Error('AI did not generate executable code')
+          }
+          
+          // Validate code
+          const validation = validateCode(generatedCode)
+          if (!validation.valid) {
+            throw new Error(`Code validation failed: ${validation.reason}`)
+          }
+          
+          // Check if aborted
+          if (abortController.signal.aborted) throw new DOMException('Stopped', 'AbortError')
+          
+          // Step 5: Execute code
+          const step5 = createStep('executingCode', `Running against ${students.length.toLocaleString()} records...`, {
+            thinking: 'Executing the analysis code against all student records...'
+          })
+          steps.push(step5)
+          updateSteps(steps)
+          
+          const execStart = Date.now()
+          const execResult = executeInSandbox(generatedCode, students as StudentRecord[])
+          
+          const resultAnswer = execResult.result?.answer
+          const resultExplanation = (execResult.result as { explanation?: string })?.explanation
+          
+          steps[4] = {
+            ...steps[4],
+            status: execResult.success ? 'complete' : 'error',
+            duration: Date.now() - execStart,
+            thinking: execResult.success 
+              ? `Found the answer: ${JSON.stringify(resultAnswer)}`
+              : `Error: ${execResult.error}`,
+            expandable: {
+              input: `Analyzed ${students.length.toLocaleString()} student records`,
+              output: execResult.success 
+                ? JSON.stringify(execResult.result, null, 2)
+                : undefined,
+              error: execResult.success ? undefined : execResult.error
+            }
+          }
+          updateSteps(steps)
+          
+          if (!execResult.success) {
+            throw new Error(ERROR_MESSAGES.tier2CodeError(execResult.error || 'Unknown error'))
+          }
+          
+          // Save to analysis cache
+          set((state) => ({
+            analysisCache: [
+              ...state.analysisCache.slice(-9), // Keep last 10
+              {
+                question: content,
+                answer: resultAnswer,
+                explanation: resultExplanation,
+                code: generatedCode!,
+                timestamp: new Date()
+              }
+            ]
+          }))
+          
+          // Check if aborted
+          if (abortController.signal.aborted) throw new DOMException('Stopped', 'AbortError')
+          
+          // Step 6: Format result
+          const step6 = createStep('formattingResult', 'Putting it together...', {
+            thinking: 'Formatting the result into a clear answer...'
+          })
+          steps.push(step6)
+          updateSteps(steps)
+          
+          const formatStart = Date.now()
+          let finalResponse: string
+          let formatReasoning: string | undefined
+          
+          try {
+            const formatPrompt = buildFormattingPrompt(
+              content,
+              execResult.result as { answer: unknown; explanation?: string },
+              context.slice(0, 2000)
+            )
+            const rawResponse = await generateWithProvider(formatPrompt, provider, model, abortController.signal)
+            
+            if (isR1Model) {
+              const parsed = extractR1Reasoning(rawResponse)
+              formatReasoning = parsed.reasoning
+              finalResponse = parsed.content
+            } else {
+              finalResponse = rawResponse
+            }
+            
+            steps[5] = {
+              ...steps[5],
+              status: 'complete',
+              duration: Date.now() - formatStart,
+              thinking: 'Formatted the response!',
+              expandable: formatReasoning ? { llmReasoning: formatReasoning } : undefined
+            }
+            updateSteps(steps)
+          } catch (error) {
+            if (isAbortError(error)) throw error
+            // If formatting fails, use a simple response
+            const result = execResult.result as { answer: unknown; explanation?: string }
+            finalResponse = `Based on my analysis: **${JSON.stringify(result?.answer)}**\n\n${result?.explanation || ''}`
+            
+            steps[5] = {
+              ...steps[5],
+              status: 'complete',
+              duration: Date.now() - formatStart,
+              thinking: 'Used simplified formatting.'
+            }
+            updateSteps(steps)
+          }
+          
+          // Step 7: Complete
+          const step7 = createStep('complete', 'Done!')
+          step7.status = 'complete'
+          steps.push(step7)
+          updateSteps(steps)
+          
+          // Update message with final answer
+          updateMessage(assistantMsgId, {
+            content: finalResponse,
+            tier: 'tier2',
+            executedCode: generatedCode,
+            executionResult: {
+              success: execResult.success,
+              result: execResult.result,
+              duration: execResult.executionTime,
+            },
+            suggestions: generateSuggestions(content),
+            thinkingSteps: steps,
+          })
+          
         } catch (error) {
-          console.error('Error calling Gemini:', error)
+          console.error('Send message error:', error)
+          
+          // Handle abort
+          if (isAbortError(error)) {
+            const stoppedStep = createStep('stopped', 'Stopped by user')
+            stoppedStep.status = 'stopped'
+            steps.push(stoppedStep)
+            updateSteps(steps)
+            
+            updateMessage(assistantMsgId, {
+              content: 'Generation stopped.',
+              thinkingSteps: steps,
+            })
+            
+            set({ isTyping: false, abortController: null })
+            return
+          }
           
           const errorMessage = error instanceof Error ? error.message : 'Unknown error'
           
+          // Add error step
+          const errorStep = createStep('error', 'Ran into an issue...', {
+            thinking: errorMessage,
+            expandable: { error: errorMessage }
+          })
+          errorStep.status = 'error'
+          steps.push(errorStep)
+          updateSteps(steps)
+          
           // Check if it's a configuration error
           if (errorMessage.includes('API_KEY') || errorMessage.includes('not configured')) {
-            addMessage({
-              role: 'assistant',
+            updateMessage(assistantMsgId, {
               content: `**Configuration needed:** ${errorMessage}\n\nTo enable AI responses, please create a \`.env\` file in the iris-react directory with:\n\n\`\`\`\nVITE_GEMINI_API_KEY=your_api_key_here\n\`\`\`\n\nYou can get a free API key from [Google AI Studio](https://aistudio.google.com/).`,
+              thinkingSteps: steps,
             })
           } else {
-            addMessage({
-              role: 'assistant',
-              content: NAVS_PERSONA.errorResponses.apiError,
+            updateMessage(assistantMsgId, {
+              content: ERROR_MESSAGES.apiError,
+              thinkingSteps: steps,
             })
           }
         } finally {
-          setTyping(false)
+          set({ isTyping: false, abortController: null })
         }
       },
     }),
     {
       name: 'navs-storage',
       partialize: (state) => ({
-        messages: state.messages.slice(-50), // Keep last 50 messages
-        currentModel: state.currentModel,
+        messages: state.messages.slice(-50),
+        provider: state.provider,
+        model: state.model,
         conversationSummary: state.conversationSummary,
+        analysisCache: state.analysisCache.slice(-10),
       }),
     }
   )

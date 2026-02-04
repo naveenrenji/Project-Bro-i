@@ -1,20 +1,23 @@
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Send, Sparkles, Trash2, Settings, RefreshCw, AlertCircle } from 'lucide-react'
+import { Send, Sparkles, Trash2, Settings, RefreshCw, AlertCircle, Code, ChevronDown, Square } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useNavs, useNavsGreeting, useNavsSuggestions } from '@/hooks/useNavs'
 import { useData } from '@/hooks/useData'
 import { GlassCard } from '@/components/shared/GlassCard'
-import { AI_MODELS } from '@/lib/constants'
+import { Markdown } from '@/components/shared/Markdown'
 import { NAVS_PERSONA } from '@/lib/navs-persona'
+import { ThinkingSteps } from '@/components/navs/ThinkingSteps'
+import { ModelSwitcher, ProviderStatusIndicator } from '@/components/navs/ModelSwitcher'
 
 export function AskNavs() {
-  const { messages, isTyping, currentModel, ask, clear, changeModel } = useNavs()
+  const { messages, isTyping, provider, model, ask, clear, changeProvider, changeModel, stop } = useNavs()
   const { data, isLoading: dataLoading, error: dataError, refresh } = useData()
   const greeting = useNavsGreeting()
   const suggestions = useNavsSuggestions('commandCenter')
   const [input, setInput] = useState('')
   const [showSettings, setShowSettings] = useState(false)
+  const [expandedCode, setExpandedCode] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
@@ -56,8 +59,8 @@ export function AskNavs() {
     await ask(suggestion)
   }
 
-  // Show loading state while data is loading
-  if (dataLoading) {
+  // Show loading state while data is loading or not yet available
+  if (dataLoading || !data) {
     return (
       <div className="h-[calc(100vh-8rem)] flex flex-col items-center justify-center">
         <div className="h-16 w-16 rounded-xl bg-gradient-to-br from-[var(--color-accent-primary)] to-[var(--color-accent-dark)] flex items-center justify-center mb-4 animate-pulse">
@@ -112,6 +115,14 @@ export function AskNavs() {
         </div>
         
         <div className="flex items-center gap-2">
+          {/* Model Switcher */}
+          <ModelSwitcher
+            currentProvider={provider}
+            currentModel={model}
+            onProviderChange={changeProvider}
+            onModelChange={changeModel}
+          />
+          
           <button
             onClick={() => setShowSettings(!showSettings)}
             className={cn(
@@ -143,23 +154,16 @@ export function AskNavs() {
             className="mb-4 flex-shrink-0 overflow-hidden"
           >
             <GlassCard padding="sm">
-              <div className="flex items-center gap-4">
-                <span className="text-sm text-[var(--color-text-muted)]">Model:</span>
-                <div className="flex gap-2">
-                  {AI_MODELS.map((model) => (
-                    <button
-                      key={model.id}
-                      onClick={() => changeModel(model.id as 'gemini' | 'gpt-4o' | 'claude')}
-                      className={cn(
-                        'px-3 py-1.5 rounded-lg text-sm transition-all',
-                        currentModel === model.id
-                          ? 'bg-[var(--color-accent-primary)] text-white'
-                          : 'bg-[var(--color-bg-elevated)] text-[var(--color-text-secondary)] hover:text-white'
-                      )}
-                    >
-                      {model.label}
-                    </button>
-                  ))}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <span className="text-sm text-[var(--color-text-muted)]">Current Model:</span>
+                  <ProviderStatusIndicator provider={provider} model={model} />
+                </div>
+                <div className="text-xs text-[var(--color-text-muted)]">
+                  {data?.students?.length 
+                    ? `${data.students.length.toLocaleString()} student records available for analysis`
+                    : 'No student records available'
+                  }
                 </div>
               </div>
             </GlassCard>
@@ -184,13 +188,14 @@ export function AskNavs() {
             <h2 className="text-xl font-semibold text-white mb-2">{greeting}</h2>
             <p className="text-[var(--color-text-muted)] max-w-md mb-8">
               I'm Navs, your AI assistant for enrollment analytics. Ask me anything about applications, 
-              NTR, programs, or trends.
+              NTR, programs, or trends. I can also dig into the raw data for complex queries.
             </p>
             
             {/* Data Status */}
             {data && (
               <div className="text-xs text-[var(--color-text-muted)] mb-6">
-                Data loaded: {data.funnel?.length ? `${data.funnel[0].count} applications` : 'No data'} • 
+                Data loaded: {data.funnel?.length ? `${data.funnel[0].count.toLocaleString()} applications` : 'No data'} • 
+                {data.students?.length ? ` ${data.students.length.toLocaleString()} student records` : ''} • 
                 Last updated: {new Date(data.lastUpdated).toLocaleString()}
               </div>
             )}
@@ -238,15 +243,71 @@ export function AskNavs() {
                         <Sparkles className="h-3 w-3 text-white" />
                       </div>
                       <span className="text-sm font-medium">Navs</span>
-                      {message.model && (
-                        <span className="text-xs text-[var(--color-text-muted)]">via {message.model}</span>
+                      {message.provider && (
+                        <span className="text-xs text-[var(--color-text-muted)]">
+                          via {message.provider === 'gemini' ? 'Gemini' : 'Ollama'}
+                        </span>
+                      )}
+                      {message.tier === 'tier2' && (
+                        <span className="text-xs px-1.5 py-0.5 rounded bg-[var(--color-accent-primary)]/20 text-[var(--color-accent-primary)]">
+                          Deep Analysis
+                        </span>
                       )}
                     </div>
                   )}
                   
-                  <div className="prose prose-invert prose-sm max-w-none">
-                    <div className="whitespace-pre-wrap">{message.content}</div>
-                  </div>
+                  {/* Thinking Steps */}
+                  {message.role === 'assistant' && message.thinkingSteps && message.thinkingSteps.length > 0 && (
+                    <ThinkingSteps 
+                      steps={message.thinkingSteps} 
+                      tier={message.tier}
+                      isProcessing={isTyping && index === messages.length - 1}
+                      onStop={stop}
+                    />
+                  )}
+                  
+                  {message.content && (
+                    <Markdown>{message.content}</Markdown>
+                  )}
+                  
+                  {/* Show executed code for Tier 2 */}
+                  {message.executedCode && (
+                    <div className="mt-3 pt-3 border-t border-[var(--color-border-subtle)]">
+                      <button
+                        onClick={() => setExpandedCode(
+                          expandedCode === message.id ? null : message.id
+                        )}
+                        className="flex items-center gap-1.5 text-xs text-[var(--color-text-muted)] hover:text-white transition-colors"
+                      >
+                        <Code className="h-3 w-3" />
+                        <span>View analysis code</span>
+                        <ChevronDown className={cn(
+                          "h-3 w-3 transition-transform",
+                          expandedCode === message.id && "rotate-180"
+                        )} />
+                      </button>
+                      
+                      <AnimatePresence>
+                        {expandedCode === message.id && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            className="overflow-hidden"
+                          >
+                            <pre className="mt-2 p-3 rounded-lg bg-[var(--color-bg-base)] text-xs font-mono text-[var(--color-text-secondary)] overflow-x-auto">
+                              {message.executedCode}
+                            </pre>
+                            {message.executionResult && (
+                              <div className="mt-2 text-xs text-[var(--color-text-muted)]">
+                                Executed in {message.executionResult.duration}ms
+                              </div>
+                            )}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  )}
                   
                   {message.suggestions && message.suggestions.length > 0 && (
                     <div className="mt-4 pt-3 border-t border-[var(--color-border-subtle)] flex flex-wrap gap-2">
@@ -312,6 +373,18 @@ export function AskNavs() {
               disabled={isTyping}
               className="flex-1 bg-transparent px-4 py-4 text-white placeholder:text-[var(--color-text-muted)] focus:outline-none disabled:opacity-50"
             />
+            
+            {/* Stop button (shown while typing) */}
+            {isTyping && (
+              <button
+                onClick={stop}
+                className="flex h-10 items-center gap-2 px-3 rounded-lg bg-[var(--color-bg-elevated)] border border-[var(--color-border-subtle)] text-[var(--color-text-muted)] hover:text-[var(--color-warning)] hover:border-[var(--color-warning)] transition-colors"
+              >
+                <Square className="h-4 w-4" />
+                <span className="text-sm">Stop</span>
+              </button>
+            )}
+            
             <button
               onClick={handleSend}
               disabled={!input.trim() || isTyping}
@@ -323,7 +396,8 @@ export function AskNavs() {
         </div>
         
         <p className="text-xs text-[var(--color-text-muted)] text-center mt-3">
-          Navs can make mistakes. Verify important data with the source.
+          Navs can dig into {data?.students?.length?.toLocaleString() || 0} student records for complex queries. 
+          Verify important data with the source.
         </p>
       </motion.div>
     </div>

@@ -5,6 +5,7 @@ import { useLocation } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { useNavs, useNavsGreeting, useNavsSuggestions } from '@/hooks/useNavs'
 import { useUIStore } from '@/store/uiStore'
+import { Markdown } from '@/components/shared/Markdown'
 
 export function NavsWidget() {
   const location = useLocation()
@@ -15,18 +16,19 @@ export function NavsWidget() {
   const [input, setInput] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
   
-  // Don't show on Ask Navs page
-  if (location.pathname === '/ask-navs') return null
-  
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
   
+  // All hooks must be called before any early returns
   useEffect(() => {
     if (navsWidgetOpen) {
       scrollToBottom()
     }
   }, [messages, navsWidgetOpen])
+  
+  // Don't show on Ask Navs page (after all hooks)
+  if (location.pathname === '/ask-navs') return null
   
   const handleSend = async () => {
     if (!input.trim()) return
@@ -127,7 +129,11 @@ export function NavsWidget() {
                           : 'bg-[var(--color-bg-elevated)] text-[var(--color-text-primary)]'
                       )}
                     >
-                      <div className="whitespace-pre-wrap">{message.content}</div>
+                      {message.role === 'user' ? (
+                        <div className="whitespace-pre-wrap">{message.content}</div>
+                      ) : (
+                        <Markdown>{message.content}</Markdown>
+                      )}
                       {message.suggestions && (
                         <div className="mt-3 pt-3 border-t border-[var(--color-border-subtle)] space-y-1">
                           {message.suggestions.map((s, i) => (

@@ -180,40 +180,54 @@ export function AskNavs() {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col items-center justify-center h-full text-center px-4"
+            className="pt-8 pb-12 px-4"
           >
-            <div className="h-20 w-20 rounded-2xl bg-gradient-to-br from-[var(--color-accent-primary)] to-[var(--color-accent-dark)] flex items-center justify-center mb-6">
-              <Sparkles className="h-10 w-10 text-white" />
-            </div>
-            <h2 className="text-xl font-semibold text-white mb-2">{greeting}</h2>
-            <p className="text-[var(--color-text-muted)] max-w-md mb-8">
-              I'm Navs, your AI assistant for enrollment analytics. Ask me anything about applications, 
-              NTR, programs, or trends. I can also dig into the raw data for complex queries.
-            </p>
-            
-            {/* Data Status */}
-            {data && (
-              <div className="text-xs text-[var(--color-text-muted)] mb-6">
-                Data loaded: {data.funnel?.length ? `${data.funnel[0].count.toLocaleString()} applications` : 'No data'} • 
-                {data.students?.length ? ` ${data.students.length.toLocaleString()} student records` : ''} • 
-                Last updated: {new Date(data.lastUpdated).toLocaleString()}
+            {/* Content wrapper with max width and centered */}
+            <div className="max-w-3xl mx-auto text-center">
+              {/* Avatar/Icon */}
+              <div className="h-20 w-20 rounded-2xl bg-gradient-to-br from-[var(--color-accent-primary)] to-[var(--color-accent-dark)] flex items-center justify-center mb-8 shadow-lg shadow-[var(--color-accent-primary)]/20 mx-auto">
+                <Sparkles className="h-10 w-10 text-white" />
               </div>
-            )}
-            
-            {/* Suggestions */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 max-w-2xl w-full">
-              {suggestions.map((suggestion, i) => (
-                <button
-                  key={i}
-                  onClick={() => handleSuggestionClick(suggestion)}
-                  disabled={isTyping}
-                  className="p-4 rounded-xl bg-[var(--color-bg-surface)] border border-[var(--color-border-subtle)] text-left hover:border-[var(--color-accent-primary)] hover:bg-[var(--color-bg-elevated)] transition-all group disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <span className="text-sm text-[var(--color-text-secondary)] group-hover:text-white transition-colors">
-                    {suggestion}
+              
+              {/* Greeting */}
+              <h2 className="text-2xl font-semibold text-white mb-3">{greeting}</h2>
+              <p className="text-[var(--color-text-muted)] mb-10 leading-relaxed">
+                I'm Navs, your AI assistant for enrollment analytics. Ask me anything about applications, 
+                NTR, programs, or trends. I can dig into the raw data for complex queries and remember 
+                our conversation for follow-up questions.
+              </p>
+              
+              {/* Data Status */}
+              {data && (
+                <div className="inline-flex text-xs text-[var(--color-text-muted)] mb-8 px-4 py-2 rounded-lg bg-[var(--color-bg-surface)]/50 border border-[var(--color-border-subtle)]">
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-success)]" />
+                    {data.funnel?.length ? `${data.funnel[0].count.toLocaleString()} applications` : 'No data'}
+                    {data.students?.length ? ` • ${data.students.length.toLocaleString()} student records` : ''}
+                    <span className="text-[var(--color-text-muted)]/60">•</span>
+                    Updated {new Date(data.lastUpdated).toLocaleDateString()}
                   </span>
-                </button>
-              ))}
+                </div>
+              )}
+              
+              {/* Suggestions */}
+              <div>
+                <p className="text-xs text-[var(--color-text-muted)] mb-3">Try asking:</p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {suggestions.map((suggestion, i) => (
+                    <button
+                      key={i}
+                      onClick={() => handleSuggestionClick(suggestion)}
+                      disabled={isTyping}
+                      className="p-4 rounded-xl bg-[var(--color-bg-surface)] border border-[var(--color-border-subtle)] text-left hover:border-[var(--color-accent-primary)] hover:bg-[var(--color-bg-elevated)] transition-all group disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <span className="text-sm text-[var(--color-text-secondary)] group-hover:text-white transition-colors">
+                        {suggestion}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           </motion.div>
         ) : (
@@ -327,27 +341,35 @@ export function AskNavs() {
               </motion.div>
             ))}
             
-            {isTyping && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex justify-start"
-              >
-                <div className="bg-[var(--color-bg-surface)] border border-[var(--color-border-subtle)] rounded-2xl px-5 py-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="h-6 w-6 rounded-full bg-gradient-to-br from-[var(--color-accent-primary)] to-[var(--color-accent-dark)] flex items-center justify-center">
-                      <Sparkles className="h-3 w-3 text-white" />
+            {/* Only show typing indicator if the last message doesn't already have thinking steps */}
+            {isTyping && (() => {
+              const lastMessage = messages[messages.length - 1]
+              // Hide typing indicator if last message is assistant with thinking steps (it shows its own loading state)
+              const hasThinkingSteps = lastMessage?.role === 'assistant' && lastMessage?.thinkingSteps && lastMessage.thinkingSteps.length > 0
+              if (hasThinkingSteps) return null
+              
+              return (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="flex justify-start"
+                >
+                  <div className="bg-[var(--color-bg-surface)] border border-[var(--color-border-subtle)] rounded-2xl px-5 py-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="h-6 w-6 rounded-full bg-gradient-to-br from-[var(--color-accent-primary)] to-[var(--color-accent-dark)] flex items-center justify-center">
+                        <Sparkles className="h-3 w-3 text-white" />
+                      </div>
+                      <span className="text-sm font-medium text-white">Navs</span>
                     </div>
-                    <span className="text-sm font-medium text-white">Navs</span>
+                    <div className="flex gap-1">
+                      <div className="w-2 h-2 rounded-full bg-[var(--color-text-muted)] animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <div className="w-2 h-2 rounded-full bg-[var(--color-text-muted)] animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <div className="w-2 h-2 rounded-full bg-[var(--color-text-muted)] animate-bounce" style={{ animationDelay: '300ms' }} />
+                    </div>
                   </div>
-                  <div className="flex gap-1">
-                    <div className="w-2 h-2 rounded-full bg-[var(--color-text-muted)] animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <div className="w-2 h-2 rounded-full bg-[var(--color-text-muted)] animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <div className="w-2 h-2 rounded-full bg-[var(--color-text-muted)] animate-bounce" style={{ animationDelay: '300ms' }} />
-                  </div>
-                </div>
-              </motion.div>
-            )}
+                </motion.div>
+              )
+            })()}
             
             <div ref={messagesEndRef} className="h-4" />
           </>

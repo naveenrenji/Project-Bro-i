@@ -25,6 +25,8 @@ export interface StudentRecord {
   canvasLastLogin?: string
   canvasWeeksSinceLogin?: number
   company?: string
+  cohortName?: string  // Corporate cohort name (primary identifier for corporate students)
+  submittedDate?: string  // Date when application was submitted
 }
 
 export interface FilterOptions {

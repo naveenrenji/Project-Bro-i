@@ -85,7 +85,7 @@ export function useFilteredFunnel() {
     { stage: 'Applications', count: funnel.applications, conversionRate: 100 },
     { stage: 'Admits', count: funnel.admits, conversionRate: funnel.admitRate },
     { stage: 'Accepted', count: funnel.accepted, conversionRate: funnel.admits > 0 ? (funnel.accepted / funnel.admits) * 100 : 0 },
-    { stage: 'Enrolled', count: funnel.enrollments, conversionRate: funnel.yieldRate },
+    { stage: 'Enrolled', count: funnel.enrolled, conversionRate: funnel.yieldRate },
   ]
 }
 

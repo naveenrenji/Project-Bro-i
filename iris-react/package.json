@@ -18,6 +18,8 @@
     "framer-motion": "^12.29.2",
     "lucide-react": "^0.563.0",
     "react": "^19.2.0",
+    "react-confetti-explosion": "^3.0.3",
+    "react-countup": "^6.5.3",
     "react-dom": "^19.2.0",
     "react-markdown": "^10.1.0",
     "react-router-dom": "^7.13.0",

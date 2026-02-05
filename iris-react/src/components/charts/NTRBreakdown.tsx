@@ -110,7 +110,7 @@ export function NTRBarChart({ data, title = 'NTR by Category', onAskNavs }: NTRB
               <LabelList 
                 dataKey="ntr" 
                 position="right" 
-                formatter={(value: number) => formatCurrency(value, true)}
+                formatter={((value: number | string | undefined) => formatCurrency(Number(value) || 0, true)) as never}
                 style={{ fill: '#fff', fontSize: 11, fontWeight: 500 }}
               />
             </Bar>
@@ -132,9 +132,10 @@ export function NTRPieChart({ data, title = 'NTR by Student Type', onAskNavs }: 
   const total = data.reduce((sum, item) => sum + item.ntr, 0)
   
   // Custom label for pie slices
-  const renderPieLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, value }: {
-    cx: number, cy: number, midAngle: number, innerRadius: number, outerRadius: number, value: number
+  const renderPieLabel = (props: {
+    cx?: number, cy?: number, midAngle?: number, innerRadius?: number, outerRadius?: number, value?: number
   }) => {
+    const { cx = 0, cy = 0, midAngle = 0, innerRadius = 0, outerRadius = 0, value = 0 } = props
     const RADIAN = Math.PI / 180
     const radius = innerRadius + (outerRadius - innerRadius) * 0.5
     const x = cx + radius * Math.cos(-midAngle * RADIAN)
@@ -468,10 +469,10 @@ export function AvgCreditsChart({ byCategory, byStudentType, overall, title = 'A
                   }}
                   itemStyle={{ color: '#fff' }}
                   labelStyle={{ color: '#fff', fontWeight: 600 }}
-                  formatter={(value: number, _name: string, props: { payload: AvgCreditsCategoryData }) => [
-                    `${value} avg credits (${formatNumber(props.payload.students)} students)`,
+                  formatter={((value: number | undefined, _name: string, props: { payload: AvgCreditsCategoryData }) => [
+                    `${value ?? 0} avg credits (${formatNumber(props.payload.students)} students)`,
                     ''
-                  ]}
+                  ]) as never}
                 />
                 <Bar dataKey="avgCredits" radius={[0, 4, 4, 0]}>
                   {byCategory.map((_, index) => (
@@ -480,7 +481,7 @@ export function AvgCreditsChart({ byCategory, byStudentType, overall, title = 'A
                   <LabelList 
                     dataKey="avgCredits" 
                     position="right" 
-                    formatter={(value: number) => value.toFixed(1)}
+                    formatter={((value: number | string | undefined) => (Number(value) || 0).toFixed(1)) as never}
                     style={{ fill: '#fff', fontSize: 11, fontWeight: 600 }}
                   />
                 </Bar>

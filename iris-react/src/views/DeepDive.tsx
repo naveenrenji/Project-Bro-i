@@ -1,16 +1,23 @@
-import { motion } from 'framer-motion'
-import { DollarSign, GitBranch, PieChart as PieChartIcon, Users, TrendingUp, GraduationCap, ChevronDown, Filter } from 'lucide-react'
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts'
+import { motion, AnimatePresence } from 'framer-motion'
+import { DollarSign, GitBranch, PieChart as PieChartIcon, Users, TrendingUp, GraduationCap, ChevronDown, ChevronRight, Filter, BarChart, Building2, Briefcase } from 'lucide-react'
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 import { cn, formatCurrency, formatNumber, formatPercent } from '@/lib/utils'
 import { useUIStore } from '@/store/uiStore'
 import { useData, useNTR, useNTRBreakdown, useNTRByStudentType, useGraduation, useDemographics, useYoY, useBySchool, useByDegree } from '@/hooks/useData'
-import { useFilteredNTR, useFilteredGraduation, useFilteredCategories, useFilteredMetrics, useFilteredDemographics, useFilteredHistorical, useFilteredPrograms, usePipelinePrograms, useAverageCredits, useIsFiltered, useFilterSummary } from '@/hooks/useFilteredData'
+import { useFilteredGraduation, useFilteredMetrics, useFilteredDemographics, useFilteredHistorical, useFilteredPrograms, usePipelinePrograms, useAverageCredits, useIsFiltered, useFilterSummary } from '@/hooks/useFilteredData'
+import { useForecast, useForecastByCategory, useForecastByProgram } from '@/hooks/useForecast'
+import { useProgramInsights } from '@/hooks/useProgramInsights'
+import { useCorporateCohorts, useCorporateCohortSummary } from '@/hooks/useCorporateCohorts'
 import { DEEP_DIVE_TABS } from '@/lib/constants'
 import { GlassCard } from '@/components/shared/GlassCard'
 import { GaugeChart } from '@/components/charts/GaugeChart'
 import { SankeyFlow } from '@/components/charts/SankeyFlow'
 import { NTRBarChart, NTRPieChart, NTRSummaryCards, NTRBreakdownTable, AvgCreditsChart } from '@/components/charts/NTRBreakdown'
 import { TimelineChart } from '@/components/charts/TimelineChart'
+import { ForecastTable } from '@/components/charts/ForecastTable'
+import { ForecastByCategory } from '@/components/charts/ForecastByCategory'
+import { ForecastByProgram } from '@/components/charts/ForecastByProgram'
+import { PerformerPanels } from '@/components/charts/PerformerTable'
 import { NavsInput } from '@/components/navs/NavsInput'
 import { ChartSkeleton } from '@/components/shared/SkeletonLoader'
 import { useState } from 'react'
@@ -21,10 +28,20 @@ const iconMap = {
   PieChart: PieChartIcon,
   Users,
   TrendingUp,
+  BarChart,
+}
+
+// Source labels for breadcrumb
+const SOURCE_LABELS: Record<string, string> = {
+  'ntr-meter': 'NTR Meter',
+  'student-metrics': 'Student Metrics',
+  'funnel': 'Enrollment Funnel',
+  'health-status': 'Health Status',
+  'performers': 'Program Performers',
 }
 
 export function DeepDive() {
-  const { activeDeepDiveTab, setActiveDeepDiveTab } = useUIStore()
+  const { activeDeepDiveTab, setActiveDeepDiveTab, deepDiveSource, clearDeepDiveSource } = useUIStore()
   const { data, isLoading } = useData()
   const isFiltered = useIsFiltered()
   const filterSummary = useFilterSummary()
@@ -33,8 +50,34 @@ export function DeepDive() {
     return iconMap[iconName as keyof typeof iconMap] || DollarSign
   }
   
+  // Get source label for breadcrumb
+  const sourceLabel = deepDiveSource ? SOURCE_LABELS[deepDiveSource] : null
+  
   return (
     <div className="space-y-6">
+      {/* Source Breadcrumb */}
+      {sourceLabel && (
+        <motion.div
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="flex items-center gap-2 text-sm"
+        >
+          <a 
+            href="/"
+            onClick={(e) => {
+              e.preventDefault()
+              clearDeepDiveSource()
+              window.location.href = '/'
+            }}
+            className="text-[var(--color-text-muted)] hover:text-[var(--color-accent-primary)] transition-colors"
+          >
+            Command Center
+          </a>
+          <span className="text-[var(--color-text-muted)]">/</span>
+          <span className="text-[var(--color-accent-primary)]">From: {sourceLabel}</span>
+        </motion.div>
+      )}
+      
       {/* Page Header */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
@@ -109,15 +152,16 @@ export function DeepDive() {
         >
           {activeDeepDiveTab === 'revenue' && <RevenueTab data={data} />}
           {activeDeepDiveTab === 'pipeline' && <PipelineTab data={data} />}
-          {activeDeepDiveTab === 'segment' && <SegmentTab data={data} />}
-          {activeDeepDiveTab === 'student' && <StudentTab data={data} />}
-          {activeDeepDiveTab === 'time' && <TimeTab data={data} />}
+          {activeDeepDiveTab === 'forecast' && <ForecastTab />}
+          {activeDeepDiveTab === 'programs' && <ProgramsTab data={data} />}
+          {activeDeepDiveTab === 'students' && <StudentsTab data={data} />}
+          {activeDeepDiveTab === 'trends' && <TrendsTab data={data} />}
         </motion.div>
       )}
       
       {/* Ask Navs */}
       <NavsInput 
-        context={activeDeepDiveTab as 'revenue' | 'pipeline' | 'segment' | 'student' | 'time'} 
+        context={activeDeepDiveTab as 'revenue' | 'pipeline' | 'programs' | 'students' | 'trends'} 
       />
     </div>
   )
@@ -217,6 +261,69 @@ function RevenueTab({ data: _data }: { data: NonNullable<ReturnType<typeof useDa
   )
 }
 
+// Forecast Tab - Enrollment and NTR projections
+function ForecastTab() {
+  const { metrics: forecast, params: forecastParams, isLoading } = useForecast()
+  const categoryForecasts = useForecastByCategory()
+  const programForecasts = useForecastByProgram(20)
+  const isFiltered = useIsFiltered()
+  const filterSummary = useFilterSummary()
+  
+  if (isLoading || !forecast) {
+    return (
+      <div className="space-y-6">
+        <ChartSkeleton height={200} />
+        <ChartSkeleton height={300} />
+      </div>
+    )
+  }
+  
+  return (
+    <div className="space-y-6">
+      {/* AI Summary */}
+      <GlassCard className="border-l-4 border-l-[var(--color-accent-primary)]">
+        <div className="flex items-start gap-3">
+          <div className="h-8 w-8 rounded-lg bg-[var(--color-accent-primary)]/20 flex items-center justify-center shrink-0">
+            <TrendingUp className="h-4 w-4 text-[var(--color-accent-primary)]" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-white mb-1">
+              Navs Forecast Summary
+              {isFiltered && <span className="ml-2 text-xs font-normal text-[var(--color-accent-primary)]">(Filtered: {filterSummary})</span>}
+            </h3>
+            <p className="text-[var(--color-text-secondary)]">
+              Projecting <strong className="text-white">{formatNumber(forecast.apps.mid)}</strong> applications by deadline
+              ({forecast.apps.yoyChange >= 0 ? '+' : ''}{forecast.apps.yoyChange}% YoY).
+              Expected enrollments: <strong className="text-white">{formatNumber(forecast.enrolls.mid)}</strong>.
+              Projected NTR: <strong className="text-[var(--color-success)]">{formatCurrency(forecast.ntr.mid, true)}</strong>.
+              {forecastParams && (
+                <> Model using {forecastParams.weeklyRunRate} apps/week run rate with {(forecastParams.avgHistoricalYield * 100).toFixed(0)}% historical yield.</>
+              )}
+            </p>
+          </div>
+        </div>
+      </GlassCard>
+      
+      {/* Overall Forecast Summary */}
+      <ForecastTable 
+        metrics={forecast} 
+        params={forecastParams ?? undefined}
+        title="Forecast Summary - 2026 Term" 
+      />
+      
+      {/* Forecast by Category */}
+      {categoryForecasts.length > 0 && (
+        <ForecastByCategory data={categoryForecasts} />
+      )}
+      
+      {/* Forecast by Program */}
+      {programForecasts.length > 0 && (
+        <ForecastByProgram data={programForecasts} />
+      )}
+    </div>
+  )
+}
+
 // Pipeline Tab
 function PipelineTab({ data }: { data: NonNullable<ReturnType<typeof useData>['data']> }) {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
@@ -242,7 +349,7 @@ function PipelineTab({ data }: { data: NonNullable<ReturnType<typeof useData>['d
   const filteredFunnelMetrics = {
     applications: programsWithPipeline.reduce((sum, p) => sum + p.applications, 0),
     admits: programsWithPipeline.reduce((sum, p) => sum + p.admits, 0),
-    accepted: programsWithPipeline.reduce((sum, p) => sum + p.accepted, 0),
+    accepted: programsWithPipeline.reduce((sum, p) => sum + (p.accepted ?? 0), 0),
     enrolled: programsWithPipeline.reduce((sum, p) => sum + p.enrollments, 0),
   }
   
@@ -469,11 +576,12 @@ function PipelineTab({ data }: { data: NonNullable<ReturnType<typeof useData>['d
   )
 }
 
-// Segment Tab - Enhanced with filters and more programs
-function SegmentTab({ data }: { data: NonNullable<ReturnType<typeof useData>['data']> }) {
+// Programs Tab - Program classification, segmentation, and performance
+function ProgramsTab({ data }: { data: NonNullable<ReturnType<typeof useData>['data']> }) {
   const bySchool = useBySchool()
   const byDegree = useByDegree()
   const { programs: filteredPrograms, programsAll: filteredProgramsAll } = useFilteredPrograms()
+  const { topPerformers, needsAttention, summary } = useProgramInsights()
   const isFiltered = useIsFiltered()
   const [showAllPrograms, setShowAllPrograms] = useState(false)
   
@@ -490,18 +598,47 @@ function SegmentTab({ data }: { data: NonNullable<ReturnType<typeof useData>['da
       <GlassCard className="border-l-4 border-l-[var(--color-accent-primary)]">
         <div className="flex items-start gap-3">
           <div className="h-8 w-8 rounded-lg bg-[var(--color-accent-primary)]/20 flex items-center justify-center shrink-0">
-            <PieChart className="h-4 w-4 text-[var(--color-accent-primary)]" />
+            <PieChartIcon className="h-4 w-4 text-[var(--color-accent-primary)]" />
           </div>
           <div>
             <h3 className="font-semibold text-white mb-1">Navs Summary</h3>
             <p className="text-[var(--color-text-secondary)]">
-              {data.categories[0]?.category} leads with <strong className="text-white">{formatNumber(data.categories[0]?.enrollments || 0)}</strong> enrollments. 
-              {bySchool.length > 0 && <> Top school: <strong className="text-white">{bySchool[0]?.school}</strong> ({bySchool[0]?.enrollments} enrolled).</>}
-              <strong className="text-white"> {data.programsAll?.length || data.programs.length}</strong> active programs.
+              <strong className="text-[var(--color-success)]">{summary.topCount}</strong> top performers, 
+              <strong className="text-[var(--color-warning)]"> {summary.middleCount}</strong> middle tier, 
+              <strong className="text-[var(--color-danger)]"> {summary.attentionCount}</strong> need attention. 
+              {data.categories[0]?.category} leads with <strong className="text-white">{formatNumber(data.categories[0]?.enrollments || 0)}</strong> enrollments.
             </p>
           </div>
         </div>
       </GlassCard>
+      
+      {/* Program Classification Summary */}
+      <GlassCard>
+        <div className="flex items-center gap-2 mb-4">
+          <h3 className="text-lg font-semibold text-white">Program Classification</h3>
+        </div>
+        <div className="grid grid-cols-3 gap-4">
+          <div className="p-4 rounded-lg bg-[var(--color-success)]/10 text-center">
+            <div className="text-3xl font-bold text-[var(--color-success)]">{summary.topCount}</div>
+            <div className="text-sm text-[var(--color-text-muted)]">Top Performers (&gt;100)</div>
+          </div>
+          <div className="p-4 rounded-lg bg-[var(--color-warning)]/10 text-center">
+            <div className="text-3xl font-bold text-[var(--color-warning)]">{summary.middleCount}</div>
+            <div className="text-sm text-[var(--color-text-muted)]">Middle Bunch (20-100)</div>
+          </div>
+          <div className="p-4 rounded-lg bg-[var(--color-danger)]/10 text-center">
+            <div className="text-3xl font-bold text-[var(--color-danger)]">{summary.attentionCount}</div>
+            <div className="text-sm text-[var(--color-text-muted)]">Needs Attention (&lt;20)</div>
+          </div>
+        </div>
+      </GlassCard>
+      
+      {/* Top / Bottom Performers */}
+      <PerformerPanels
+        topPerformers={topPerformers}
+        needsAttention={needsAttention}
+        limit={5}
+      />
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* By Category */}
@@ -581,8 +718,8 @@ function SegmentTab({ data }: { data: NonNullable<ReturnType<typeof useData>['da
             </thead>
             <tbody>
               {programsToShow.map((prog, i) => {
-                const progData = prog as { vs2025?: number; vs2024?: number; yoyEnrollChange?: number }
-                const vs2025 = progData.vs2025 ?? prog.yoyChange ?? 0
+                const progData = prog as { vs2025?: number; vs2024?: number; yoyChange?: number; yoyEnrollChange?: number }
+                const vs2025 = progData.vs2025 ?? progData.yoyChange ?? 0
                 const vs2024 = progData.vs2024 ?? progData.yoyEnrollChange ?? 0
                 return (
                   <tr key={i} className="border-b border-[var(--color-border-subtle)] hover:bg-[var(--color-bg-elevated)]">
@@ -613,7 +750,7 @@ function SegmentTab({ data }: { data: NonNullable<ReturnType<typeof useData>['da
 }
 
 // Student Tab - Enhanced with graduation tracking and demographics
-function StudentTab({ data }: { data: NonNullable<ReturnType<typeof useData>['data']> }) {
+function StudentsTab({ data }: { data: NonNullable<ReturnType<typeof useData>['data']> }) {
   const rawGraduation = useGraduation()
   const filteredGraduation = useFilteredGraduation()
   const rawDemographics = useDemographics()
@@ -623,9 +760,10 @@ function StudentTab({ data }: { data: NonNullable<ReturnType<typeof useData>['da
   const [showDemographics, setShowDemographics] = useState(false)
   
   // Custom label for pie slices - shows count
-  const renderPieLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, value }: {
-    cx: number, cy: number, midAngle: number, innerRadius: number, outerRadius: number, value: number
+  const renderPieLabel = (props: {
+    cx?: number, cy?: number, midAngle?: number, innerRadius?: number, outerRadius?: number, value?: number
   }) => {
+    const { cx = 0, cy = 0, midAngle = 0, innerRadius = 0, outerRadius = 0, value = 0 } = props
     const RADIAN = Math.PI / 180
     const radius = innerRadius + (outerRadius - innerRadius) * 0.5
     const x = cx + radius * Math.cos(-midAngle * RADIAN)
@@ -672,11 +810,11 @@ function StudentTab({ data }: { data: NonNullable<ReturnType<typeof useData>['da
       {/* Enrollment Breakdown */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <GlassCard className="text-center" padding="sm">
-          <div className="text-3xl font-bold text-white mb-1">{formatNumber(isFiltered ? enrollment.newStudents : data.enrollmentBreakdown.newSlate)}</div>
+          <div className="text-3xl font-bold text-white mb-1">{formatNumber(isFiltered ? (enrollment as { newStudents: number }).newStudents : data.enrollmentBreakdown.newSlate)}</div>
           <div className="text-sm text-[var(--color-text-muted)]">New {isFiltered ? 'Students' : '(Slate)'}</div>
         </GlassCard>
         <GlassCard className="text-center" padding="sm">
-          <div className="text-3xl font-bold text-white mb-1">{formatNumber(isFiltered ? enrollment.currentStudents : data.enrollmentBreakdown.continuing)}</div>
+          <div className="text-3xl font-bold text-white mb-1">{formatNumber(isFiltered ? (enrollment as { currentStudents: number }).currentStudents : data.enrollmentBreakdown.continuing)}</div>
           <div className="text-sm text-[var(--color-text-muted)]">{isFiltered ? 'Current' : 'Continuing'}</div>
         </GlassCard>
         <GlassCard className="text-center" padding="sm">
@@ -861,7 +999,7 @@ function StudentTab({ data }: { data: NonNullable<ReturnType<typeof useData>['da
                         }}
                         itemStyle={{ color: '#fff' }}
                         labelStyle={{ color: '#fff', fontWeight: 600 }}
-                        formatter={(value: number) => [formatNumber(value), 'Students']}
+                        formatter={((value: number | undefined) => [formatNumber(value ?? 0), 'Students']) as never}
                       />
                     </PieChart>
                   </ResponsiveContainer>
@@ -886,38 +1024,217 @@ function StudentTab({ data }: { data: NonNullable<ReturnType<typeof useData>['da
         </GlassCard>
       )}
       
-      {/* Corporate Cohorts */}
-      <GlassCard>
-        <h3 className="text-lg font-semibold text-white mb-4">Top Corporate Cohorts</h3>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-[var(--color-border-subtle)]">
-                <th className="text-left py-3 text-[var(--color-text-muted)] font-medium">Cohort</th>
-                <th className="text-right py-3 text-[var(--color-text-muted)] font-medium">New</th>
-                <th className="text-right py-3 text-[var(--color-text-muted)] font-medium">Continuing</th>
-                <th className="text-right py-3 text-[var(--color-text-muted)] font-medium">Total Enrolled</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.cohorts.map((cohort, i) => (
-                <tr key={i} className="border-b border-[var(--color-border-subtle)] hover:bg-[var(--color-bg-elevated)]">
-                  <td className="py-3 text-white">{cohort.company}</td>
-                  <td className="py-3 text-right text-[var(--color-success)] tabular-nums">{cohort.newStudents}</td>
-                  <td className="py-3 text-right text-[var(--color-text-secondary)] tabular-nums">{cohort.continuingStudents}</td>
-                  <td className="py-3 text-right text-white font-medium tabular-nums">{cohort.enrollments}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </GlassCard>
+      {/* Corporate Cohorts - Now with drill-down */}
+      <CorporateCohortsSection />
     </div>
   )
 }
 
+/**
+ * Corporate Cohorts Section with expandable drill-down
+ */
+function CorporateCohortsSection() {
+  const cohorts = useCorporateCohorts()
+  const summary = useCorporateCohortSummary()
+  const [expandedCohorts, setExpandedCohorts] = useState<Set<string>>(new Set())
+  
+  const toggleCohort = (cohortName: string) => {
+    setExpandedCohorts(prev => {
+      const next = new Set(prev)
+      if (next.has(cohortName)) {
+        next.delete(cohortName)
+      } else {
+        next.add(cohortName)
+      }
+      return next
+    })
+  }
+  
+  if (cohorts.length === 0) {
+    return (
+      <GlassCard>
+        <div className="flex items-center gap-2 mb-4">
+          <Building2 className="h-5 w-5 text-[var(--color-accent-primary)]" />
+          <h3 className="text-lg font-semibold text-white">Corporate Cohorts</h3>
+        </div>
+        <p className="text-[var(--color-text-muted)]">No corporate cohort data available.</p>
+      </GlassCard>
+    )
+  }
+  
+  return (
+    <GlassCard>
+      {/* Header with Summary */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <Building2 className="h-5 w-5 text-[var(--color-accent-primary)]" />
+          <h3 className="text-lg font-semibold text-white">Corporate Cohorts</h3>
+          <span className="text-sm text-[var(--color-text-muted)]">
+            ({summary.totalCohorts} companies)
+          </span>
+        </div>
+        <div className="flex items-center gap-4 text-sm">
+          <span className="text-[var(--color-text-muted)]">
+            <strong className="text-white">{formatNumber(summary.totalStudents)}</strong> students
+          </span>
+          <span className="text-[var(--color-text-muted)]">
+            <strong className="text-[var(--color-success)]">{formatNumber(summary.totalNew)}</strong> new
+          </span>
+          <span className="text-[var(--color-text-muted)]">
+            <strong className="text-[var(--color-info)]">{formatNumber(summary.totalContinuing)}</strong> continuing
+          </span>
+        </div>
+      </div>
+      
+      {/* Cohort List */}
+      <div className="space-y-2">
+        {cohorts.map((cohort, index) => {
+          const isExpanded = expandedCohorts.has(cohort.cohortName)
+          
+          return (
+            <motion.div
+              key={cohort.cohortName}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.03 }}
+              className="rounded-lg border border-[var(--color-border-subtle)] overflow-hidden"
+            >
+              {/* Cohort Header Row - Clickable */}
+              <button
+                onClick={() => toggleCohort(cohort.cohortName)}
+                className="w-full flex items-center justify-between p-4 hover:bg-[var(--color-bg-elevated)] transition-colors text-left"
+              >
+                <div className="flex items-center gap-3">
+                  <motion.div
+                    animate={{ rotate: isExpanded ? 90 : 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <ChevronRight className="h-4 w-4 text-[var(--color-text-muted)]" />
+                  </motion.div>
+                  <Briefcase className="h-4 w-4 text-[var(--color-accent-primary)]" />
+                  <span className="font-medium text-white">{cohort.cohortName}</span>
+                  
+                  {/* Program and Degree count badges */}
+                  <div className="flex items-center gap-2 ml-2">
+                    <span className="px-2 py-0.5 text-xs rounded-full bg-[var(--color-bg-elevated)] text-[var(--color-text-muted)]">
+                      {cohort.programs.length} program{cohort.programs.length !== 1 ? 's' : ''}
+                    </span>
+                    <span className="px-2 py-0.5 text-xs rounded-full bg-[var(--color-bg-elevated)] text-[var(--color-text-muted)]">
+                      {cohort.degreeTypes.length} degree type{cohort.degreeTypes.length !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-6 text-sm tabular-nums">
+                  <div className="text-right">
+                    <span className="text-[var(--color-success)]">{cohort.newStudents}</span>
+                    <span className="text-[var(--color-text-muted)] ml-1">new</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-[var(--color-info)]">{cohort.continuing}</span>
+                    <span className="text-[var(--color-text-muted)] ml-1">cont.</span>
+                  </div>
+                  <div className="text-right min-w-[60px]">
+                    <span className="font-semibold text-white">{cohort.total}</span>
+                    <span className="text-[var(--color-text-muted)] ml-1">total</span>
+                  </div>
+                </div>
+              </button>
+              
+              {/* Expanded Detail */}
+              <AnimatePresence>
+                {isExpanded && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="p-4 pt-0 border-t border-[var(--color-border-subtle)] bg-[var(--color-bg-secondary)]/30">
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-4">
+                        {/* Programs Breakdown */}
+                        <div>
+                          <h4 className="text-sm font-medium text-[var(--color-text-muted)] uppercase tracking-wider mb-3">
+                            Programs ({cohort.programs.length})
+                          </h4>
+                          <div className="space-y-2">
+                            {cohort.programs.map((program) => (
+                              <div key={program.name} className="flex items-center gap-3">
+                                <div className="flex-1">
+                                  <div className="flex items-center justify-between mb-1">
+                                    <span className="text-sm text-[var(--color-text-secondary)] truncate max-w-[200px]" title={program.name}>
+                                      {program.name}
+                                    </span>
+                                    <span className="text-sm text-white font-medium tabular-nums">
+                                      {program.count}
+                                    </span>
+                                  </div>
+                                  <div className="h-1.5 rounded-full bg-[var(--color-bg-elevated)] overflow-hidden">
+                                    <motion.div
+                                      initial={{ width: 0 }}
+                                      animate={{ width: `${program.percentage}%` }}
+                                      transition={{ duration: 0.4, delay: 0.1 }}
+                                      className="h-full rounded-full bg-gradient-to-r from-[var(--color-accent-primary)] to-[var(--color-accent-glow)]"
+                                    />
+                                  </div>
+                                </div>
+                                <span className="text-xs text-[var(--color-text-muted)] w-10 text-right">
+                                  {program.percentage}%
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        
+                        {/* Degree Types Breakdown */}
+                        <div>
+                          <h4 className="text-sm font-medium text-[var(--color-text-muted)] uppercase tracking-wider mb-3">
+                            Degree Types ({cohort.degreeTypes.length})
+                          </h4>
+                          <div className="space-y-2">
+                            {cohort.degreeTypes.map((degreeType) => (
+                              <div key={degreeType.name} className="flex items-center gap-3">
+                                <div className="flex-1">
+                                  <div className="flex items-center justify-between mb-1">
+                                    <span className="text-sm text-[var(--color-text-secondary)]">
+                                      {degreeType.name}
+                                    </span>
+                                    <span className="text-sm text-white font-medium tabular-nums">
+                                      {degreeType.count}
+                                    </span>
+                                  </div>
+                                  <div className="h-1.5 rounded-full bg-[var(--color-bg-elevated)] overflow-hidden">
+                                    <motion.div
+                                      initial={{ width: 0 }}
+                                      animate={{ width: `${degreeType.percentage}%` }}
+                                      transition={{ duration: 0.4, delay: 0.1 }}
+                                      className="h-full rounded-full bg-gradient-to-r from-[var(--color-info)] to-[#60a5fa]"
+                                    />
+                                  </div>
+                                </div>
+                                <span className="text-xs text-[var(--color-text-muted)] w-10 text-right">
+                                  {degreeType.percentage}%
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
+          )
+        })}
+      </div>
+    </GlassCard>
+  )
+}
+
 // Time Tab - Enhanced with YoY data
-function TimeTab({ data }: { data: NonNullable<ReturnType<typeof useData>['data']> }) {
+function TrendsTab({ data }: { data: NonNullable<ReturnType<typeof useData>['data']> }) {
   const rawYoY = useYoY()
   const { historical: filteredHistorical, yoy: filteredYoY, isFiltered } = useFilteredHistorical()
   

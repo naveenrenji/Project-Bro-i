@@ -1,4 +1,16 @@
 import { create } from 'zustand'
+import { 
+  getDashboardCache, 
+  setDashboardCache, 
+  flagDashboardForRevalidation,
+  initKnowledgeBase 
+} from '@/lib/indexed-db'
+
+// =============================================================================
+// CONSTANTS
+// =============================================================================
+
+const DASHBOARD_TTL_MS = 15 * 24 * 60 * 60 * 1000 // 15 days in milliseconds
 
 // Types for dashboard data
 export interface KPIData {
@@ -246,6 +258,7 @@ export interface StudentRecord {
   canvasLastLogin?: string
   canvasWeeksSinceLogin?: number
   company?: string
+  cohortName?: string  // Corporate cohort name (primary identifier for corporate students)
   // Date fields for timeline
   submittedDate?: string | null
   enrollmentDate?: string | null
@@ -382,6 +395,8 @@ interface DataState {
   isLoading: boolean
   error: string | null
   lastFetched: Date | null
+  cacheSource: 'network' | 'indexeddb' | null
+  knowledgeBaseInitialized: boolean
   
   // Actions
   setData: (data: DashboardData) => void
@@ -389,6 +404,7 @@ interface DataState {
   setError: (error: string | null) => void
   fetchData: (forceRefresh?: boolean) => Promise<void>
   refreshData: () => Promise<void>
+  initializeKnowledgeBase: () => Promise<void>
 }
 
 export const useDataStore = create<DataState>((set, get) => ({
@@ -396,13 +412,28 @@ export const useDataStore = create<DataState>((set, get) => ({
   isLoading: false,
   error: null,
   lastFetched: null,
+  cacheSource: null,
+  knowledgeBaseInitialized: false,
   
   setData: (data) => set({ data, lastFetched: new Date() }),
   setLoading: (isLoading) => set({ isLoading }),
   setError: (error) => set({ error }),
   
+  initializeKnowledgeBase: async () => {
+    const { knowledgeBaseInitialized } = get()
+    if (knowledgeBaseInitialized) return
+    
+    try {
+      const { stats, cleanedUp } = await initKnowledgeBase()
+      console.log(`[Knowledge Base] Ready: ${stats.activeEntries} entries, cleaned ${cleanedUp} expired`)
+      set({ knowledgeBaseInitialized: true })
+    } catch (error) {
+      console.error('[Knowledge Base] Failed to initialize:', error)
+    }
+  },
+  
   fetchData: async (forceRefresh = false) => {
-    const { isLoading, lastFetched } = get()
+    const { isLoading, lastFetched, initializeKnowledgeBase } = get()
     
     // Don't fetch if already loading
     if (isLoading) return
@@ -412,8 +443,37 @@ export const useDataStore = create<DataState>((set, get) => ({
     
     set({ isLoading: true, error: null })
     
+    // Initialize knowledge base in parallel
+    initializeKnowledgeBase()
+    
     try {
-      // Fetch from static JSON file with cache-busting for refresh
+      // Check IndexedDB cache first (unless force refresh)
+      if (!forceRefresh) {
+        try {
+          const cached = await getDashboardCache()
+          if (cached && cached.data) {
+            const cacheAge = Date.now() - new Date(cached.cachedAt).getTime()
+            
+            // Use cache if within 15 days and not marked for revalidation
+            if (cacheAge < DASHBOARD_TTL_MS && !cached.needsRevalidation) {
+              console.log(`[Data Store] Using cached data (${Math.round(cacheAge / 1000 / 60 / 60)} hours old)`)
+              set({ 
+                data: cached.data as DashboardData, 
+                isLoading: false, 
+                lastFetched: new Date(cached.cachedAt),
+                cacheSource: 'indexeddb'
+              })
+              return
+            } else {
+              console.log('[Data Store] Cache expired or needs revalidation, fetching fresh data')
+            }
+          }
+        } catch (cacheError) {
+          console.warn('[Data Store] IndexedDB cache check failed:', cacheError)
+        }
+      }
+      
+      // Fetch from network
       const url = forceRefresh 
         ? `/data/dashboard.json?t=${Date.now()}` 
         : '/data/dashboard.json'
@@ -424,9 +484,32 @@ export const useDataStore = create<DataState>((set, get) => ({
       
       if (response.ok) {
         const data = await response.json()
-        set({ data, isLoading: false, lastFetched: new Date() })
+        const now = new Date()
+        
+        // Store in IndexedDB for future use
+        try {
+          await setDashboardCache(data)
+          console.log('[Data Store] Dashboard data cached to IndexedDB')
+        } catch (cacheError) {
+          console.warn('[Data Store] Failed to cache to IndexedDB:', cacheError)
+        }
+        
+        set({ 
+          data, 
+          isLoading: false, 
+          lastFetched: now,
+          cacheSource: 'network'
+        })
+        
         if (forceRefresh) {
-          console.log('Data refreshed at', new Date().toLocaleTimeString())
+          console.log('[Data Store] Data refreshed at', now.toLocaleTimeString())
+          
+          // Flag old knowledge entries for re-validation when source data changes
+          try {
+            await flagDashboardForRevalidation()
+          } catch (e) {
+            // Ignore - this is just a hint for the knowledge base
+          }
         }
       } else {
         throw new Error('Failed to load dashboard data')

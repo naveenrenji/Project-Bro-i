@@ -52,17 +52,6 @@ export function KPICard({
     ? ((value - previousValue) / previousValue) * 100
     : 0
   
-  const formatValue = (v: number) => {
-    switch (format) {
-      case 'currency':
-        return formatCurrency(v, true)
-      case 'percent':
-        return formatPercent(v)
-      default:
-        return formatNumber(v)
-    }
-  }
-  
   const isPositive = change > 0
   const isNegative = change < 0
   const TrendIcon = isPositive ? ArrowUpRight : isNegative ? ArrowDownRight : Minus
@@ -125,7 +114,7 @@ export function KPICard({
             "font-bold text-white mb-3 tabular-nums",
             variant === 'large' ? 'text-4xl' : 'text-3xl'
           )}>
-            <AnimatedNumber value={value} format={formatValue} />
+            <AnimatedNumber value={value} format={format} compact={format === 'currency'} />
           </div>
           
           {/* Change Indicator */}

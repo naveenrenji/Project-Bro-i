@@ -11,7 +11,6 @@ import {
   ChevronDown, 
   Check, 
   AlertCircle,
-  Loader2,
   ExternalLink,
   RefreshCw
 } from 'lucide-react'
@@ -21,7 +20,6 @@ import {
   type ProviderStatus,
   checkProviderStatus,
   getModelDisplayName,
-  SUPPORTED_OLLAMA_MODELS,
   DEFAULT_GEMINI_MODEL
 } from '@/lib/llm-provider'
 

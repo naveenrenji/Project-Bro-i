@@ -1749,7 +1749,13 @@ def generate_student_records(apps_df: pd.DataFrame, census_df: pd.DataFrame, yea
                     "canvasWeeksSinceLogin": int(row.get('Census_1_CANVAS_LAST_LOGIN_FROM_CURRENT_DAY_IN_WEEKS', 0)) if pd.notna(row.get('Census_1_CANVAS_LAST_LOGIN_FROM_CURRENT_DAY_IN_WEEKS')) else None,
                 }
                 
-                # Add company for corporate students
+                # Add cohort name for corporate students (this is the primary identifier)
+                if 'Census_1_CORPORATE_COHORT' in row.index and pd.notna(row.get('Census_1_CORPORATE_COHORT')):
+                    cohort_val = str(row['Census_1_CORPORATE_COHORT']).strip()
+                    if cohort_val.lower() not in ['not reported', '', 'nan', 'none']:
+                        student["cohortName"] = cohort_val
+                
+                # Also add company for reference (may be different from cohort name)
                 if 'Census_1_CORPORATE_STUDENT_COMPANY' in row.index and pd.notna(row.get('Census_1_CORPORATE_STUDENT_COMPANY')):
                     student["company"] = standardize_company_name(str(row['Census_1_CORPORATE_STUDENT_COMPANY']))
                 

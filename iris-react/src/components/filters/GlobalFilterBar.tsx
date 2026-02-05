@@ -142,7 +142,7 @@ export function GlobalFilterBar({ className, compact = false }: GlobalFilterBarP
 // Compact version for tight spaces
 function CompactFilterBar({
   activeCount,
-  onReset,
+  onReset: _onReset,
   className,
 }: {
   activeCount: number

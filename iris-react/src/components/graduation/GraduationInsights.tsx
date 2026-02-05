@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { GraduationCap, Users, TrendingUp, ChevronDown, AlertCircle } from 'lucide-react'
+import { GraduationCap, ChevronDown, AlertCircle } from 'lucide-react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 import { useState } from 'react'
 import { cn, formatNumber, formatPercent } from '@/lib/utils'
@@ -29,9 +29,10 @@ export function GraduationInsights({
   const [showAllStudents, setShowAllStudents] = useState(false)
   
   // Custom label for pie slices - shows count
-  const renderPieLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, value }: {
-    cx: number, cy: number, midAngle: number, innerRadius: number, outerRadius: number, value: number
+  const renderPieLabel = (props: {
+    cx?: number, cy?: number, midAngle?: number, innerRadius?: number, outerRadius?: number, value?: number
   }) => {
+    const { cx = 0, cy = 0, midAngle = 0, innerRadius = 0, outerRadius = 0, value = 0 } = props
     const RADIAN = Math.PI / 180
     const radius = innerRadius + (outerRadius - innerRadius) * 0.5
     const x = cx + radius * Math.cos(-midAngle * RADIAN)
@@ -93,7 +94,7 @@ export function GraduationInsights({
                     }}
                     itemStyle={{ color: '#fff' }}
                     labelStyle={{ color: '#fff', fontWeight: 600 }}
-                    formatter={(value: number) => [formatNumber(value), 'Students']}
+                    formatter={((value: number | undefined) => [formatNumber(value ?? 0), 'Students']) as never}
                   />
                 </PieChart>
               </ResponsiveContainer>
@@ -121,10 +122,10 @@ export function GraduationInsights({
             <div className="mt-6 pt-4 border-t border-[var(--color-border-subtle)]">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-[var(--color-text-muted)]">
-                  Est. Retention Rate: <strong className="text-white">{formatPercent(graduation.retentionRate * 100)}</strong>
+                  Est. Retention Rate: <strong className="text-white">{formatPercent((graduation.retentionRate ?? 0) * 100)}</strong>
                 </span>
                 <span className="text-sm text-[var(--color-text-muted)]">
-                  Projected Continuing: <strong className="text-white">{formatNumber(graduation.projectedContinuing)}</strong>
+                  Projected Continuing: <strong className="text-white">{formatNumber(graduation.projectedContinuing ?? 0)}</strong>
                 </span>
               </div>
             </div>
@@ -244,11 +245,11 @@ export function GraduationInsights({
                     <td className="py-2 text-right text-white tabular-nums">{student.creditsThisTerm}</td>
                     <td className={cn(
                       'py-2 text-right font-medium tabular-nums',
-                      student.creditsAfterTerm <= 0 
+                      (student.creditsAfterTerm ?? 0) <= 0 
                         ? 'text-[var(--color-success)]' 
                         : 'text-[var(--color-text-secondary)]'
                     )}>
-                      {student.creditsAfterTerm}
+                      {student.creditsAfterTerm ?? 0}
                     </td>
                   </tr>
                 ))}
@@ -261,28 +262,3 @@ export function GraduationInsights({
   )
 }
 
-// Metric card subcomponent
-function GradMetricCard({
-  label,
-  value,
-  color,
-  icon,
-}: {
-  label: string
-  value: number
-  color: string
-  icon: React.ReactNode
-}) {
-  return (
-    <GlassCard padding="sm" className="text-center">
-      <div 
-        className="mx-auto h-10 w-10 rounded-lg flex items-center justify-center mb-2"
-        style={{ backgroundColor: `color-mix(in srgb, ${color} 20%, transparent)` }}
-      >
-        <div style={{ color }}>{icon}</div>
-      </div>
-      <div className="text-2xl font-bold text-white mb-1">{formatNumber(value)}</div>
-      <div className="text-xs text-[var(--color-text-muted)]">{label}</div>
-    </GlassCard>
-  )
-}

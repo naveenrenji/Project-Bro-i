@@ -44,6 +44,7 @@ export const SUPPORTED_OLLAMA_MODELS: OllamaModelFamily[] = ['qwen3', 'deepseek-
 // Default models
 export const DEFAULT_GEMINI_MODEL = 'gemini-2.0-flash-exp'
 export const DEFAULT_OLLAMA_MODEL = 'qwen3'
+export const DEFAULT_EMBEDDING_MODEL = 'nomic-embed-text'
 
 // Ollama server URL
 export const OLLAMA_BASE_URL = 'http://localhost:11434'
@@ -296,4 +297,77 @@ export function groupModelsByFamily(models: string[]): Record<OllamaModelFamily,
   }
   
   return grouped
+}
+
+// =============================================================================
+// EMBEDDING SUPPORT (Ollama only)
+// =============================================================================
+
+/**
+ * Check if embedding model is available
+ */
+export async function isEmbeddingModelAvailable(): Promise<boolean> {
+  try {
+    const res = await fetch(`${OLLAMA_BASE_URL}/api/tags`)
+    if (!res.ok) return false
+    
+    const data = await res.json()
+    const installed: string[] = data.models?.map((m: { name: string }) => m.name) || []
+    
+    return installed.some(name => 
+      name.toLowerCase().includes('nomic-embed') || 
+      name.toLowerCase().includes('embed')
+    )
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Generate embedding for text using Ollama
+ */
+export async function generateEmbedding(
+  text: string,
+  model: string = DEFAULT_EMBEDDING_MODEL
+): Promise<number[]> {
+  try {
+    const res = await fetch(`${OLLAMA_BASE_URL}/api/embeddings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model,
+        prompt: text,
+      }),
+    })
+
+    if (!res.ok) {
+      const error = await res.text()
+      throw new Error(`Ollama embedding error: ${error}`)
+    }
+
+    const data = await res.json()
+    
+    if (!data.embedding || !Array.isArray(data.embedding)) {
+      throw new Error('Invalid embedding response from Ollama')
+    }
+    
+    return data.embedding
+  } catch (error) {
+    // If embedding model not available, return empty (fallback to keyword matching)
+    console.warn('[Embedding] Failed to generate embedding:', error)
+    return []
+  }
+}
+
+/**
+ * Generate embeddings for multiple texts in parallel
+ */
+export async function generateEmbeddings(
+  texts: string[],
+  model: string = DEFAULT_EMBEDDING_MODEL
+): Promise<number[][]> {
+  const embeddings = await Promise.all(
+    texts.map(text => generateEmbedding(text, model))
+  )
+  return embeddings
 }

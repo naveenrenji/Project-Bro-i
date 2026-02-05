@@ -6,7 +6,7 @@ import { useNavs, useNavsSuggestions } from '@/hooks/useNavs'
 import { cn } from '@/lib/utils'
 
 interface NavsInputProps {
-  context?: 'commandCenter' | 'revenue' | 'pipeline' | 'segment' | 'student' | 'time'
+  context?: 'commandCenter' | 'revenue' | 'pipeline' | 'programs' | 'students' | 'trends' | 'forecast'
   placeholder?: string
   className?: string
 }

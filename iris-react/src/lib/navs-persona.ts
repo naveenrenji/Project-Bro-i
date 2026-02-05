@@ -44,20 +44,25 @@ export const NAVS_PERSONA = {
       'Which stage has the biggest drop-off?',
       'Compare conversion rates by program',
     ],
-    segment: [
+    forecast: [
+      'Project final applications by deadline',
+      'What are the low/mid/high NTR scenarios?',
+      'Compare forecast vs last year',
+    ],
+    programs: [
       'Top performing programs by yield',
       'Corporate cohort performance',
       'School-level breakdown',
     ],
-    student: [
+    students: [
       'Student demographics overview',
       'GPA distribution analysis',
       'Graduation projections',
     ],
-    time: [
+    trends: [
       'Year-over-year comparison',
       'Seasonal enrollment patterns',
-      'Forecast next quarter',
+      'Historical yield analysis',
     ],
   },
   

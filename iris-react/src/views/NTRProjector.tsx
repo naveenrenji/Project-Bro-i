@@ -4,19 +4,13 @@ import {
   Calculator, 
   TrendingUp, 
   Users, 
-  GraduationCap, 
-  DollarSign,
-  MessageCircle,
-  Download,
   RotateCcw,
   ChevronDown,
   Sparkles,
   Target,
-  AlertCircle
 } from 'lucide-react'
 import { cn, formatCurrency, formatNumber, formatPercent } from '@/lib/utils'
-import { useData, useNTR, useGraduation, useCPCRates } from '@/hooks/useData'
-import { useDataStore } from '@/store/dataStore'
+import { useData, useNTR, useGraduation } from '@/hooks/useData'
 import { useNavsStore } from '@/store/navsStore'
 import { GlassCard } from '@/components/shared/GlassCard'
 import { ChartSkeleton } from '@/components/shared/SkeletonLoader'

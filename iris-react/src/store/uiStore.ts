@@ -1,6 +1,15 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
+// Navigation source labels for Deep Dive breadcrumb
+export type DeepDiveSource = 
+  | 'ntr-meter' 
+  | 'student-metrics' 
+  | 'funnel' 
+  | 'health-status' 
+  | 'performers' 
+  | null
+
 interface UIState {
   // Sidebar
   sidebarOpen: boolean
@@ -15,6 +24,7 @@ interface UIState {
   
   // Deep Dive
   activeDeepDiveTab: string
+  deepDiveSource: DeepDiveSource
   
   // Filters
   selectedYear: string
@@ -29,6 +39,8 @@ interface UIState {
   toggleNavsWidget: () => void
   setNavsWidgetMinimized: (minimized: boolean) => void
   setActiveDeepDiveTab: (tab: string) => void
+  navigateToDeepDive: (tab: string, source: DeepDiveSource) => void
+  clearDeepDiveSource: () => void
   setSelectedYear: (year: string) => void
   setSelectedCategory: (category: string | null) => void
   setSelectedSchool: (school: string | null) => void
@@ -46,6 +58,7 @@ export const useUIStore = create<UIState>()(
       navsWidgetOpen: false,
       navsWidgetMinimized: true,
       activeDeepDiveTab: 'revenue',
+      deepDiveSource: null,
       selectedYear: '2026',
       selectedCategory: null,
       selectedSchool: null,
@@ -61,6 +74,8 @@ export const useUIStore = create<UIState>()(
       })),
       setNavsWidgetMinimized: (minimized) => set({ navsWidgetMinimized: minimized }),
       setActiveDeepDiveTab: (tab) => set({ activeDeepDiveTab: tab }),
+      navigateToDeepDive: (tab, source) => set({ activeDeepDiveTab: tab, deepDiveSource: source }),
+      clearDeepDiveSource: () => set({ deepDiveSource: null }),
       setSelectedYear: (year) => set({ selectedYear: year }),
       setSelectedCategory: (category) => set({ selectedCategory: category }),
       setSelectedSchool: (school) => set({ selectedSchool: school }),

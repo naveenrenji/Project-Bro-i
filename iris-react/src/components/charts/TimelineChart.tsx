@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import {
   AreaChart,
   Area,
@@ -8,11 +8,8 @@ import {
   Tooltip,
   ResponsiveContainer,
   Legend,
-  BarChart,
-  Bar,
-  LabelList,
 } from 'recharts'
-import { Calendar, TrendingUp, Users, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
 import { GlassCard } from '../shared/GlassCard'
 import { cn } from '../../lib/utils'
 
@@ -70,7 +67,7 @@ const formatNumber = (num: number): string => {
   return num.toLocaleString()
 }
 
-export function TimelineChart({ data, selectedCategory, selectedDegree }: TimelineChartProps) {
+export function TimelineChart({ data, selectedCategory: _selectedCategory, selectedDegree: _selectedDegree }: TimelineChartProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('month')
   const [dataType, setDataType] = useState<DataType>('both')
   const [dateRange, setDateRange] = useState<{ start: string; end: string }>(() => {
@@ -356,7 +353,7 @@ export function TimelineChart({ data, selectedCategory, selectedDegree }: Timeli
               labelStyle={{ color: 'white', fontWeight: 'bold', marginBottom: '8px' }}
               itemStyle={{ color: 'white' }}
               labelFormatter={(val) => formatDate(val, viewMode)}
-              formatter={(value: number, name: string) => [formatNumber(value), name === 'applications' ? 'Applications' : 'Enrollments']}
+              formatter={((value: number | undefined, name: string) => [formatNumber(value ?? 0), name === 'applications' ? 'Applications' : 'Enrollments']) as never}
             />
             <Legend
               wrapperStyle={{ paddingTop: '16px' }}

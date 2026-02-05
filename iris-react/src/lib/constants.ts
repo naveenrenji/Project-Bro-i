@@ -79,9 +79,10 @@ export const NAV_ITEMS = [
 export const DEEP_DIVE_TABS = [
   { id: 'revenue', label: 'Revenue', icon: 'DollarSign' },
   { id: 'pipeline', label: 'Pipeline', icon: 'GitBranch' },
-  { id: 'segment', label: 'Segment', icon: 'PieChart' },
-  { id: 'student', label: 'Student', icon: 'Users' },
-  { id: 'time', label: 'Time', icon: 'TrendingUp' },
+  { id: 'forecast', label: 'Forecast', icon: 'TrendingUp' },
+  { id: 'programs', label: 'Programs', icon: 'PieChart' },
+  { id: 'students', label: 'Students', icon: 'Users' },
+  { id: 'trends', label: 'Trends', icon: 'BarChart' },
 ] as const
 
 // AI Models Available

@@ -2,12 +2,17 @@
  * Navs Store - Two-Tier AI Response System
  * Supports both cloud (Gemini) and local (Ollama) LLM providers
  * with intelligent fallback to code execution for complex queries
- * Enhanced with human-readable thinking, abort control, and analysis caching
+ * Enhanced with:
+ * - Human-readable thinking steps
+ * - Abort control
+ * - Knowledge base with 15-day TTL per entry
+ * - Semantic similarity search
+ * - Reference detection and context injection
+ * - Parallel follow-up pre-computation
  */
 
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { NAVS_PERSONA } from '@/lib/navs-persona'
 import { useDataStore, type DashboardData, type StudentRecord } from './dataStore'
 import { formatCurrency, formatNumber } from '@/lib/utils'
 import { 
@@ -15,7 +20,8 @@ import {
   generateWithProvider,
   isAbortError,
   DEFAULT_GEMINI_MODEL,
-  getModelFamily
+  getModelFamily,
+  generateEmbedding
 } from '@/lib/llm-provider'
 import { 
   buildTier1Prompt, 
@@ -32,6 +38,20 @@ import {
 } from '@/lib/code-utils'
 import { executeInSandbox, validateCode } from '@/lib/code-sandbox'
 import type { ThinkingStep, StepType, StepStatus, ThinkingStepExpandable } from '@/components/navs/ThinkingSteps'
+
+// Knowledge base and similarity search
+import { 
+  addKnowledgeEntry, 
+  getAllKnowledgeEntries,
+  type ComputedData,
+} from '@/lib/indexed-db'
+import { 
+  findCachedAnswer, 
+  detectReferences, 
+  findRelevantContext,
+  injectPreviousContext 
+} from '@/lib/similarity'
+import { runBackgroundPrecomputation } from '@/lib/follow-up-engine'
 
 // =============================================================================
 // TYPES
@@ -130,7 +150,8 @@ function createStep(
   }
 }
 
-function updateStepInArray(
+// Reserved for future use
+function _updateStepInArray(
   steps: ThinkingStep[],
   stepId: string,
   updates: Partial<ThinkingStep>
@@ -138,6 +159,84 @@ function updateStepInArray(
   return steps.map(step => 
     step.id === stepId ? { ...step, ...updates } : step
   )
+}
+void _updateStepInArray // suppress unused warning
+
+// Infer computed data structure from execution result
+function inferComputedData(
+  question: string, 
+  result: { answer: unknown; explanation?: string } | null
+): ComputedData {
+  if (!result || result.answer === undefined) {
+    return { type: 'unknown', entities: [], values: {} }
+  }
+  
+  const answer = result.answer
+  const q = question.toLowerCase()
+  
+  // Determine type based on question and result
+  let type: ComputedData['type'] = 'unknown'
+  let entities: string[] = []
+  let values: Record<string, unknown> = {}
+  
+  // Check if answer is an array (list type)
+  if (Array.isArray(answer)) {
+    type = 'list'
+    // Try to extract entity names from array
+    entities = answer.slice(0, 20).map(item => {
+      if (typeof item === 'string') return item
+      if (typeof item === 'object' && item !== null) {
+        // Look for common name fields
+        const obj = item as Record<string, unknown>
+        return String(obj.name || obj.state || obj.program || obj.school || obj.category || Object.values(obj)[0] || '')
+      }
+      return String(item)
+    }).filter(Boolean)
+    
+    // Try to build values from array
+    answer.slice(0, 10).forEach((item, i) => {
+      if (typeof item === 'object' && item !== null) {
+        const obj = item as Record<string, unknown>
+        const name = String(obj.name || obj.state || obj.program || obj.school || `item_${i}`)
+        const value = obj.count || obj.total || obj.value || obj.students || obj.ntr
+        if (value !== undefined) {
+          values[name] = value
+        }
+      }
+    })
+  }
+  // Check if answer is a number (count or aggregation)
+  else if (typeof answer === 'number') {
+    if (q.includes('how many') || q.includes('count') || q.includes('number of')) {
+      type = 'count'
+    } else {
+      type = 'aggregation'
+    }
+    values = { result: answer }
+  }
+  // Check if answer is an object
+  else if (typeof answer === 'object' && answer !== null) {
+    const obj = answer as Record<string, unknown>
+    
+    if (q.includes('compare') || q.includes('vs') || q.includes('versus')) {
+      type = 'comparison'
+    } else if (q.includes('breakdown') || q.includes('by category')) {
+      type = 'aggregation'
+    } else {
+      type = 'aggregation'
+    }
+    
+    // Extract entities from object keys
+    entities = Object.keys(obj).slice(0, 20)
+    values = obj
+  }
+  // String answer
+  else if (typeof answer === 'string') {
+    type = 'unknown'
+    values = { result: answer }
+  }
+  
+  return { type, entities, values }
 }
 
 // Detect question type for thinking summary
@@ -411,9 +510,11 @@ export const useNavsStore = create<NavsState>()(
       
       /**
        * Send a message using the two-tier AI response system
+       * Enhanced with knowledge base caching and similarity search
        */
       sendMessage: async (content) => {
-        const { addMessage, updateMessage, setTyping, messages, provider, model, analysisCache } = get()
+        const { addMessage, updateMessage, setTyping: _setTyping, messages, provider, model, analysisCache } = get()
+        void _setTyping // suppress unused warning
         
         // Create abort controller for this request
         const abortController = new AbortController()
@@ -450,7 +551,107 @@ export const useNavsStore = create<NavsState>()(
           const context = buildContext(data, analysisCache)
           const students = data?.students || []
           
-          // Build conversation history with analysis results
+          // =================================================================
+          // STEP 0: Check Knowledge Base for cached answer
+          // =================================================================
+          const step0 = createStep('searchingContext', 'Checking my memory...', {
+            thinking: 'Looking for similar questions I\'ve answered before...'
+          })
+          steps.push(step0)
+          updateSteps(steps)
+          
+          const cacheStart = Date.now()
+          let enrichedContent = content
+          let usedCache = false
+          
+          try {
+            // Check for similar cached answers
+            const cached = await findCachedAnswer(content, 0.88)
+            
+            if (cached) {
+              // Cache hit! Return cached answer
+              steps[0] = {
+                ...steps[0],
+                status: 'complete',
+                duration: Date.now() - cacheStart,
+                thinking: `Found a similar question from my memory! (${Math.round(cached.similarity * 100)}% match)`,
+                expandable: {
+                  input: `Matched: "${cached.entry.question}"`,
+                  output: `Using cached answer from ${new Date(cached.entry.createdAt).toLocaleDateString()}`
+                }
+              }
+              updateSteps(steps)
+              
+              // Mark as complete with cached answer
+              const stepComplete = createStep('complete', 'Retrieved from memory!')
+              stepComplete.status = 'complete'
+              steps.push(stepComplete)
+              updateSteps(steps)
+              
+              updateMessage(assistantMsgId, {
+                content: cached.entry.answer,
+                tier: 'tier1',
+                suggestions: generateSuggestions(content),
+                thinkingSteps: steps,
+              })
+              
+              set({ isTyping: false, abortController: null })
+              usedCache = true
+              return
+            }
+            
+            // No direct cache hit - check for references to previous results
+            const { hasReferences, patterns } = detectReferences(content)
+            
+            if (hasReferences) {
+              // Get recent knowledge entries for context injection
+              const recentEntries = await getAllKnowledgeEntries()
+              const relevantContext = await findRelevantContext(content, recentEntries)
+              
+              if (relevantContext) {
+                enrichedContent = injectPreviousContext(content, relevantContext)
+                steps[0] = {
+                  ...steps[0],
+                  status: 'complete',
+                  duration: Date.now() - cacheStart,
+                  thinking: `Detected references (${patterns.join(', ')}), adding context from previous query...`,
+                  expandable: {
+                    input: `Reference patterns: ${patterns.join(', ')}`,
+                    output: `Injecting context from: "${relevantContext.question}"`
+                  }
+                }
+              } else {
+                steps[0] = {
+                  ...steps[0],
+                  status: 'complete',
+                  duration: Date.now() - cacheStart,
+                  thinking: 'No matching cached answers, proceeding with fresh analysis...'
+                }
+              }
+            } else {
+              steps[0] = {
+                ...steps[0],
+                status: 'complete',
+                duration: Date.now() - cacheStart,
+                thinking: 'No cached answer found, proceeding with analysis...'
+              }
+            }
+            updateSteps(steps)
+          } catch (cacheError) {
+            console.warn('Knowledge base check failed:', cacheError)
+            steps[0] = {
+              ...steps[0],
+              status: 'complete',
+              duration: Date.now() - cacheStart,
+              thinking: 'Proceeding with analysis...'
+            }
+            updateSteps(steps)
+          }
+          
+          // Skip the rest if we used cache
+          if (usedCache) return
+          
+          // Build conversation history with analysis results (use enriched content)
           const historyStr = messages.slice(-6).map(m => {
             if (m.role === 'assistant' && m.executionResult?.result) {
               return `Navs: [Computed: ${JSON.stringify(m.executionResult.result)}] ${m.content}`
@@ -461,14 +662,15 @@ export const useNavsStore = create<NavsState>()(
           // =================================================================
           // STEP 1: Analyzing the question
           // =================================================================
+          const step1Index = steps.length
           const step1 = createStep('analyzing', 'Looking at your question...', {
-            thinking: analyzeQuestion(content)
+            thinking: analyzeQuestion(enrichedContent)
           })
           steps.push(step1)
           updateSteps(steps)
           
           await new Promise(r => setTimeout(r, 100))
-          steps[0] = { ...steps[0], status: 'complete', duration: 100 }
+          steps[step1Index] = { ...steps[step1Index], status: 'complete', duration: 100 }
           updateSteps(steps)
           
           // Check if aborted
@@ -477,6 +679,7 @@ export const useNavsStore = create<NavsState>()(
           // =================================================================
           // STEP 2: Try Tier 1 (Context-based)
           // =================================================================
+          const step2Index = steps.length
           const step2 = createStep('searchingContext', 'Checking my summary data...', {
             thinking: 'Looking through NTR breakdown, enrollment counts, category performance...'
           })
@@ -490,7 +693,8 @@ export const useNavsStore = create<NavsState>()(
           let tier1Reasoning: string | undefined
           
           try {
-            const tier1Prompt = buildTier1Prompt(content, context, historyStr)
+            // Use enriched content (with injected context if references detected)
+            const tier1Prompt = buildTier1Prompt(enrichedContent, context, historyStr)
             const rawResponse = await generateWithProvider(tier1Prompt, provider, model, abortController.signal)
             
             // Extract R1 reasoning if applicable
@@ -509,8 +713,8 @@ export const useNavsStore = create<NavsState>()(
               ? `Found what you need in my pre-calculated data...`
               : tier1Parsed?.reason || `This needs a deeper look into the raw records...`
             
-            steps[1] = { 
-              ...steps[1], 
+            steps[step2Index] = { 
+              ...steps[step2Index], 
               status: 'complete', 
               duration: Date.now() - tier1Start,
               thinking,
@@ -521,8 +725,8 @@ export const useNavsStore = create<NavsState>()(
             if (isAbortError(error)) throw error
             console.error('Tier 1 error:', error)
             useTier2 = true
-            steps[1] = { 
-              ...steps[1], 
+            steps[step2Index] = { 
+              ...steps[step2Index], 
               status: 'error', 
               duration: Date.now() - tier1Start,
               thinking: 'Context search had an issue, switching to data analysis...'
@@ -572,6 +776,7 @@ export const useNavsStore = create<NavsState>()(
           updateSteps(steps)
           
           // Step 4: Generate code
+          const step4Index = steps.length
           const step4 = createStep('generatingCode', 'Writing analysis code...', {
             thinking: 'Let me write some code to filter and calculate this...'
           })
@@ -583,7 +788,8 @@ export const useNavsStore = create<NavsState>()(
           let tier2Reasoning: string | undefined
           
           try {
-            const tier2Prompt = buildTier2Prompt(content)
+            // Use enriched content (with injected context if references detected)
+            const tier2Prompt = buildTier2Prompt(enrichedContent)
             const rawResponse = await generateWithProvider(tier2Prompt, provider, model, abortController.signal)
             
             // Extract R1 reasoning if applicable
@@ -597,19 +803,19 @@ export const useNavsStore = create<NavsState>()(
                 ? generateThinkingSummary(tier2Reasoning)
                 : 'Generated analysis code...'
               
-              steps[3] = {
-                ...steps[3],
+              steps[step4Index] = {
+                ...steps[step4Index],
                 thinking: thinkingSummary
               }
             } else {
               generatedCode = extractCodeBlock(rawResponse)
             }
             
-            steps[3] = {
-              ...steps[3],
+            steps[step4Index] = {
+              ...steps[step4Index],
               status: 'complete',
               duration: Date.now() - tier2Start,
-              thinking: steps[3].thinking || 'Generated the analysis code...',
+              thinking: steps[step4Index].thinking || 'Generated the analysis code...',
               expandable: {
                 code: generatedCode || 'No code extracted',
                 llmReasoning: tier2Reasoning
@@ -619,8 +825,8 @@ export const useNavsStore = create<NavsState>()(
           } catch (error) {
             if (isAbortError(error)) throw error
             console.error('Code generation error:', error)
-            steps[3] = {
-              ...steps[3],
+            steps[step4Index] = {
+              ...steps[step4Index],
               status: 'error',
               duration: Date.now() - tier2Start,
               thinking: 'Failed to generate analysis code...',
@@ -644,6 +850,7 @@ export const useNavsStore = create<NavsState>()(
           if (abortController.signal.aborted) throw new DOMException('Stopped', 'AbortError')
           
           // Step 5: Execute code
+          const step5Index = steps.length
           const step5 = createStep('executingCode', `Running against ${students.length.toLocaleString()} records...`, {
             thinking: 'Executing the analysis code against all student records...'
           })
@@ -656,25 +863,37 @@ export const useNavsStore = create<NavsState>()(
           const resultAnswer = execResult.result?.answer
           const resultExplanation = (execResult.result as { explanation?: string })?.explanation
           
-          steps[4] = {
-            ...steps[4],
-            status: execResult.success ? 'complete' : 'error',
+          // Check for empty/undefined results
+          const isEmptyResult = resultAnswer === undefined || resultAnswer === null || 
+            (typeof resultAnswer === 'object' && Object.keys(resultAnswer as object).length === 0) ||
+            (Array.isArray(resultAnswer) && resultAnswer.length === 0)
+          
+          steps[step5Index] = {
+            ...steps[step5Index],
+            status: execResult.success && !isEmptyResult ? 'complete' : 'error',
             duration: Date.now() - execStart,
-            thinking: execResult.success 
-              ? `Found the answer: ${JSON.stringify(resultAnswer)}`
-              : `Error: ${execResult.error}`,
+            thinking: !execResult.success 
+              ? `Error: ${execResult.error}`
+              : isEmptyResult
+                ? 'Analysis completed but found no matching data for this query.'
+                : `Found the answer: ${JSON.stringify(resultAnswer)}`,
             expandable: {
               input: `Analyzed ${students.length.toLocaleString()} student records`,
               output: execResult.success 
                 ? JSON.stringify(execResult.result, null, 2)
                 : undefined,
-              error: execResult.success ? undefined : execResult.error
+              error: !execResult.success ? execResult.error : (isEmptyResult ? 'No matching data found' : undefined)
             }
           }
           updateSteps(steps)
           
           if (!execResult.success) {
             throw new Error(ERROR_MESSAGES.tier2CodeError(execResult.error || 'Unknown error'))
+          }
+          
+          // Handle empty results gracefully - continue but note the issue
+          if (isEmptyResult) {
+            console.warn('[Navs] Code execution returned empty result:', resultAnswer)
           }
           
           // Save to analysis cache
@@ -695,6 +914,7 @@ export const useNavsStore = create<NavsState>()(
           if (abortController.signal.aborted) throw new DOMException('Stopped', 'AbortError')
           
           // Step 6: Format result
+          const step6Index = steps.length
           const step6 = createStep('formattingResult', 'Putting it together...', {
             thinking: 'Formatting the result into a clear answer...'
           })
@@ -721,8 +941,8 @@ export const useNavsStore = create<NavsState>()(
               finalResponse = rawResponse
             }
             
-            steps[5] = {
-              ...steps[5],
+            steps[step6Index] = {
+              ...steps[step6Index],
               status: 'complete',
               duration: Date.now() - formatStart,
               thinking: 'Formatted the response!',
@@ -735,14 +955,22 @@ export const useNavsStore = create<NavsState>()(
             const result = execResult.result as { answer: unknown; explanation?: string }
             finalResponse = `Based on my analysis: **${JSON.stringify(result?.answer)}**\n\n${result?.explanation || ''}`
             
-            steps[5] = {
-              ...steps[5],
+            steps[step6Index] = {
+              ...steps[step6Index],
               status: 'complete',
               duration: Date.now() - formatStart,
               thinking: 'Used simplified formatting.'
             }
             updateSteps(steps)
           }
+          
+          // Ensure all previous steps are marked complete before "Done!"
+          steps.forEach((s, i) => {
+            if (s.status === 'active') {
+              steps[i] = { ...s, status: 'complete' as const, duration: s.duration || 0 }
+            }
+          })
+          updateSteps(steps)
           
           // Step 7: Complete
           const step7 = createStep('complete', 'Done!')
@@ -763,6 +991,56 @@ export const useNavsStore = create<NavsState>()(
             suggestions: generateSuggestions(content),
             thinkingSteps: steps,
           })
+          
+          // =================================================================
+          // KNOWLEDGE BASE: Store result and run follow-up pre-computation
+          // =================================================================
+          const execResultTyped = execResult.result as { answer: unknown; explanation?: string }
+          
+          // Build computed data for knowledge base
+          const computedData: ComputedData = inferComputedData(content, execResultTyped)
+          
+          // Store in knowledge base (async, don't block)
+          generateEmbedding(content).then(async (embedding) => {
+            if (embedding.length > 0) {
+              try {
+                await addKnowledgeEntry({
+                  question: content,
+                  answer: finalResponse,
+                  computedData,
+                  embedding
+                })
+                console.log('[Navs] Stored answer in knowledge base')
+              } catch (e) {
+                console.warn('[Navs] Failed to store in knowledge base:', e)
+              }
+            }
+          })
+          
+          // Run follow-up pre-computation in background
+          runBackgroundPrecomputation(
+            content,
+            finalResponse,
+            computedData,
+            students,
+            async (question: string, _context: unknown) => {
+              // This is a simplified compute function for follow-ups
+              // It re-uses the code generation and execution flow
+              const prompt = buildTier2Prompt(question)
+              const response = await generateWithProvider(prompt, provider, model)
+              const code = extractCodeBlock(response)
+              if (!code) throw new Error('No code generated')
+              const result = executeInSandbox(code, students as StudentRecord[])
+              if (!result.success) throw new Error(result.error)
+              const typedResult = result.result as { answer: unknown; explanation?: string }
+              return {
+                answer: String(typedResult.answer),
+                computedData: inferComputedData(question, typedResult),
+                code
+              }
+            },
+            model
+          )
           
         } catch (error) {
           console.error('Send message error:', error)

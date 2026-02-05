@@ -18,7 +18,9 @@ import {
   Cpu,
   FileText,
   Sparkles,
-  Square
+  Square,
+  Database,
+  Zap
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -29,11 +31,15 @@ import { cn } from '@/lib/utils'
 export type StepType = 
   | 'analyzing' 
   | 'searchingContext' 
+  | 'searchingKnowledge'  // Checking knowledge base
+  | 'cacheHit'            // Found in knowledge base
   | 'foundInContext'
   | 'needsDeepDive' 
   | 'generatingCode' 
   | 'executingCode' 
   | 'formattingResult' 
+  | 'savingToMemory'      // Storing in knowledge base
+  | 'precomputing'        // Pre-computing follow-ups
   | 'complete' 
   | 'error'
   | 'stopped'
@@ -75,11 +81,15 @@ interface ThinkingStepsProps {
 const stepIcons: Record<StepType, typeof Brain> = {
   analyzing: Brain,
   searchingContext: Search,
+  searchingKnowledge: Database,
+  cacheHit: Zap,
   foundInContext: Check,
   needsDeepDive: Sparkles,
   generatingCode: Code,
   executingCode: Cpu,
   formattingResult: FileText,
+  savingToMemory: Database,
+  precomputing: Sparkles,
   complete: Check,
   error: AlertCircle,
   stopped: Square,
@@ -160,6 +170,8 @@ export function ThinkingSteps({
   const isComplete = steps.some(s => s.type === 'complete')
   const hasError = steps.some(s => s.status === 'error')
   const wasStopped = steps.some(s => s.status === 'stopped')
+  const wasCacheHit = steps.some(s => s.type === 'cacheHit' || 
+    (s.type === 'searchingContext' && s.thinking?.includes('memory')))
   const totalDuration = steps.reduce((acc, s) => acc + (s.duration || 0), 0)
   
   const handleToggleExpand = () => {
@@ -190,9 +202,11 @@ export function ThinkingSteps({
             {wasStopped ? (
               'Stopped by user'
             ) : isComplete ? (
-              tier === 'tier2' 
-                ? `Analyzed in ${steps.length} steps (${(totalDuration / 1000).toFixed(1)}s)`
-                : `Found in context (${(totalDuration / 1000).toFixed(1)}s)`
+              wasCacheHit 
+                ? `Retrieved from memory (${(totalDuration / 1000).toFixed(1)}s)`
+                : tier === 'tier2' 
+                  ? `Analyzed in ${steps.length} steps (${(totalDuration / 1000).toFixed(1)}s)`
+                  : `Found in context (${(totalDuration / 1000).toFixed(1)}s)`
             ) : hasError ? (
               'Ran into an issue...'
             ) : (
@@ -204,7 +218,11 @@ export function ThinkingSteps({
             <Loader2 className="h-3 w-3 animate-spin ml-auto" />
           )}
           
-          {isComplete && (
+          {isComplete && wasCacheHit && (
+            <Zap className="h-3 w-3 text-[var(--color-accent-primary)] ml-auto" />
+          )}
+          
+          {isComplete && !wasCacheHit && (
             <Check className="h-3 w-3 text-[var(--color-success)] ml-auto" />
           )}
           

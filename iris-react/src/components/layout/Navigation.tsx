@@ -1,7 +1,7 @@
 import React from 'react'
 import { NavLink } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { LayoutDashboard, Search, Calculator, MessageSquare, RefreshCw } from 'lucide-react'
+import { LayoutDashboard, Search, Calculator, DollarSign, MessageSquare, RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { NAV_ITEMS } from '@/lib/constants'
 import { useDataStore } from '@/store/dataStore'
@@ -10,6 +10,7 @@ const iconMap = {
   LayoutDashboard,
   Search,
   Calculator,
+  DollarSign,
   MessageSquare,
 }
 

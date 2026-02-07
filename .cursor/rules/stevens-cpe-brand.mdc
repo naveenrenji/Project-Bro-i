@@ -1,0 +1,63 @@
+---
+description: Stevens CPE brand guidelines for colors, typography, logos, and visual identity
+alwaysApply: true
+---
+
+# Stevens CPE Brand Guidelines
+
+Reference: `Stevens-CPE-Brand-Guidelines-2025-10.pdf` in repo root.
+Logo assets: `CPE-assets(logos)/CPE Canva/` (SVG format).
+
+## Color Palette (Section 2.3)
+
+| Name | Hex | Usage |
+|------|-----|-------|
+| Stevens Red | `#A32638` | Accents, table headers, KPI borders, primary brand color |
+| Dark Gray | `#363D45` | Body text, secondary headings |
+| Stevens Gray | `#7F7F7F` | Dividers, secondary text, muted elements |
+| Light Gray | `#E4E5E6` | Alternating row backgrounds, subtle fills |
+| Black | `#000000` | Primary text on light backgrounds |
+| White | `#FFFFFF` | Primary text on dark backgrounds |
+
+- Emphasize black and white for an "impactful and modern aesthetic"
+- Stevens Red used sparingly — accents, not large fills
+- NEVER use gradients, drop shadows, or embellishments on typography
+- NEVER use opacity variants of Stevens Red
+
+## Typography (Section 2.2)
+
+- **Headlines**: Saira Regular (light weights only — Thin, Extra Light, Light)
+- **Body text**: IBM Plex Sans (Regular weight for body, Bold for emphasis)
+- **Fallback**: Arial / Arial Narrow when brand fonts unavailable
+- All brand fonts are free on fonts.google.com
+- Build hierarchy through dramatic size shifts and weight contrast, not color
+
+## Logo Assets (Section 2.1)
+
+Located in `CPE-assets(logos)/CPE Canva/`:
+- **Primary** (stacked): `Stevens-CPE-logo-RGB_Primary-{variant}.svg`
+- **Linear** (horizontal): `Stevens-CPE-logo-RGB_Linear-{variant}.svg` — min 2.5" / 250px wide
+- **Abbreviated** (icon): `Stevens-CPE-logo-RGB_Abbreviated-{variant}.svg` — min 0.5" / 50px wide
+
+Variants: `4C` (full color), `4C-BLK-bg` (on dark), `BLK` (single black), `WHT` (single white)
+
+- On dark backgrounds use `*-4C-BLK-bg.svg` or `*-WHT.svg`
+- On light backgrounds use `*-4C.svg` or `*-BLK.svg`
+- Respect clear space around logos
+- NEVER stretch, tilt, recolor, or add effects to logos
+
+## Visual Gestures — Asterisms (Section 2.4)
+
+- Thin lines (1px) at 0, 90, 25, -25 degree angles
+- Only black, gray, or white — never Stevens Red
+- One main asterism per composition, 3-5 rays from center
+- At least one line should use a gradient fade for depth
+
+## Existing CSS Variables (in iris-react)
+
+The React app maps brand colors to CSS variables — use these:
+- `--color-accent-primary` (Stevens Red)
+- `--color-bg-base`, `--color-bg-surface`, `--color-bg-elevated`
+- `--color-text-primary`, `--color-text-secondary`, `--color-text-muted`
+- `--color-success`, `--color-warning`, `--color-danger`
+- `--color-border-subtle`, `--color-border-default`

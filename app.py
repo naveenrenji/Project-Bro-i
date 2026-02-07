@@ -525,6 +525,11 @@ def page_ask_navs():
     ai_assistant.render(_get_data())
 
 
+def page_program_financial():
+    from components import program_financial
+    program_financial.render(_get_data())
+
+
 def main():
     """Main application function."""
     # Check authentication
@@ -568,6 +573,7 @@ def main():
     p_student = st.Page(page_student_intelligence, title="Student Intelligence")
     p_yoy = st.Page(page_historical_yoy, title="Historical & YoY")
     p_ai = st.Page(page_ask_navs, title="Ask Navs")
+    p_fin = st.Page(page_program_financial, title="Program Financial Estimation")
     # Store AI page object for in-app CTA (kept in session state for this session only).
     st.session_state["_page_ai_ref"] = p_ai
 
@@ -579,6 +585,7 @@ def main():
         p_cohorts,
         p_student,
         p_yoy,
+        p_fin,
         p_ai,
     ]
 

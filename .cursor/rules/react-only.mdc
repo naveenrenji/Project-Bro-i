@@ -1,0 +1,20 @@
+---
+description: All development must target the React app in iris-react/, not the legacy Streamlit app
+alwaysApply: true
+---
+
+# React Application Only
+
+This project has two codebases:
+- **`iris-react/`** — the active React/Vite/Tailwind dashboard (THIS is the live web app)
+- **Root-level Python files** (`app.py`, `components/`, etc.) — legacy Streamlit app, NOT actively used
+
+## Rules
+
+- ALL new features, pages, and components MUST be built in `iris-react/`
+- NEVER build features in the Streamlit app unless explicitly asked
+- Use the existing React patterns: React Router for pages, Zustand for state, Recharts for charts, Tailwind CSS for styling, Framer Motion for animations
+- New pages go in `iris-react/src/views/`, routes in `App.tsx`, nav items in `src/lib/constants.ts`, icons in `src/components/layout/Navigation.tsx`
+- Use `GlassCard` for containers, `motion` for animations, `cn()` for class merging
+- Use `formatCurrency()`, `formatNumber()`, `formatPercent()` from `src/lib/utils.ts`
+- The dev server runs via `npm run dev` in `iris-react/`

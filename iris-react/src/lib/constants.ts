@@ -67,6 +67,13 @@ export const NAV_ITEMS = [
     description: 'Project next term revenue',
   },
   {
+    id: 'program-financial',
+    label: 'Program P&L',
+    path: '/program-financial',
+    icon: 'DollarSign',
+    description: 'Program financial estimation',
+  },
+  {
     id: 'ask-navs',
     label: 'Ask Navs',
     path: '/ask-navs',

@@ -6,6 +6,7 @@
 import ExcelJS from 'exceljs'
 import { saveAs } from 'file-saver'
 import type { FinancialInputs, ScenarioResults } from './financial-engine'
+import { SESSION_GROWTH_KEYS } from './financial-engine'
 
 // Brand colours
 const RED = 'A32638'
@@ -237,11 +238,22 @@ function buildAssumptions(wb: ExcelJS.Workbook, inp: FinancialInputs) {
     ]],
     ['Enrollment & Growth', [
       ['Initial Intake', inp.initialIntake],
-      ...inp.growthByYear.flatMap((yr, i) => [
-        [`Year ${i + 1} Fall Growth`, yr.fall, pctFmt],
-        [`Year ${i + 1} Spring Growth`, yr.spring, pctFmt],
-        ...(inp.includeSummer ? [[`Year ${i + 1} Summer Growth`, yr.summer, pctFmt] as [string, number, string]] : []),
-      ]),
+      ...inp.growthByYear.flatMap((yr, i): [string, number, string][] => {
+        const sessionKeys = inp.deliveryFormat === '8-week' ? (inp.includeSummer ? SESSION_GROWTH_KEYS : SESSION_GROWTH_KEYS.slice(0, 4)) : null
+        const hasAB = sessionKeys?.some(k => typeof yr[k] === 'number')
+        if (inp.deliveryFormat === '8-week' && sessionKeys && hasAB) {
+          const sessionLabel = (k: typeof sessionKeys[number]) => { const sem = k.startsWith('fall') ? 'Fall' : k.startsWith('spring') ? 'Spring' : 'Summer'; const ab = k.endsWith('A') ? 'A' : 'B'; return `${sem}-${ab}` }
+          return sessionKeys.map(k => {
+            const v = typeof yr[k] === 'number' ? yr[k]! : (k.startsWith('fall') ? yr.fall : k.startsWith('spring') ? yr.spring : yr.summer)
+            return [`Year ${i + 1} ${sessionLabel(k)} Growth`, v, pctFmt]
+          })
+        }
+        return [
+          [`Year ${i + 1} Fall Growth`, yr.fall, pctFmt],
+          [`Year ${i + 1} Spring Growth`, yr.spring, pctFmt],
+          ...(inp.includeSummer ? [[`Year ${i + 1} Summer Growth`, yr.summer, pctFmt] as [string, number, string]] : []),
+        ]
+      }),
     ]],
     ['Retention', [
       ['Early Retention %', inp.earlyRetentionRate, pctFmt],

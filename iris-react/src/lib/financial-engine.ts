@@ -12,6 +12,13 @@ export interface YearGrowthRates {
   fall: number
   spring: number
   summer: number
+  /** 8-week only: optional per-session rates; when set, override fall/spring/summer for that session */
+  fallA?: number
+  fallB?: number
+  springA?: number
+  springB?: number
+  summerA?: number
+  summerB?: number
 }
 
 export interface FinancialInputs {
@@ -117,13 +124,39 @@ export interface ScenarioResults {
 export function buildDefaultGrowthByYear(years: number, includeSummer: boolean): YearGrowthRates[] {
   const rates: YearGrowthRates[] = []
   for (let y = 0; y < years; y++) {
-    rates.push({
-      fall: y === 0 ? 0 : 0.25,
-      spring: 0.01,
-      summer: includeSummer ? 0.01 : 0,
-    })
+    rates.push(getDefaultGrowthRow(y, '16-week', includeSummer))
   }
   return rates
+}
+
+/** Default growth row for one year. Used for initial load and when adding new years in 8-week mode. */
+export function getDefaultGrowthRow(
+  yearIndex: number,
+  deliveryFormat: '8-week' | '16-week',
+  includeSummer: boolean,
+): YearGrowthRates {
+  if (deliveryFormat === '8-week') {
+    // New years (e.g. when user adds projection years) get Yr 5-style rates
+    const row: YearGrowthRates = {
+      fall: 1.3,
+      spring: 1.2,
+      summer: includeSummer ? 1.1 : 0,
+      fallA: 1.3,
+      fallB: -0.5,
+      springA: 1.2,
+      springB: -0.5,
+    }
+    if (includeSummer) {
+      row.summerA = 1.1
+      row.summerB = -0.5
+    }
+    return row
+  }
+  return {
+    fall: yearIndex === 0 ? 0 : 0.25,
+    spring: 0.01,
+    summer: includeSummer ? 0.01 : 0,
+  }
 }
 
 export function getDefaultInputs(): FinancialInputs {
@@ -137,26 +170,32 @@ export function getDefaultInputs(): FinancialInputs {
     startFY: 2026,
     numberOfPrograms: 1,
 
-    coursesToDevelop: 3,
-    devCostPerCourse: 50_000,
+    coursesToDevelop: 10,
+    devCostPerCourse: 60_000,
     coursesToRevise: 0,
     revisionCostPct: 0.30,
     devAmortizationTerms: 2,
 
-    initialIntake: 25,
-    growthByYear: buildDefaultGrowthByYear(5, true),
+    initialIntake: 17,
+    growthByYear: [
+      { fall: 0.01, spring: 1.2, summer: 1.1, fallA: 0.01, fallB: -0.5, springA: 1.2, springB: -0.5, summerA: 1.1, summerB: -0.5 },
+      { fall: 1.2, spring: 1.1, summer: 1.1, fallA: 1.2, fallB: -0.5, springA: 1.1, springB: -0.5, summerA: 1.1, summerB: -0.5 },
+      { fall: 1.3, spring: 1.2, summer: 1.1, fallA: 1.3, fallB: -0.5, springA: 1.2, springB: -0.5, summerA: 1.1, summerB: -0.5 },
+      { fall: 1.3, spring: 1.2, summer: 1.1, fallA: 1.3, fallB: -0.5, springA: 1.2, springB: -0.5, summerA: 1.1, summerB: -0.5 },
+      { fall: 1.3, spring: 1.2, summer: 1.1, fallA: 1.3, fallB: -0.5, springA: 1.2, springB: -0.5, summerA: 1.1, summerB: -0.5 },
+    ],
 
-    earlyRetentionRate: 0.85,
-    lateRetentionRate: 0.90,
+    earlyRetentionRate: 0.90,
+    lateRetentionRate: 0.95,
     retentionThresholdTerm: 4,
     graduationCurve: null,
 
-    tuitionPerCredit: 1395,
-    creditsPerSession: 3,       // 1 course per 8-week session
+    tuitionPerCredit: 800,
+    creditsPerSession: 3,
     tuitionInflationPct: 0.0,
 
     facultyCostPerSection: 12_000,
-    maxStudentsPerSection: 30,
+    maxStudentsPerSection: 100,
     taStudentRatio: 30,
     taHourlyRate: 21,
     taHoursPerWeek: 20,
@@ -195,6 +234,36 @@ function getSemesterType(sessionIndex: number, inp: FinancialInputs): string {
   const perSem = inp.deliveryFormat === '8-week' ? 2 : 1
   const semIdx = Math.floor(posInYear / perSem)
   return semesters[semIdx] ?? semesters[semesters.length - 1]
+}
+
+/** Session keys for 8-week A/B (in order: Fall-A, Fall-B, Spring-A, Spring-B, Summer-A, Summer-B when summer included). Export for UI/export. */
+export const SESSION_GROWTH_KEYS: (keyof YearGrowthRates)[] = ['fallA', 'fallB', 'springA', 'springB', 'summerA', 'summerB']
+
+/** Growth rate for a given calendar session. In 8-week mode uses A/B rates when defined, else semester rate. */
+function getGrowthRateForSession(sessionIndex: number, inp: FinancialInputs): number {
+  const spy = sessionsPerYear(inp)
+  const yr = getYearIndex(sessionIndex, inp)
+  const yearRates = inp.growthByYear[yr] ?? inp.growthByYear[inp.growthByYear.length - 1]
+  if (!yearRates) return 0
+
+  if (inp.deliveryFormat === '16-week') {
+    const semType = getSemesterType(sessionIndex, inp)
+    if (semType === 'Fall') return yearRates.fall ?? 0
+    if (semType === 'Spring') return yearRates.spring ?? 0
+    return yearRates.summer ?? 0
+  }
+
+  // 8-week: posInYear 0=Fall-A, 1=Fall-B, 2=Spring-A, 3=Spring-B, 4=Summer-A, 5=Summer-B
+  const posInYear = sessionIndex % spy
+  const keysForYear = inp.includeSummer ? SESSION_GROWTH_KEYS : (SESSION_GROWTH_KEYS as (keyof YearGrowthRates)[]).slice(0, 4)
+  const key = keysForYear[posInYear]
+  const abRate = key != null ? yearRates[key] : undefined
+  if (typeof abRate === 'number') return abRate
+  // Fallback to semester rate
+  const semType = getSemesterType(sessionIndex, inp)
+  if (semType === 'Fall') return yearRates.fall ?? 0
+  if (semType === 'Spring') return yearRates.spring ?? 0
+  return yearRates.summer ?? 0
 }
 
 export function generateTermLabels(inp: FinancialInputs): string[] {
@@ -257,15 +326,7 @@ function computeCohortIntakes(inp: FinancialInputs): number[] {
   intakes[0] = inp.initialIntake
 
   for (let t = 1; t < n; t++) {
-    const yr = getYearIndex(t, inp)
-    const semType = getSemesterType(t, inp)
-
-    const yearRates = inp.growthByYear[yr] ?? inp.growthByYear[inp.growthByYear.length - 1]
-    let rate = 0
-    if (semType === 'Fall') rate = yearRates?.fall ?? 0
-    else if (semType === 'Spring') rate = yearRates?.spring ?? 0
-    else if (semType === 'Summer') rate = yearRates?.summer ?? 0
-
+    const rate = getGrowthRateForSession(t, inp)
     intakes[t] = intakes[t - 1] * (1 + rate)
   }
   return intakes

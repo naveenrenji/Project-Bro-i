@@ -14,7 +14,8 @@ import { cn } from '@/lib/utils'
 import { GlassCard } from '@/components/shared/GlassCard'
 import {
   type FinancialInputs, type ScenarioResults, type YearGrowthRates,
-  getDefaultInputs, computeScenario, programDurationTerms, sessionsPerYear,
+  getDefaultInputs, computeScenario, sessionsPerYear,
+  SESSION_GROWTH_KEYS, getDefaultGrowthRow,
 } from '@/lib/financial-engine'
 import type { AIContent } from '@/lib/financial-export-pdf'
 
@@ -87,12 +88,15 @@ export function ProgramFinancial() {
   const update = useCallback(<K extends keyof FinancialInputs>(key: K, val: FinancialInputs[K]) => {
     setInputs(prev => {
       const next = { ...prev, [key]: val }
-      if (key === 'projectionYears' || key === 'includeSummer') {
+        if (key === 'projectionYears' || key === 'includeSummer') {
         const yrs = key === 'projectionYears' ? (val as number) : prev.projectionYears
         const summer = key === 'includeSummer' ? (val as boolean) : prev.includeSummer
         const existing = prev.growthByYear
         const grid: YearGrowthRates[] = []
-        for (let y = 0; y < yrs; y++) grid.push(existing[y] ?? { fall: y === 0 ? 0 : 0.25, spring: 0.01, summer: summer ? 0.01 : 0 })
+        for (let y = 0; y < yrs; y++) {
+          const defaultRow = getDefaultGrowthRow(y, prev.deliveryFormat, summer)
+          grid.push(existing[y] ? { ...defaultRow, ...existing[y] } : defaultRow)
+        }
         next.growthByYear = grid
       }
       return next
@@ -102,7 +106,13 @@ export function ProgramFinancial() {
   const setYearAllGrowth = useCallback((yi: number, pct: number) => {
     setInputs(prev => {
       const grid = [...prev.growthByYear]
-      grid[yi] = { fall: pct / 100, spring: pct / 100, summer: pct / 100 }
+      const r = pct / 100
+      const row: YearGrowthRates = { fall: r, spring: r, summer: r }
+      if (prev.deliveryFormat === '8-week') {
+        const keys = prev.includeSummer ? SESSION_GROWTH_KEYS : SESSION_GROWTH_KEYS.slice(0, 4)
+        keys.forEach(k => { row[k] = r })
+      }
+      grid[yi] = row
       return { ...prev, growthByYear: grid }
     })
   }, [])
@@ -128,6 +138,10 @@ export function ProgramFinancial() {
   const handleExcel = async () => {
     const { generateExcel } = await import('@/lib/financial-export-excel')
     generateExcel(inputsRef.current, resultsRef.current, getTitle())
+  }
+  const handleMethodologyPDF = async () => {
+    const { generateMethodologyPDF } = await import('@/lib/financial-export-pdf')
+    generateMethodologyPDF()
   }
 
   // AI-Enhanced PDF — tries Gemini first, falls back to Ollama, then plain PDF
@@ -208,7 +222,16 @@ Respond in this EXACT JSON format (no markdown, no code fences):
   }
 
   const spy = sessionsPerYear(inputs)
+  const sessionKeys = inputs.deliveryFormat === '8-week'
+    ? (inputs.includeSummer ? SESSION_GROWTH_KEYS : SESSION_GROWTH_KEYS.slice(0, 4))
+    : null
   const getYearAll = (yr: YearGrowthRates): number | null => {
+    if (sessionKeys) {
+      const vals = sessionKeys.map(k => yr[k]).filter((v): v is number => typeof v === 'number')
+      if (vals.length === sessionKeys.length && vals.every(v => Math.round(v * 100) === Math.round(vals[0] * 100)))
+        return Math.round(vals[0] * 100)
+      return null
+    }
     const f = Math.round(yr.fall * 100), s = Math.round(yr.spring * 100), su = Math.round(yr.summer * 100)
     return (f === s && s === su) ? f : null
   }
@@ -234,6 +257,7 @@ Respond in this EXACT JSON format (no markdown, no code fences):
           <button onClick={() => setInputs(getDefaultInputs())} className="flex items-center gap-1 px-3 py-2 text-sm text-[var(--color-text-muted)] hover:text-white transition-colors"><RotateCcw className="h-4 w-4" /> Reset</button>
           <button onClick={handlePDFQuick} className="flex items-center gap-2 px-3 py-2 text-sm bg-[var(--color-bg-elevated)] border border-[var(--color-border-subtle)] text-white rounded-lg hover:bg-[var(--color-bg-surface)] transition-colors"><FileText className="h-4 w-4" /> Summary</button>
           <button onClick={handlePDFFull} className="flex items-center gap-2 px-3 py-2 text-sm bg-[var(--color-bg-elevated)] border border-[var(--color-border-subtle)] text-white rounded-lg hover:bg-[var(--color-bg-surface)] transition-colors"><FileDown className="h-4 w-4" /> Full Report</button>
+          <button onClick={handleMethodologyPDF} className="flex items-center gap-2 px-3 py-2 text-sm bg-[var(--color-bg-elevated)] border border-[var(--color-border-subtle)] text-white rounded-lg hover:bg-[var(--color-bg-surface)] transition-colors"><BookOpen className="h-4 w-4" /> Methodology</button>
           <button onClick={handleAIPDF} disabled={aiLoading} className="flex items-center gap-2 px-3 py-2 text-sm bg-gradient-to-r from-[var(--color-accent-primary)] to-purple-600 text-white rounded-lg hover:opacity-90 transition-all disabled:opacity-50">
             {aiLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
             {aiLoading ? 'Generating...' : 'AI Summary'}
@@ -286,9 +310,17 @@ Respond in this EXACT JSON format (no markdown, no code fences):
                   <thead><tr>
                     <th className="px-1 py-1 text-left text-[var(--color-text-muted)]">Year</th>
                     <th className="px-1 py-1 text-right text-[var(--color-text-muted)]">All</th>
-                    <th className="px-1 py-1 text-right text-[var(--color-text-muted)]">Fall</th>
-                    <th className="px-1 py-1 text-right text-[var(--color-text-muted)]">Spring</th>
-                    {inputs.includeSummer && <th className="px-1 py-1 text-right text-[var(--color-text-muted)]">Summer</th>}
+                    {inputs.deliveryFormat === '8-week' ? (
+                      inputs.includeSummer
+                        ? (['Fall-A', 'Fall-B', 'Spring-A', 'Spring-B', 'Summer-A', 'Summer-B'] as const).map(l => <th key={l} className="px-1 py-1 text-right text-[var(--color-text-muted)]">{l}</th>)
+                        : (['Fall-A', 'Fall-B', 'Spring-A', 'Spring-B'] as const).map(l => <th key={l} className="px-1 py-1 text-right text-[var(--color-text-muted)]">{l}</th>)
+                    ) : (
+                      <>
+                        <th className="px-1 py-1 text-right text-[var(--color-text-muted)]">Fall</th>
+                        <th className="px-1 py-1 text-right text-[var(--color-text-muted)]">Spring</th>
+                        {inputs.includeSummer && <th className="px-1 py-1 text-right text-[var(--color-text-muted)]">Summer</th>}
+                      </>
+                    )}
                   </tr></thead>
                   <tbody>
                     {inputs.growthByYear.map((yr, i) => {
@@ -297,16 +329,28 @@ Respond in this EXACT JSON format (no markdown, no code fences):
                         <tr key={i} className={i % 2 ? 'bg-[var(--color-bg-elevated)]/30' : ''}>
                           <td className="px-1 py-1 text-[var(--color-text-secondary)] whitespace-nowrap">Yr {i + 1}</td>
                           <td className="px-1 py-1"><input type="number" value={allVal ?? ''} placeholder="--" step={1} onChange={e => { const v = parseFloat(e.target.value); if (!isNaN(v)) setYearAllGrowth(i, v) }} className="w-full px-1 py-0.5 text-xs text-right bg-[var(--color-accent-primary)]/10 border border-[var(--color-accent-primary)]/30 rounded text-white placeholder:text-[var(--color-text-muted)]" /></td>
-                          <td className="px-1 py-1"><input type="number" value={Math.round(yr.fall * 100)} step={1} onChange={e => updateGrowth(i, 'fall', parseFloat(e.target.value) || 0)} className="w-full px-1 py-0.5 text-xs text-right bg-[var(--color-bg-elevated)] border border-[var(--color-border-subtle)] rounded text-white" /></td>
-                          <td className="px-1 py-1"><input type="number" value={Math.round(yr.spring * 100)} step={1} onChange={e => updateGrowth(i, 'spring', parseFloat(e.target.value) || 0)} className="w-full px-1 py-0.5 text-xs text-right bg-[var(--color-bg-elevated)] border border-[var(--color-border-subtle)] rounded text-white" /></td>
-                          {inputs.includeSummer && <td className="px-1 py-1"><input type="number" value={Math.round(yr.summer * 100)} step={1} onChange={e => updateGrowth(i, 'summer', parseFloat(e.target.value) || 0)} className="w-full px-1 py-0.5 text-xs text-right bg-[var(--color-bg-elevated)] border border-[var(--color-border-subtle)] rounded text-white" /></td>}
+                          {inputs.deliveryFormat === '8-week' && sessionKeys ? (
+                            sessionKeys.map(k => (
+                              <td key={k} className="px-1 py-1">
+                                <input type="number" value={Math.round((typeof yr[k] === 'number' ? yr[k] : (k.startsWith('fall') ? yr.fall : k.startsWith('spring') ? yr.spring : yr.summer)) * 100)} step={1} onChange={e => updateGrowth(i, k, parseFloat(e.target.value) || 0)} className="w-full px-1 py-0.5 text-xs text-right bg-[var(--color-bg-elevated)] border border-[var(--color-border-subtle)] rounded text-white" />
+                              </td>
+                            ))
+                          ) : (
+                            <>
+                              <td className="px-1 py-1"><input type="number" value={Math.round(yr.fall * 100)} step={1} onChange={e => updateGrowth(i, 'fall', parseFloat(e.target.value) || 0)} className="w-full px-1 py-0.5 text-xs text-right bg-[var(--color-bg-elevated)] border border-[var(--color-border-subtle)] rounded text-white" /></td>
+                              <td className="px-1 py-1"><input type="number" value={Math.round(yr.spring * 100)} step={1} onChange={e => updateGrowth(i, 'spring', parseFloat(e.target.value) || 0)} className="w-full px-1 py-0.5 text-xs text-right bg-[var(--color-bg-elevated)] border border-[var(--color-border-subtle)] rounded text-white" /></td>
+                              {inputs.includeSummer && <td className="px-1 py-1"><input type="number" value={Math.round(yr.summer * 100)} step={1} onChange={e => updateGrowth(i, 'summer', parseFloat(e.target.value) || 0)} className="w-full px-1 py-0.5 text-xs text-right bg-[var(--color-bg-elevated)] border border-[var(--color-border-subtle)] rounded text-white" /></td>}
+                            </>
+                          )}
                         </tr>
                       )
                     })}
                   </tbody>
                 </table>
               </div>
-              <p className="text-[10px] text-[var(--color-text-muted)] mt-1">Set "All" to fill every term. For 8-week, A+B sessions use the same semester rate.</p>
+              <p className="text-[10px] text-[var(--color-text-muted)] mt-1">
+                {inputs.deliveryFormat === '8-week' ? 'Set "All" to fill every session. Each 8-week session can have its own rate.' : 'Set "All" to fill every term.'}
+              </p>
             </div>
           </Section>
 

@@ -12,6 +12,7 @@ import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import { CPE_LOGO_DARK_PNG } from './logo-data'
 import type { FinancialInputs, ScenarioResults } from './financial-engine'
+import { SESSION_GROWTH_KEYS } from './financial-engine'
 
 // ── Brand colours (RGB) ───────────────────────────────────────────────
 const RED:     [number, number, number] = [163, 38, 56]
@@ -214,6 +215,95 @@ function drawAsterism(doc: jsPDF, cx: number, cy: number, size: number) {
   doc.line(cx, cy, cx + size * Math.cos(-rad25), cy - size * Math.sin(-rad25))
   // 90 degree ray (shorter, upward)
   doc.line(cx, cy, cx, cy - size * 0.6)
+}
+
+// ── Diagram drawing helpers (for methodology PDF) ────────────────────
+
+type RGB = [number, number, number]
+
+/** Rounded box with centred text, used as a flowchart node */
+function drawBox(
+  doc: jsPDF, x: number, y: number, w: number, h: number,
+  label: string, fill: RGB, border: RGB, textCol: RGB, fontSize = 8,
+) {
+  doc.setFillColor(...fill)
+  doc.setDrawColor(...border)
+  doc.setLineWidth(0.4)
+  doc.roundedRect(x, y, w, h, 2, 2, 'FD')
+  doc.setFontSize(fontSize)
+  doc.setTextColor(...textCol)
+  const lines = doc.splitTextToSize(label, w - 6) as string[]
+  const lineH = fontSize * 0.42
+  const totalH = lines.length * lineH
+  const startY = y + (h - totalH) / 2 + lineH - 0.5
+  lines.forEach((line: string, i: number) => {
+    doc.text(line, x + w / 2, startY + i * lineH, { align: 'center' })
+  })
+}
+
+/** Vertical arrow from bottom of one box to top of another */
+function arrowV(doc: jsPDF, x: number, y1: number, y2: number, color: RGB) {
+  doc.setDrawColor(...color)
+  doc.setLineWidth(0.5)
+  doc.line(x, y1, x, y2)
+  // arrowhead
+  const dir = y2 > y1 ? 1 : -1
+  doc.setFillColor(...color)
+  doc.triangle(x, y2, x - 1.5, y2 - 3 * dir, x + 1.5, y2 - 3 * dir, 'F')
+}
+
+/** Horizontal arrow */
+function arrowH(doc: jsPDF, x1: number, x2: number, y: number, color: RGB) {
+  doc.setDrawColor(...color)
+  doc.setLineWidth(0.5)
+  doc.line(x1, y, x2, y)
+  const dir = x2 > x1 ? 1 : -1
+  doc.setFillColor(...color)
+  doc.triangle(x2, y, x2 - 3 * dir, y - 1.5, x2 - 3 * dir, y + 1.5, 'F')
+}
+
+/** Dashed vertical arrow (for dropout branches) */
+function dashedArrowV(doc: jsPDF, x: number, y1: number, y2: number, color: RGB) {
+  doc.setDrawColor(...color)
+  doc.setLineWidth(0.3)
+  const step = 2
+  let cy = y1
+  while (cy < y2 - step) {
+    doc.line(x, cy, x, Math.min(cy + step, y2))
+    cy += step * 2
+  }
+  doc.setFillColor(...color)
+  doc.triangle(x, y2, x - 1.2, y2 - 2.5, x + 1.2, y2 - 2.5, 'F')
+}
+
+/** Small label text */
+function smallLabel(doc: jsPDF, text: string, x: number, y: number, color: RGB, align: 'left' | 'center' | 'right' = 'center') {
+  doc.setFontSize(7)
+  doc.setTextColor(...color)
+  doc.text(text, x, y, { align })
+}
+
+/** Pipeline stage box: rect + title band + content lines with consistent spacing */
+function pipelineStageBox(
+  doc: jsPDF, x: number, y: number, w: number, h: number,
+  title: string, lines: string[], fill: RGB, border: RGB,
+) {
+  doc.setFillColor(...fill)
+  doc.setDrawColor(...border)
+  doc.setLineWidth(0.4)
+  doc.roundedRect(x, y, w, h, 2, 2, 'FD')
+  const titleY = y + 7
+  const lineH = 5
+  doc.setFontSize(10)
+  doc.setFont('helvetica', 'bold')
+  doc.setTextColor(...WHITE)
+  doc.text(title, x + w / 2, titleY, { align: 'center' })
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(7)
+  doc.setTextColor(...LGRAY)
+  lines.forEach((line, i) => {
+    doc.text(line, x + w / 2, titleY + 6 + (i + 1) * lineH, { align: 'center' })
+  })
 }
 
 // ═══════════════════════ PAGES ════════════════════════════════════════
@@ -505,11 +595,22 @@ function assumptionsPage(doc: jsPDF, inp: FinancialInputs) {
     ]],
     ['Enrollment', [
       ['Initial Intake', String(inp.initialIntake)],
-      ...inp.growthByYear.flatMap((yr, i): [string, string][] => [
-        [`Year ${i + 1} Fall`, `${Math.round(yr.fall * 100)}%`],
-        [`Year ${i + 1} Spring`, `${Math.round(yr.spring * 100)}%`],
-        ...(inp.includeSummer ? [[`Year ${i + 1} Summer`, `${Math.round(yr.summer * 100)}%`] as [string, string]] : []),
-      ]),
+      ...inp.growthByYear.flatMap((yr, i): [string, string][] => {
+        const sessionKeys = inp.deliveryFormat === '8-week' ? (inp.includeSummer ? SESSION_GROWTH_KEYS : SESSION_GROWTH_KEYS.slice(0, 4)) : null
+        const hasAB = sessionKeys?.some(k => typeof yr[k] === 'number')
+        if (inp.deliveryFormat === '8-week' && sessionKeys && hasAB) {
+          const sessionLabel = (k: typeof sessionKeys[number]) => { const sem = k.startsWith('fall') ? 'Fall' : k.startsWith('spring') ? 'Spring' : 'Summer'; const ab = k.endsWith('A') ? 'A' : 'B'; return `${sem}-${ab}` }
+          return sessionKeys.map(k => {
+            const v = typeof yr[k] === 'number' ? yr[k]! : (k.startsWith('fall') ? yr.fall : k.startsWith('spring') ? yr.spring : yr.summer)
+            return [`Year ${i + 1} ${sessionLabel(k)}`, `${Math.round(v * 100)}%`]
+          })
+        }
+        return [
+          [`Year ${i + 1} Fall`, `${Math.round(yr.fall * 100)}%`],
+          [`Year ${i + 1} Spring`, `${Math.round(yr.spring * 100)}%`],
+          ...(inp.includeSummer ? [[`Year ${i + 1} Summer`, `${Math.round(yr.summer * 100)}%`] as [string, string]] : []),
+        ]
+      }),
       ['Early Retention', `${Math.round(inp.earlyRetentionRate * 100)}%`],
       ['Late Retention', `${Math.round(inp.lateRetentionRate * 100)}%`],
     ]],
@@ -630,7 +731,388 @@ function aiAnalysisPage(doc: jsPDF, ai: AIContent) {
   doc.text(recLines, ML, y)
 }
 
+// ═══════════════════════ METHODOLOGY PDF ═════════════════════════════
+
+function methodologyCover(doc: jsPDF) {
+  darkBg(doc)
+  doc.setFillColor(...RED)
+  doc.rect(0, 0, PW, 10, 'F')
+  try { doc.addImage(CPE_LOGO_DARK_PNG, 'PNG', ML, 16, 110, 0) } catch { /* optional */ }
+  doc.setFontSize(28)
+  doc.setFont('helvetica', 'bold')
+  doc.setTextColor(...WHITE)
+  doc.text('P&L Calculation Methodology', ML, 65)
+  doc.setFontSize(14)
+  doc.setFont('helvetica', 'normal')
+  doc.setTextColor(...LGRAY)
+  doc.text('How the Financial Model Works', ML, 77)
+  doc.setDrawColor(...DGRAY)
+  doc.setLineWidth(0.3)
+  doc.line(ML, 83, ML + CW, 83)
+  doc.setFontSize(10)
+  doc.setTextColor(...GRAY)
+  doc.text(
+    `Generated: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })} - Naveen Mathews Renji`,
+    ML, 89,
+  )
+
+  // Brief description
+  doc.setFontSize(10)
+  doc.setTextColor(...LGRAY)
+  doc.text(
+    'This document explains the complete computation pipeline used by the Program Financial Estimation tool. ' +
+    'It covers how student enrollment is projected, how retention and graduation are modeled, and how revenue ' +
+    'and costs are calculated to produce the P&L forecast.',
+    ML, 103, { maxWidth: CW },
+  )
+
+  drawAsterism(doc, PW - 60, PH - 50, 45)
+  doc.setFontSize(8)
+  doc.setTextColor(...GRAY)
+  doc.text('Stevens Institute of Technology  |  College of Professional Education', PW / 2, PH - 15, { align: 'center' })
+}
+
+function pipelinePage(doc: jsPDF) {
+  doc.addPage()
+  darkBg(doc)
+  pageHeader(doc)
+  let y = sectionTitle(doc, '1. Computation Pipeline', 14)
+
+  doc.setFontSize(9)
+  doc.setTextColor(...LGRAY)
+  doc.text(
+    'The engine processes inputs through five sequential stages. Each stage feeds into the next.',
+    ML, y, { maxWidth: CW },
+  )
+  y += 12
+
+  // Dimensions: centered boxes, consistent spacing
+  const bw = Math.min(CW * 0.62, 165)   // box width, cap for readability
+  const bh = 30                          // box height (title band + 3–4 lines)
+  const gap = 14                          // vertical gap between stages
+  const bx = ML + (CW - bw) / 2          // centre x on page
+
+  // Stage 1: Program Structure
+  const s1y = y
+  pipelineStageBox(doc, bx, s1y, bw, bh, '1. Program Structure', [
+    'Total Credits = Courses x Credits/Course',
+    'Sessions to Graduate = ceil(Total Credits / Credits per Session)',
+    'Sessions/Year: 6 (8-week) or 3 (16-week)',
+  ], SURFACE, DGRAY)
+  arrowV(doc, bx + bw / 2, s1y + bh, s1y + bh + gap, RED)
+
+  // Stage 2: Enrollment Forecast
+  const s2y = s1y + bh + gap
+  pipelineStageBox(doc, bx, s2y, bw, bh, '2. Enrollment Forecast', [
+    'Start with initial cohort size',
+    'Each session: new intake = previous x (1 + growth rate)',
+    'Growth rates vary by semester: Fall, Spring, Summer',
+    'In 8-week format, each session (Fall-A, Fall-B, …) can have its own rate.',
+  ], SURFACE, DGRAY)
+  arrowV(doc, bx + bw / 2, s2y + bh, s2y + bh + gap, RED)
+
+  // Stage 3: Student Lifecycle (4 lines)
+  const s3y = s2y + bh + gap
+  const s3h = 34
+  pipelineStageBox(doc, bx, s3y, bw, s3h, '3. Student Lifecycle (per Cohort)', [
+    'Each session: remove graduates, then apply retention',
+    'active[t] = (active[t-1] - graduates) x retention_rate',
+    'Cliff graduation: all survivors graduate at calculated session',
+  ], SURFACE, DGRAY)
+  arrowV(doc, bx + bw / 2, s3y + s3h, s3y + s3h + gap, RED)
+
+  // Stage 4: Aggregate
+  const s4y = s3y + s3h + gap
+  pipelineStageBox(doc, bx, s4y, bw, bh, '4. Aggregate Across All Cohorts', [
+    'Total Active[t] = Sum of all overlapping cohorts at session t',
+    'New Students[t] = Fresh cohort intake at session t',
+    'Graduating[t] = Sum of all cohort graduates at session t',
+  ], SURFACE, DGRAY)
+  arrowV(doc, bx + bw / 2, s4y + bh, s4y + bh + gap, RED)
+
+  // Stage 5: Financial Output
+  const s5y = s4y + bh + gap
+  pipelineStageBox(doc, bx, s5y, bw, bh, '5. Financial Output', [
+    'Revenue per Session = Active x Tuition/Credit x Credits/Session',
+    'Cost per Session = Faculty + TA + Dev + OH + CAC',
+    'Net P&L per FY = Sum(Revenue) - Sum(Cost)  |  Break-Even = first FY cumulative >= 0',
+  ], SURFACE, DGRAY)
+}
+
+function lifecyclePage(doc: jsPDF) {
+  doc.addPage()
+  darkBg(doc)
+  pageHeader(doc)
+  let y = sectionTitle(doc, '2. Student Lifecycle — Single Cohort', 14)
+
+  doc.setFontSize(9)
+  doc.setTextColor(...LGRAY)
+  doc.text(
+    'Each cohort starts with N students. Every session, retention is applied (students drop out). ' +
+    'At the calculated graduation session, all surviving students graduate and active count drops to zero.',
+    ML, y, { maxWidth: CW },
+  )
+  y += 14
+
+  // Horizontal lifecycle flow
+  const boxW = 24
+  const boxH = 16
+  const arrowGap = 4
+  const startX = ML + 2
+  const flowY = y
+
+  // Box: New Cohort
+  drawBox(doc, startX, flowY, boxW + 4, boxH, 'New Cohort\nN students', DARK_ELEVATED, LGRAY, WHITE, 7)
+  arrowH(doc, startX + boxW + 4, startX + boxW + 4 + arrowGap, flowY + boxH / 2, RED)
+
+  // Box: Session 0
+  const s0x = startX + boxW + 4 + arrowGap
+  drawBox(doc, s0x, flowY, boxW, boxH, 'Session 0\nN active', SURFACE, DGRAY, WHITE, 7)
+
+  // Early retention arrow + box
+  const retEX = s0x + boxW + arrowGap - 1
+  smallLabel(doc, 'x Early Retention', s0x + boxW + arrowGap / 2 + 8, flowY - 2, GRAY)
+  arrowH(doc, s0x + boxW, retEX + 2, flowY + boxH / 2, RED)
+  const s1x = retEX + 2
+  drawBox(doc, s1x, flowY, boxW + 2, boxH, 'Session 1\n...', SURFACE, DGRAY, WHITE, 7)
+
+  // Threshold marker
+  const thX = s1x + boxW + 2 + arrowGap - 1
+  smallLabel(doc, 'x Early/Late', s1x + boxW + 2 + arrowGap / 2 + 6, flowY - 2, GRAY)
+  arrowH(doc, s1x + boxW + 2, thX + 2, flowY + boxH / 2, RED)
+  const sMidX = thX + 2
+  drawBox(doc, sMidX, flowY, boxW + 4, boxH, 'Sessions\n2 ... T-1', SURFACE, DGRAY, WHITE, 7)
+
+  // Late retention arrow + grad session
+  const gradArrX = sMidX + boxW + 4 + arrowGap - 1
+  smallLabel(doc, 'x Late Retention', sMidX + boxW + 4 + arrowGap / 2 + 10, flowY - 2, GRAY)
+  arrowH(doc, sMidX + boxW + 4, gradArrX + 2, flowY + boxH / 2, RED)
+  const gradX = gradArrX + 2
+  drawBox(doc, gradX, flowY, boxW + 6, boxH, 'Graduation\nSession T', [163, 38, 56], RED, WHITE, 7)
+
+  // Arrow to "0"
+  arrowH(doc, gradX + boxW + 6, gradX + boxW + 6 + arrowGap + 2, flowY + boxH / 2, GRAY)
+  drawBox(doc, gradX + boxW + 6 + arrowGap + 2, flowY, boxW - 6, boxH, 'Active\n= 0', DARK_ELEVATED, DGRAY, LGRAY, 7)
+
+  // Dropout arrows (dashed, going down)
+  const dropY = flowY + boxH + 18
+  const dropBoxH = 12
+
+  dashedArrowV(doc, s0x + boxW / 2, flowY + boxH, flowY + boxH + 6, GRAY)
+  drawBox(doc, s0x - 2, dropY - 8, boxW + 4, dropBoxH, 'Dropouts', DARK_ELEVATED, GRAY, GRAY, 7)
+
+  dashedArrowV(doc, s1x + (boxW + 2) / 2, flowY + boxH, flowY + boxH + 6, GRAY)
+  drawBox(doc, s1x - 1, dropY - 8, boxW + 4, dropBoxH, 'Dropouts', DARK_ELEVATED, GRAY, GRAY, 7)
+
+  dashedArrowV(doc, sMidX + (boxW + 4) / 2, flowY + boxH, flowY + boxH + 6, GRAY)
+  drawBox(doc, sMidX, dropY - 8, boxW + 4, dropBoxH, 'Dropouts', DARK_ELEVATED, GRAY, GRAY, 7)
+
+  // "All survivors graduate" label
+  smallLabel(doc, 'All survivors graduate', gradX + (boxW + 6) / 2, flowY + boxH + 6, GREEN, 'center')
+
+  // Formula section
+  y = dropY + dropBoxH + 12
+
+  doc.setFillColor(...SURFACE)
+  doc.roundedRect(ML, y, CW, 72, 2, 2, 'F')
+  y += 6
+
+  doc.setFontSize(11)
+  doc.setFont('helvetica', 'bold')
+  doc.setTextColor(...WHITE)
+  doc.text('Key Formulas', ML + 6, y)
+  doc.setFont('helvetica', 'normal')
+  y += 8
+
+  const formulas = [
+    ['Program Duration', 'Sessions to Graduate = ceil( Total Courses x Credits/Course  /  Credits per Session )'],
+    ['Sessions per Year', '8-week: Semesters x 2  |  16-week: Semesters x 1  (Semesters = 3 with summer, 2 without)'],
+    ['Graduation Curve', 'Cumulative curve is 0 for all sessions, then jumps to 1.0 at the graduation session (cliff)'],
+    ['Active Students', 'active[t] = ( active[t-1]  -  graduates )  x  retention_rate'],
+    ['Retention Rate', 'Early rate for sessions 1 .. (threshold - 1),  Late rate for sessions threshold onward'],
+    ['Graduates', 'At cliff session: graduates = min( expected_grads,  active students remaining )'],
+    ['Total Active', 'Total Active[t] = Sum of active[internal_session] across all overlapping cohorts at calendar session t'],
+    ['New Students', 'New Students[t] = Intake of the cohort that starts at calendar session t'],
+  ]
+
+  formulas.forEach(([label, formula]) => {
+    doc.setFontSize(8)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(...LGRAY)
+    doc.text(label, ML + 6, y)
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(7.5)
+    doc.setTextColor(...GRAY)
+    doc.text(formula, ML + 42, y)
+    y += 7
+  })
+
+  // Numerical example
+  y += 6
+  doc.setFillColor(...DARK_ELEVATED)
+  doc.roundedRect(ML, y, CW, 48, 2, 2, 'F')
+  y += 6
+
+  doc.setFontSize(10)
+  doc.setFont('helvetica', 'bold')
+  doc.setTextColor(...WHITE)
+  doc.text('Worked Example (Default Inputs)', ML + 6, y)
+  doc.setFont('helvetica', 'normal')
+  y += 7
+
+  const examples = [
+    '10 courses x 3 credits/course = 30 total credits',
+    '30 credits / 3 credits per session = 10 sessions to graduate',
+    '8-week format with summer: 3 semesters x 2 sessions = 6 sessions/year',
+    '',
+    'Cohort of 25 students, 85% early retention (sessions 1-3), 90% late retention (sessions 4+):',
+    '  Session 0: 25.00  →  Session 1: 21.25  →  Session 2: 18.06  →  Session 3: 15.35',
+    '  Session 4: 13.82  →  Session 5: 12.44  →  ...  →  Session 9: 8.16 → GRADUATE',
+    '',
+    'Result: 8 out of 25 students (33%) survive retention and graduate at session 10.',
+  ]
+
+  examples.forEach(line => {
+    doc.setFontSize(7.5)
+    doc.setTextColor(...(line.startsWith(' ') ? LGRAY : GRAY))
+    doc.text(line, ML + 6, y)
+    y += line === '' ? 3 : 5
+  })
+}
+
+function formulasPage(doc: jsPDF) {
+  doc.addPage()
+  darkBg(doc)
+  pageHeader(doc)
+  let y = sectionTitle(doc, '3. Revenue & Cost Formulas', 14)
+
+  // Revenue section
+  doc.setFillColor(...SURFACE)
+  doc.roundedRect(ML, y, CW, 44, 2, 2, 'F')
+
+  // Revenue header bar
+  doc.setFillColor(...RED)
+  doc.roundedRect(ML, y, CW, 8, 2, 2, 'F')
+  doc.rect(ML, y + 4, CW, 4, 'F')  // fill bottom corners
+  doc.setFontSize(10)
+  doc.setFont('helvetica', 'bold')
+  doc.setTextColor(...WHITE)
+  doc.text('REVENUE', ML + 6, y + 6)
+  doc.setFont('helvetica', 'normal')
+
+  const ry = y + 13
+  const revFormulas = [
+    ['Revenue per Session', 'Total Active  x  Programs  x  Tuition/Credit  x  Credits/Session  x  (1 + Tuition Inflation)^year'],
+    ['Total Active', 'Sum of all overlapping cohort active counts at that calendar session'],
+    ['Tuition Inflation', 'Compounds annually — (1 + rate) raised to the power of the fiscal year index'],
+    ['Annual Revenue', 'Sum of all session revenues within the fiscal year'],
+  ]
+
+  revFormulas.forEach(([label, formula], i) => {
+    doc.setFontSize(8)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(...LGRAY)
+    doc.text(label, ML + 6, ry + i * 7.5)
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(7.5)
+    doc.setTextColor(...GRAY)
+    doc.text(formula, ML + 46, ry + i * 7.5)
+  })
+
+  // Cost section
+  y += 52
+  doc.setFillColor(...SURFACE)
+  doc.roundedRect(ML, y, CW, 82, 2, 2, 'F')
+
+  // Cost header bar
+  doc.setFillColor(...DGRAY)
+  doc.roundedRect(ML, y, CW, 8, 2, 2, 'F')
+  doc.rect(ML, y + 4, CW, 4, 'F')
+  doc.setFontSize(10)
+  doc.setFont('helvetica', 'bold')
+  doc.setTextColor(...WHITE)
+  doc.text('COSTS (6 Line Items)', ML + 6, y + 6)
+  doc.setFont('helvetica', 'normal')
+
+  const cy = y + 14
+  const costFormulas = [
+    ['Faculty', 'ceil( Active Students / Max per Section )  x  Cost per Section'],
+    ['Teaching Assistants', 'Active Students  x  ( Hourly Rate  x  Hours/Week  x  Weeks )  /  TA:Student Ratio'],
+    ['Course Development', '( Courses to Develop x Dev Cost  +  Courses to Revise x Dev Cost x Revision % )  /  Amort Terms'],
+    ['Variable Overhead', 'Active Students  x  Overhead per Student'],
+    ['Fixed Overhead', 'Overhead per Semester  /  Sessions per Semester   (split for 8-week format)'],
+    ['Student Acquisition', 'New Students  x  CAC per Student   (charged once at enrollment, before retention)'],
+    ['', ''],
+    ['Cost Inflation', 'Each line item above  x  (1 + Cost Inflation %)^year   — compounds annually'],
+    ['Total Cost/Session', 'Faculty + TA + Course Dev + Variable OH + Fixed OH + CAC   (all inflated)'],
+  ]
+
+  costFormulas.forEach(([label, formula], i) => {
+    if (!label) return
+    doc.setFontSize(8)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(...LGRAY)
+    doc.text(label, ML + 6, cy + i * 7.5)
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(7.5)
+    doc.setTextColor(...GRAY)
+    doc.text(formula, ML + 46, cy + i * 7.5)
+  })
+
+  // P&L Aggregation section
+  y += 90
+  doc.setFillColor(...SURFACE)
+  doc.roundedRect(ML, y, CW, 44, 2, 2, 'F')
+
+  doc.setFillColor(...GREEN)
+  doc.roundedRect(ML, y, CW, 8, 2, 2, 'F')
+  doc.rect(ML, y + 4, CW, 4, 'F')
+  doc.setFontSize(10)
+  doc.setFont('helvetica', 'bold')
+  doc.setTextColor(...WHITE)
+  doc.text('P&L AGGREGATION', ML + 6, y + 6)
+  doc.setFont('helvetica', 'normal')
+
+  const py = y + 14
+  const plFormulas = [
+    ['Revenue per FY', 'Sum of all session revenues within the fiscal year'],
+    ['Cost per FY', 'Sum of all session costs within the fiscal year'],
+    ['Net P&L', 'Revenue per FY  -  Cost per FY'],
+    ['Cumulative P&L', 'Running total of Net P&L across all fiscal years'],
+    ['Net Margin %', '( Net P&L  /  Revenue )  x  100'],
+    ['Break-Even Year', 'First fiscal year where cumulative P&L  >=  0'],
+  ]
+
+  plFormulas.forEach(([label, formula], i) => {
+    doc.setFontSize(8)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(...LGRAY)
+    doc.text(label, ML + 6, py + i * 5.5)
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(7.5)
+    doc.setTextColor(...GRAY)
+    doc.text(formula, ML + 46, py + i * 5.5)
+  })
+}
+
 // ═══════════════════════ PUBLIC API ═══════════════════════════════════
+
+export function generateMethodologyPDF() {
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' })
+
+  methodologyCover(doc)
+  pipelinePage(doc)
+  lifecyclePage(doc)
+  formulasPage(doc)
+
+  const total = doc.getNumberOfPages()
+  for (let i = 1; i <= total; i++) {
+    doc.setPage(i)
+    pageFooter(doc, i, total)
+  }
+
+  doc.save('PnL_Calculation_Methodology.pdf')
+}
 
 export function generatePDF(
   inputs: FinancialInputs,

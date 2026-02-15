@@ -1,0 +1,489 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Stevens CPE — Strategic Market Blueprint</title>
+
+  <!-- Brand fonts: Saira (headlines) + IBM Plex Sans (body) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=Saira:wght@100;200;300;400;500&display=swap" rel="stylesheet">
+
+  <!-- Tailwind (layout utilities) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    :root {
+      --bg:#FFFFFF;
+      --surface:#F5F5F6;
+      --surface2:rgba(0,0,0,.03);
+      --elevated:#EBEBEC;
+      --border:rgba(0,0,0,.12);
+      --red:#A32638;
+      --dark-gray:#363D45;
+      --gray:#7F7F7F;
+      --light-gray:#E4E5E6;
+      --text:#000000;
+      --muted:rgba(0,0,0,.55);
+      --ai:#7E57C2; --fin:#00897B; --soft:#1E88E5; --biz:#F57C00;
+    }
+
+    body {
+      background:var(--bg);color:var(--text);
+      font-family:'IBM Plex Sans',Arial,sans-serif;
+      font-size:10.5pt;line-height:1.55;margin:0;padding:0;
+    }
+
+    h1,h2,h3,h4 {
+      font-family:'Saira','Arial Narrow',Arial,sans-serif;
+      font-weight:200;color:#000;margin:0;
+    }
+    h1{font-size:32pt;line-height:1.15}
+    h2{font-size:18pt;line-height:1.3}
+    h3{font-size:13pt;line-height:1.3;font-weight:300}
+
+    .glass{background:var(--surface2);border:1px solid var(--border);border-radius:10px;}
+
+    .badge{display:inline-flex;padding:.15rem .6rem;border-radius:99px;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;border:1px solid transparent;font-family:'IBM Plex Sans',Arial,sans-serif;}
+    .b-ai{color:var(--ai);border-color:rgba(126,87,194,.35);background:rgba(126,87,194,.08)}
+    .b-fin{color:var(--fin);border-color:rgba(0,137,123,.35);background:rgba(0,137,123,.08)}
+    .b-soft{color:var(--soft);border-color:rgba(30,136,229,.35);background:rgba(30,136,229,.08)}
+    .b-biz{color:var(--biz);border-color:rgba(245,124,0,.35);background:rgba(245,124,0,.08)}
+    .dot{width:8px;height:8px;border-radius:50%;margin-right:6px;display:inline-block}
+
+    .section-title{
+      font-family:'Saira',sans-serif;font-weight:200;color:#000;
+      font-size:20pt;padding-bottom:6px;
+      border-bottom:2px solid var(--red);margin-bottom:14px;
+    }
+    .tier-header{
+      font-size:10pt;font-weight:700;color:var(--red);
+      text-transform:uppercase;letter-spacing:.08em;
+      padding-bottom:6px;border-bottom:1px solid rgba(0,0,0,.1);
+      margin-bottom:12px;font-family:'IBM Plex Sans',sans-serif;
+    }
+
+    /* ── Cover ─────────────────────────────────────── */
+    .cover-page{
+      min-height:100vh;display:flex;flex-direction:column;
+      justify-content:center;padding:0 40px;position:relative;
+    }
+    .cover-page .logo{width:260px;margin-bottom:40px;}
+    .cover-page .subtitle{font-size:12pt;color:var(--dark-gray);margin-top:10px;font-weight:300;}
+    .cover-page .source{font-size:9pt;color:var(--red);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-top:20px;}
+    .cover-page .date-line{font-size:9pt;color:var(--gray);margin-top:6px;}
+    .cover-page .footer-text{position:absolute;bottom:30px;left:40px;font-size:8pt;color:var(--gray);}
+    .asterism-svg{position:absolute;bottom:30px;right:30px;width:180px;height:180px;opacity:0.7;}
+
+    /* ── Print / PDF ───────────────────────────────── */
+    @page{size:Letter;margin:0.75in;}
+    @media print{
+      body{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}
+      .cover-page{break-after:page;page-break-after:always;}
+      .section-page{break-before:page;page-break-before:always;}
+      .glass,.card-item{break-inside:avoid;page-break-inside:avoid;}
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════ COVER PAGE ═══════════════════════════════════════ -->
+<div class="cover-page">
+  <div style="position:absolute;top:0;left:0;width:100%;height:4px;background:var(--red);"></div>
+
+  <img src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyBpZD0ibWFpbiIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB2ZXJzaW9uPSIxLjEiIHZpZXdCb3g9IjAgMCAxNjk0LjYgNTc2LjEiPgogIDwhLS0gR2VuZXJhdG9yOiBBZG9iZSBJbGx1c3RyYXRvciAyOS43LjEsIFNWRyBFeHBvcnQgUGx1Zy1JbiAuIFNWRyBWZXJzaW9uOiAyLjEuMSBCdWlsZCA4KSAgLS0+CiAgPGRlZnM+CiAgICA8c3R5bGU+CiAgICAgIC5zdDAgewogICAgICAgIGZpbGw6ICNhMzI2Mzg7CiAgICAgIH0KCiAgICAgIC5zdDEgewogICAgICAgIGZpbGw6ICMyZDNkNDU7CiAgICAgIH0KCiAgICAgIC5zdDIgewogICAgICAgIGZpbGw6ICM3ZjdmN2Y7CiAgICAgIH0KICAgIDwvc3R5bGU+CiAgPC9kZWZzPgogIDxwYXRoIGNsYXNzPSJzdDAiIGQ9Ik0yNDEuMiwxMTEuNXY5Mi41bC0xMjYuMSw1OC4yLDEyNi4xLTE1MC44Wk00NDEuOCw0MjQuOGMtMi4yLTEuMS01LTEuOS04LTEuOS05LjEsMC0xMi40LDUuNC0xMi40LDEwLjRzMS41LDcsNi4xLDkuN2w1LjgsMy42YzIuNCwxLjUsMy41LDIuOSwzLjUsNC42LDAsMi41LTIsNC41LTUuOCw0LjVzLTcuMS0xLjctOS4xLTMuMnY3YzIuMywxLjEsNS42LDIuMSw5LjQsMi4xLDguMywwLDEyLjItNS4xLDEyLjItMTAuN3MtMS44LTcuMS02LjYtMTBsLTUuNy0zLjZjLTItMS4zLTMuMS0yLjYtMy4xLTQuMiwwLTIuNSwyLTQuMiw1LjYtNC4yczYuMiwxLjMsOC4xLDIuOHYtNi44Wk00NjYuNyw0NjAuOWg2LjN2LTMxLjRoMTEuOHYtNmgtMjkuOXY2aDExLjh2MzEuNFpNNTE5LjMsNDYwLjl2LTZoLTE0LjR2LTkuOGgxMy4zdi02aC0xMy4zdi05LjZoMTQuNHYtNmgtMjAuN3YzNy40aDIwLjdaTTU0NC45LDQ2MC45aDdsMTQtMzcuNGgtN2wtMTAuNSwzMC4xLTEwLjUtMzAuMWgtN2wxNCwzNy40Wk01OTkuNSw0NjAuOXYtNmgtMTQuNHYtOS44aDEzLjN2LTZoLTEzLjN2LTkuNmgxNC40di02aC0yMC43djM3LjRoMjAuN1pNNjM5LjcsNDYwLjloNi4zdi0zNy40aC02LjN2MjYuNmwtMTguOS0yNi42aC03LjV2LjVsMi41LDR2MzNoNi4zdi0yNC4ybDE3LjYsMjQuMlpNNjgxLjYsNDI0LjhjLTIuMi0xLjEtNS0xLjktOC0xLjktOS4xLDAtMTIuNCw1LjQtMTIuNCwxMC40czEuNSw3LDYuMSw5LjdsNS44LDMuNmMyLjQsMS41LDMuNSwyLjksMy41LDQuNiwwLDIuNS0yLDQuNS01LjgsNC41cy03LjEtMS43LTkuMS0zLjJ2N2MyLjMsMS4xLDUuNiwyLjEsOS40LDIuMSw4LjMsMCwxMi4yLTUuMSwxMi4yLTEwLjdzLTEuOC03LjEtNi42LTEwbC01LjctMy42Yy0yLTEuMy0zLjEtMi42LTMuMS00LjIsMC0yLjUsMi00LjIsNS42LTQuMnM2LjIsMS4zLDguMSwyLjh2LTYuOFoiLz4KICA8Zz4KICAgIDxwb2x5Z29uIGNsYXNzPSJzdDIiIHBvaW50cz0iMjQxLjIgMjk2LjUgMTE1LjIgMzU0LjcgMTE1LjIgMzA4LjUgMjQxLjIgMjUwLjMgMjQxLjIgMjk2LjUiLz4KICAgIDxyZWN0IGNsYXNzPSJzdDIiIHg9IjQyMS45IiB5PSIzNjQuMiIgd2lkdGg9IjExNTcuNSIgaGVpZ2h0PSI0LjEiLz4KICA8L2c+CiAgPHBhdGggY2xhc3M9InN0MSIgZD0iTTcxOC43LDQ2MC45aDYuM3YtMzcuNGgtNi4zdjM3LjRaTTc2Ni4zLDQ2MC45aDYuM3YtMzcuNGgtNi4zdjI2LjZsLTE4LjktMjYuNmgtNy41di41bDIuNSw0djMzaDYuM3YtMjQuMmwxNy42LDI0LjJaTTgwOC4yLDQyNC44Yy0yLjItMS4xLTUtMS45LTgtMS45LTkuMSwwLTEyLjQsNS40LTEyLjQsMTAuNHMxLjUsNyw2LjEsOS43bDUuOCwzLjZjMi40LDEuNSwzLjUsMi45LDMuNSw0LjYsMCwyLjUtMiw0LjUtNS44LDQuNXMtNy4xLTEuNy05LjEtMy4ydjdjMi4zLDEuMSw1LjYsMi4xLDkuNCwyLjEsOC4zLDAsMTIuMi01LjEsMTIuMi0xMC43cy0xLjgtNy4xLTYuNi0xMGwtNS43LTMuNmMtMi0xLjMtMy4xLTIuNi0zLjEtNC4yLDAtMi41LDItNC4yLDUuNi00LjJzNi4yLDEuMyw4LjEsMi44di02LjhaTTgzMC44LDQ2MC45aDYuM3YtMzEuNGg5LjV2LTZoLTI1LjN2Nmg5LjV2MzEuNFpNODYwLjUsNDYwLjloNi4zdi0zNy40aC02LjN2MzcuNFpNODkwLDQ2MC45aDYuM3YtMzEuNGg5LjV2LTZoLTI1LjN2Nmg5LjV2MzEuNFpNOTQwLjcsNDIzLjV2MjQuMmMwLDQuNi0zLDcuOC03LjYsNy44cy03LjctMy4xLTcuNy03Ljh2LTI0LjJoLTYuM3YyMy43YzAsOC45LDUuNCwxNC4zLDEzLjksMTQuM3MxMy45LTUuNCwxMy45LTE0LjN2LTIzLjdoLTYuM1pNOTY5LjksNDYwLjloNi4zdi0zMS40aDkuNXYtNmgtMjUuM3Y2aDkuNXYzMS40Wk0xMDIwLjIsNDYwLjl2LTZoLTE0LjR2LTkuOGgxMy4zdi02aC0xMy4zdi05LjZoMTQuNHYtNmgtMjAuN3YzNy40aDIwLjdaTTEwNTQuNCw0NDIuMmMwLDEwLjksOC4zLDE5LjMsMTkuMywxOS4zczE5LjMtOC40LDE5LjMtMTkuMy04LjMtMTkuMy0xOS4zLTE5LjMtMTkuMyw4LjQtMTkuMywxOS4zWk0xMDYwLjksNDQyLjJjMC03LjMsNS41LTEzLDEyLjgtMTNzMTIuOCw1LjgsMTIuOCwxMy01LjYsMTMtMTIuOCwxMy0xMi44LTUuOC0xMi44LTEzWk0xMTI3LjMsNDQ2LjZ2LTZoLTEzLjN2LTExLjFoMTQuNHYtNmgtMjAuN3YzNy40aDYuM3YtMTQuM2gxMy4zWk0xMTY3LjgsNDYwLjloNi4zdi0zMS40aDkuNXYtNmgtMjUuM3Y2aDkuNXYzMS40Wk0xMjE4LjEsNDYwLjl2LTZoLTE0LjR2LTkuOGgxMy4zdi02aC0xMy4zdi05LjZoMTQuNHYtNmgtMjAuN3YzNy40aDIwLjdaTTEyNTkuNiw0NTJjLTIuMiwxLjktNS41LDMuMi05LjEsMy4yLTcuMywwLTEyLjgtNS44LTEyLjgtMTNzNS41LTEzLDEyLjgtMTMsNi45LDEuMyw5LjEsMy4zdi03LjNjLTIuNi0xLjQtNS44LTIuMy05LjEtMi4zLTEwLjksMC0xOS4zLDguNC0xOS4zLDE5LjNzOC4zLDE5LjMsMTkuMywxOS4zLDYuNS0uOSw5LjEtMi4zdi03LjJaTTEzMDAuNCw0NjAuOWg2LjN2LTM3LjRoLTYuM3YxNS42aC0xOS4ydi0xNS42aC02LjN2MzcuNGg2LjN2LTE1LjhoMTkuMnYxNS44Wk0xMzQ4LDQ2MC45aDYuM3YtMzcuNGgtNi4zdjI2LjZsLTE4LjktMjYuNmgtNy41di41bDIuNSw0djMzaDYuM3YtMjQuMmwxNy42LDI0LjJaTTEzNjksNDQyLjJjMCwxMC45LDguMywxOS4zLDE5LjMsMTkuM3MxOS4zLTguNCwxOS4zLTE5LjMtOC4zLTE5LjMtMTkuMy0xOS4zLTE5LjMsOC40LTE5LjMsMTkuM1pNMTM3NS41LDQ0Mi4yYzAtNy4zLDUuNS0xMywxMi44LTEzczEyLjgsNS44LDEyLjgsMTMtNS42LDEzLTEyLjgsMTMtMTIuOC01LjgtMTIuOC0xM1pNMTQ0My4xLDQ2MC45di02aC0xNC40di0zMS40aC02LjN2MzcuNGgyMC43Wk0xNDUzLjUsNDQyLjJjMCwxMC45LDguMywxOS4zLDE5LjMsMTkuM3MxOS4zLTguNCwxOS4zLTE5LjMtOC4zLTE5LjMtMTkuMy0xOS4zLTE5LjMsOC40LTE5LjMsMTkuM1pNMTQ1OS45LDQ0Mi4yYzAtNy4zLDUuNS0xMywxMi44LTEzczEyLjgsNS44LDEyLjgsMTMtNS42LDEzLTEyLjgsMTMtMTIuOC01LjgtMTIuOC0xM1pNMTU2MSw0NjAuOWg2LjN2LTE2LjNsMTIuMi0yMS4xaC03bC04LjMsMTQuOC04LjMtMTQuOGgtNy4xbDEyLjMsMjEuMXYxNi4zWk0xNTMzLjIsNDMxLjVoLS4xYy0xLS43LTIuNC0xLjItNC4xLTEuNy0xLjctLjQtMy4yLS43LTQuNC0uNy00LjMsMC03LjcsMS4yLTEwLjEsMy41LTIuNCwyLjMtMy43LDUuNy0zLjcsOS45cy42LDQuOCwxLjcsNi43YzEuMSwxLjksMi44LDMuNCw0LjgsNC41LDIuMSwxLjEsNC41LDEuNiw3LjEsMS42czIuMy0uMSwzLjQtLjNjMS4xLS4yLDItLjUsMi43LS45di02LjFoLTcuMXYtNmgxMy4zdjE1LjZoMGMtMSwxLTIuOSwxLjktNS40LDIuNy0yLjYuOC00LjksMS4yLTcuMSwxLjItNCwwLTcuNS0uOC0xMC41LTIuNC0zLTEuNi01LjMtMy44LTctNi42LTEuNi0yLjgtMi40LTYtMi40LTkuNXMuOS03LjksMi42LTEwLjljMS43LTMsNC4xLTUuNCw3LjEtNi45LDIuOS0xLjUsNi4yLTIuMyw5LjctMi4zczQuMi4zLDYuMi44YzEuOS41LDMuNywxLjIsNS4yLDJoMHMtMiw1LjgtMiw1LjhaIi8+CiAgPHBhdGggY2xhc3M9InN0MSIgZD0iTTI0MS4yLDIwNGwxMjYuMSw1OC4ydjQ2LjJzLTEyNi4xLTU4LjItMTI2LjEtNTguMnYtNDYuMlpNNDc1LjcsMjI4LjNjLjYsNCwuOSw4LjUuOSwxMy43cy0uMyw5LjMtLjgsMTMuMmMtLjUsMy45LTEuNiw3LjMtMy4yLDEwLjEtMS42LDIuOC00LDUtNy4yLDYuNS0zLjIsMS41LTcuNCwyLjItMTIuNSwyLjJoLTE1Ljh2MzQuNmgtMTUuMXYtOTguNmgzMWM1LjEsMCw5LjIuNywxMi4zLDIuMiwzLjIsMS40LDUuNSwzLjUsNy4yLDYuMiwxLjYsMi43LDIuNyw2LjEsMy4zLDEwWk00NjEuNCwyNDJjMC00LjEtLjItNy40LS41LTkuOS0uMy0yLjUtMS00LjQtMS45LTUuNy0uOS0xLjMtMi4yLTIuMi0zLjgtMi43LTEuNi0uNS0zLjctLjctNi4zLS43aC0xMS45djM4LjFoMTEuOWMyLjMsMCw0LjMtLjIsNS45LS42LDEuNi0uNCwyLjktMS4zLDMuOS0yLjUsMS0xLjIsMS42LTMuMiwyLjEtNS43LjQtMi42LjYtNiwuNi0xMC4yWk01MDMuMSwyNzQuOGMwLTYuNi42LTExLjgsMS44LTE1LjYsMS4yLTMuOCwzLjItNi41LDUuOS04LjIsMi43LTEuNiw2LjMtMi40LDEwLjctMi40di0xNC4zYy0zLjIsMC01LjkuNC04LjMsMS4zLTIuNC45LTQuNCwyLjMtNS45LDQuNC0xLjYsMi4xLTIuOCw0LjktMy44LDguNWgtLjlsLS42LTEzaC0xM3Y3My4xaDE0LjJ2LTMzLjdaTTU1NS44LDMwOS42Yy00LjksMC04LjktLjMtMTItMS0zLjItLjctNS43LTEuOC03LjUtMy41LTEuOS0xLjctMy4zLTMuOS00LjItNi44LS45LTIuOS0xLjUtNi41LTEuOC0xMC44LS4zLTQuMy0uNC05LjUtLjQtMTUuNnMuMS0xMS4zLjQtMTUuNmMuMy00LjMuOS03LjksMS44LTEwLjguOS0yLjksMi4zLTUuMSw0LjItNi44LDEuOS0xLjcsNC40LTIuOCw3LjUtMy41LDMuMi0uNyw3LjItMSwxMi0xczguNC4zLDExLjUsMWMzLjEuNyw1LjYsMS44LDcuNSwzLjUsMS45LDEuNywzLjIsMy45LDQuMSw2LjhzMS40LDYuNSwxLjcsMTAuOGMuMyw0LjMuNCw5LjUuNCwxNS42cy0uMSwxMS4zLS40LDE1LjZjLS4zLDQuMy0uOSw3LjktMS43LDEwLjgtLjksMi45LTIuMiw1LjEtNC4xLDYuOC0xLjksMS43LTQuNCwyLjgtNy41LDMuNS0zLjEuNy03LDEtMTEuNSwxWk01NTUuNiwyOTcuOWMyLjgsMCw0LjktLjMsNi41LS45LDEuNS0uNiwyLjctMS43LDMuNC0zLjUuNy0xLjgsMS4xLTQuNCwxLjMtNy44LjEtMy40LjItOCwuMi0xMy44czAtMTAuMy0uMi0xMy44Yy0uMS0zLjQtLjYtNi0xLjMtNy44LS43LTEuOC0xLjgtMi45LTMuNC0zLjUtMS41LS42LTMuNy0uOS02LjYtLjlzLTQuOS4zLTYuNS45Yy0xLjUuNi0yLjcsMS43LTMuNCwzLjUtLjcsMS44LTEuMSw0LjQtMS4zLDcuOC0uMSwzLjQtLjIsOC0uMiwxMy44czAsMTAuMy4yLDEzLjhjLjEsMy40LjYsNiwxLjMsNy44LjcsMS44LDEuOCwyLjksMy40LDMuNSwxLjUuNiwzLjcuOSw2LjYuOVpNNjI3LjEsMjM1LjRoLTEyLjh2LTExLjhjMC0yLjYuMi00LjYuNi02LjEuNC0xLjUsMS0yLjYsMS45LTMuMy45LS43LDIuMi0xLjIsMy44LTEuNCwxLjYtLjIsMy44LS4zLDYuNS0uM3YtMTAuNmMtNC40LDAtOC4yLjEtMTEuMy40LTMuMi4yLTUuOC44LTcuOCwxLjctMi4xLjktMy43LDIuMi00LjgsNC0xLjEsMS44LTIsNC4xLTIuNCw3LjEtLjUsMy0uNyw2LjctLjcsMTEuMnY5aC05Ljl2MTEuOGg5Ljl2NjEuNGgxNC4zdi02MS40aDEyLjh2LTExLjhaTTY4My4zLDMwNy41Yy0xLjUuNC0zLjUuNy01LjgsMS4xLTIuMy4zLTQuOC42LTcuMy44LTIuNS4yLTUuMS4zLTcuNy4zLTUuMiwwLTkuNC0uNS0xMi42LTEuNC0zLjMtLjktNS44LTIuMy03LjctNC4yLTEuOS0xLjktMy4zLTQuMy00LjItNy4yLS45LTIuOS0xLjUtNi41LTEuNy0xMC42LS4yLTQuMi0uNC04LjktLjQtMTQuMXMuMi0xMywuNi0xNy44Yy40LTQuOCwxLjUtOC43LDMuMi0xMS42LDEuNy0yLjksNC4zLTUsNy43LTYuNCwzLjQtMS4zLDguMS0yLDE0LjEtMnM4LjYuNSwxMS42LDEuNGMzLC45LDUuMywyLjMsNyw0LjIsMS43LDEuOSwyLjksNC4zLDMuNyw3LjIuNywzLDEuMSw2LjUsMS4zLDEwLjcuMSw0LjIuMiw4LjkuMiwxNC4zdjQuM2gtMzUuNGMwLDQuOS4yLDguNy41LDExLjYuMywyLjksMSw1LDIuMSw2LjUsMS4xLDEuNSwyLjYsMi40LDQuNywyLjksMi4xLjQsNC45LjYsOC40LjZzMy41LDAsNS4zLS4xYzEuOCwwLDMuOC0uMyw1LjktLjUsMi4yLS4yLDQuMy0uNSw2LjUtLjh2MTFaTTY0OS45LDI2Ni44aDIxLjljMC00LjgtLjEtOC42LS40LTExLjQtLjMtMi44LS44LTQuOS0xLjUtNi4zLS43LTEuNC0xLjgtMi4zLTMuMi0yLjctMS40LS40LTMuMi0uNi01LjUtLjZzLTQuNC4yLTUuOS43Yy0xLjYuNS0yLjcsMS41LTMuNSwyLjktLjgsMS41LTEuMywzLjYtMS41LDYuNC0uMiwyLjgtLjQsNi41LS40LDExWk03MzYsMzA0LjhjMS45LTEuOCwzLjItNC4xLDQuMS02LjkuOS0yLjgsMS4zLTYuNCwxLjMtMTAuN3MtLjYtMTAuMy0xLjYtMTMuMWMtMS4xLTIuOC0yLjYtNC43LTQuNS01LjctMS45LTEtNC0xLjYtNi4zLTEuOWwtMTIuMy0xLjdjLTEuOC0uMy0zLjItLjctNC0xLjMtLjktLjYtMS40LTEuNS0xLjYtMi44LS4yLTEuMy0uNC0zLjEtLjQtNS40cy40LTQuNywxLjEtNmMuOC0xLjMsMi0yLjMsMy42LTIuOCwxLjYtLjUsMy44LS44LDYuNS0uOHM0LjEsMCw1LjkuMWMxLjksMCwzLjcuMiw1LjQuNCwxLjguMiwzLjUuNSw1LjEuOXYtMTFjLTEuMy0uNC0zLS43LTUuMS0xLTIuMS0uMy00LjItLjUtNi41LS43LTIuMy0uMi00LjUtLjMtNi42LS4zLTMuOSwwLTcuMy4zLTEwLjIsMS0yLjkuNy01LjMsMS44LTcuMywzLjUtMiwxLjctMy41LDMuOS00LjQsNi43LTEsMi44LTEuNCw2LjMtMS40LDEwLjVzLjMsOC4yLDEsMTFjLjcsMi45LDEuOCw1LDMuNCw2LjQsMS42LDEuNCwzLjgsMi4zLDYuNSwyLjhsMTMuNSwyYzIuMi4zLDMuOC43LDQuNywxLjMuOS42LDEuNSwxLjUsMS42LDIuOC4yLDEuMy4zLDMuMi4zLDUuOHMtLjMsNC42LS45LDZjLS42LDEuNC0xLjcsMi41LTMuNCwzLjEtMS42LjYtNCwuOS03LjIuOXMtMy4xLDAtNC42LDBjLTEuNSwwLTMtLjEtNC40LS4yLTEuNCwwLTIuOS0uMi00LjQtLjQtMS41LS4yLTIuOS0uNC00LjQtLjZ2MTAuOWMxLjguNCwzLjkuNyw2LjMsMSwyLjQuMyw0LjguNSw3LjMuNywyLjUuMiw0LjguMyw3LC4zLDMuOSwwLDcuMy0uNCwxMC0xLjEsMi44LS43LDUuMS0yLDctMy43Wk03OTQuNywyOThjLjktMi44LDEuMy02LjQsMS4zLTEwLjdzLS42LTEwLjMtMS42LTEzLjFjLTEuMS0yLjgtMi42LTQuNy00LjUtNS43LTEuOS0xLTQtMS42LTYuMy0xLjlsLTEyLjMtMS43Yy0xLjgtLjMtMy4yLS43LTQtMS4zLS45LS42LTEuNC0xLjUtMS42LTIuOC0uMi0xLjMtLjQtMy4xLS40LTUuNHMuNC00LjcsMS4xLTZjLjgtMS4zLDItMi4zLDMuNi0yLjgsMS42LS41LDMuOC0uOCw2LjUtLjhzNC4xLDAsNS45LjFjMS45LDAsMy43LjIsNS40LjQsMS44LjIsMy41LjUsNS4xLjl2LTExYy0xLjMtLjQtMy0uNy01LjEtMS0yLjEtLjMtNC4yLS41LTYuNS0uNy0yLjMtLjItNC41LS4zLTYuNi0uMy0zLjksMC03LjMuMy0xMC4yLDEtMi45LjctNS4zLDEuOC03LjMsMy41LTIsMS43LTMuNSwzLjktNC40LDYuNy0xLDIuOC0xLjQsNi4zLTEuNCwxMC41cy4zLDguMiwxLDExYy43LDIuOSwxLjgsNSwzLjQsNi40LDEuNiwxLjQsMy44LDIuMyw2LjUsMi44bDEzLjUsMmMyLjIuMywzLjguNyw0LjcsMS4zLjkuNiwxLjUsMS41LDEuNiwyLjguMiwxLjMuMywzLjIuMyw1LjhzLS4zLDQuNi0uOSw2Yy0uNiwxLjQtMS43LDIuNS0zLjQsMy4xLTEuNi42LTQsLjktNy4yLjlzLTMuMSwwLTQuNiwwYy0xLjUsMC0zLS4xLTQuNC0uMi0xLjQsMC0yLjktLjItNC40LS40LTEuNS0uMi0yLjktLjQtNC40LS42djEwLjljMS44LjQsMy45LjcsNi4zLDEsMi40LjMsNC44LjUsNy4zLjcsMi41LjIsNC44LjMsNywuMywzLjksMCw3LjMtLjQsMTAtMS4xLDIuOC0uNyw1LjEtMiw3LTMuNywxLjktMS44LDMuMi00LjEsNC4xLTYuOVpNODIzLjQsMjM1LjRoLTE0LjJ2NzMuMWgxNC4ydi03My4xWk04MDguOSwyMTYuNWgxNC42di0xNC41aC0xNC42djE0LjVaTTg2My42LDMwOS42Yy00LjksMC04LjktLjMtMTItMS0zLjItLjctNS43LTEuOC03LjUtMy41LTEuOS0xLjctMy4zLTMuOS00LjItNi44LS45LTIuOS0xLjUtNi41LTEuOC0xMC44LS4zLTQuMy0uNC05LjUtLjQtMTUuNnMuMS0xMS4zLjQtMTUuNmMuMy00LjMuOS03LjksMS44LTEwLjguOS0yLjksMi4zLTUuMSw0LjItNi44LDEuOS0xLjcsNC40LTIuOCw3LjUtMy41LDMuMi0uNyw3LjItMSwxMi0xczguNC4zLDExLjUsMWMzLjEuNyw1LjYsMS44LDcuNSwzLjUsMS45LDEuNywzLjIsMy45LDQuMSw2LjguOSwyLjksMS40LDYuNSwxLjcsMTAuOC4zLDQuMy40LDkuNS40LDE1LjZzLS4xLDExLjMtLjQsMTUuNmMtLjMsNC4zLS45LDcuOS0xLjcsMTAuOC0uOSwyLjktMi4yLDUuMS00LjEsNi44LTEuOSwxLjctNC40LDIuOC03LjUsMy41LTMuMS43LTcsMS0xMS41LDFaTTg2My40LDI5Ny45YzIuOCwwLDQuOS0uMyw2LjUtLjksMS41LS42LDIuNy0xLjcsMy40LTMuNS43LTEuOCwxLjEtNC40LDEuMy03LjguMS0zLjQuMi04LC4yLTEzLjhzMC0xMC4zLS4yLTEzLjhjLS4xLTMuNC0uNi02LTEuMy03LjgtLjctMS44LTEuOC0yLjktMy40LTMuNS0xLjUtLjYtMy43LS45LTYuNi0uOXMtNC45LjMtNi41LjljLTEuNS42LTIuNywxLjctMy40LDMuNS0uNywxLjgtMS4xLDQuNC0xLjMsNy44LS4xLDMuNC0uMiw4LS4yLDEzLjhzMCwxMC4zLjIsMTMuOGMuMSwzLjQuNiw2LDEuMyw3LjguNywxLjgsMS44LDIuOSwzLjQsMy41LDEuNS42LDMuNy45LDYuNi45Wk05MzYuOCwyNTAuM2MuNywxLjMsMS4xLDMuMywxLjMsNS45LjIsMi42LjMsNi4yLjMsMTAuOHY0MS40aDE0LjN2LTQ2LjljMC00LjgtLjItOC45LS42LTEyLjMtLjQtMy40LTEuMy02LjItMi41LTguNS0xLjItMi4yLTMuMS0zLjktNS40LTUtMi40LTEuMS01LjUtMS42LTkuMy0xLjZzLTUuNy40LTgsMS4yYy0yLjIuOC00LjEsMi01LjYsMy41LTEuNSwxLjUtMi43LDMuNS0zLjUsNmgtLjlsLS42LTkuNmgtMTN2NzMuMWgxNC4ydi0zOGMwLTQuMSwwLTcuNi4zLTEwLjUuMi0yLjkuNi01LjQsMS4zLTcuMy43LTIsMS43LTMuNCwzLjItNC40LDEuNS0xLDMuNS0xLjQsNi4xLTEuNHM0LjEuMiw1LjQuN2MxLjMuNSwyLjMsMS40LDMsMi43Wk0xMDEzLjgsMjUxLjdjLjMsMy4yLjUsNi45LjUsMTEuMnY0NS42aC0xM2wtLjYtOS41aC0xYy0xLDIuOC0yLjIsNC45LTMuOSw2LjUtMS42LDEuNS0zLjUsMi42LTUuNywzLjItMi4yLjYtNC42LjktNy4yLjktNC4yLDAtNy42LS43LTEwLjMtMi4yLTIuNi0xLjQtNC42LTMuNy01LjgtNi45LTEuMi0zLjItMS45LTcuNC0xLjktMTIuNnMuNi0xMC4yLDEuOC0xMy4zYzEuMi0zLjIsMy4yLTUuNCw1LjktNi43LDIuNy0xLjMsNi40LTEuOSwxMS0xLjloMy4zYzEuMiwwLDIuNiwwLDMuOSwwLDEuNCwwLDIuOC4xLDQuNC4yLDEuNSwwLDMuMi4yLDQuOS4zdi00LjNjMC0zLjgtLjItNi45LS42LTkuMS0uNC0yLjItMS4xLTMuOS0yLjItNC45LTEuMS0xLTIuNi0xLjYtNC41LTEuOS0yLS4zLTQuNS0uNC03LjUtLjRzLTMsMC00LjcuMWMtMS43LDAtMy42LjItNS42LjQtMiwuMi00LjIuNC02LjYuN3YtMTAuOWMzLjMtLjgsNi44LTEuMywxMC4zLTEuNiwzLjUtLjMsNy4xLS41LDEwLjgtLjVzNy45LjMsMTAuOC45YzIuOS42LDUuMywxLjYsNy4yLDMsMS45LDEuNCwzLjMsMy4yLDQuMyw1LjQsMSwyLjIsMS43LDQuOSwyLDguMVpNMTAwMC4xLDI3NS43aC0xMi41Yy0yLjYsMC00LjUuMy01LjcuOS0xLjIuNi0yLDEuNy0yLjQsMy40LS4zLDEuNi0uNSwzLjktLjUsNi45cy4yLDUuMi42LDYuOGMuNCwxLjYsMS4zLDIuNywyLjcsMy4yLDEuNC42LDMuNC45LDYuMS45czMuMS0uMSw0LjMtLjRjMS4yLS4yLDIuMy0uNywzLjItMS40LjktLjcsMS42LTEuNywyLjItMi45LjctMS40LDEuMS0zLjMsMS40LTUuNS4zLTIuMi40LTQuOC40LTcuNXYtNC4zWk0xMDMwLjUsMjAydjEwNi41aDE0LjJ2LTEwNi41aC0xNC4yWk0xMDkwLDMwOC41aDQ3LjV2LTEzaC0zMi40di0zMC40aDI4LjF2LTEyLjloLTI4LjF2LTI5LjJoMzIuNHYtMTNoLTQ3LjV2OTguNlpNMTIwMCwyMDJ2MTA2LjVoLTEzLjJsLS42LTkuNWgtLjljLS44LDIuOC0yLDQuOS0zLjYsNi41LTEuNiwxLjUtMy41LDIuNi01LjcsMy4yLTIuMi42LTQuNi45LTcuMi45LTMuOCwwLTctLjYtOS41LTEuNy0yLjUtMS4xLTQuNS0zLjEtNi01LjktMS41LTIuOC0yLjUtNi43LTMuMS0xMS41LS42LTQuOS0uOS0xMS0uOS0xOC40cy4zLTEzLjUuOS0xOC40Yy42LTQuOSwxLjYtOC44LDMuMS0xMS42LDEuNS0yLjgsMy41LTQuOCw1LjktNiwyLjUtMS4yLDUuNi0xLjgsOS41LTEuOHM1LjQuMyw3LjUuOWMyLjEuNiwzLjksMS42LDUuMywzLDEuNCwxLjQsMi42LDMuMiwzLjQsNS41aC45di00MS43aDE0LjJaTTExODUuOCwyNzEuNGMwLTMuOCwwLTctLjItOS42LS4xLTIuNi0uNC00LjYtLjYtNi4yLS41LTMuMi0xLjUtNS41LTMuMi02LjktMS42LTEuMy00LTItNy4yLTJzLTQuMy4yLTUuNy43Yy0xLjQuNS0yLjUsMS41LTMuMywzLjItLjgsMS42LTEuMyw0LjEtMS42LDcuNS0uMywzLjQtLjQsOC0uNCwxMy44cy4xLDEwLjUuNCwxMy45Yy4yLDMuNC44LDUuOSwxLjYsNy41LjgsMS42LDIsMi42LDMuNCwzLDEuNS40LDMuNS42LDUuOS42czQuOS0uNSw2LjUtMS41YzEuNS0xLDIuNi0yLjgsMy4yLTUuNC42LTIsLjktNC40LDEuMS03LjMuMS0yLjkuMi02LjcuMi0xMS41Wk0xMjUxLjMsMjczLjRjMCw0LjgtLjEsOC43LS40LDExLjgtLjMsMy4xLS44LDUuNS0xLjUsNy4yLS43LDEuNy0xLjgsMi45LTMuMywzLjYtMS41LjctMy40LDEuMS01LjgsMS4xcy0zLjgtLjItNS4xLS42Yy0xLjMtLjQtMi4zLTEuMi0zLTIuNS0uNy0xLjMtMS4yLTMuMy0xLjUtNi0uMy0yLjctLjQtNi40LS40LTExLjF2LTQxLjRoLTE0LjJ2NDYuOWMwLDQuNi4yLDguNi42LDEyLjEuNCwzLjUsMS4zLDYuNCwyLjUsOC42LDEuMiwyLjIsMy4xLDMuOSw1LjQsNSwyLjQsMS4xLDUuNSwxLjYsOS4zLDEuNnM1LjQtLjQsNy43LTEuMWMyLjItLjcsNC4yLTEuOSw1LjctMy40LDEuNi0xLjYsMi44LTMuNywzLjctNi4yaC45bC40LDkuNmgxMy4ydi03My4xaC0xNC4ydjM4Wk0xMzA3LjQsMjk3LjljLTIuOCwwLTUtLjMtNi44LS45LTEuOC0uNi0zLjEtMS44LTQtMy42LS45LTEuOC0xLjUtNC40LTEuOS03LjktLjMtMy40LS41LTgtLjUtMTMuNnMuMi0xMCwuNS0xMy41Yy4zLTMuNC45LTYsMS44LTcuOC45LTEuOCwyLjItMywzLjktMy43LDEuOC0uNyw0LTEsNi44LTFzNC4yLDAsNi4yLjNjMi4xLjIsNCwuNSw1LjgsMXYtMTFjLTEuOS0uNi00LjMtMS4xLTcuMi0xLjQtMi45LS40LTUuNy0uNi04LjQtLjYtNCwwLTcuNC40LTEwLjIsMS4yLTIuOC44LTUuMSwyLjEtNi45LDMuOS0xLjgsMS44LTMuMiw0LjItNC4yLDcuMS0xLDIuOS0xLjYsNi41LTEuOSwxMC43LS4zLDQuMi0uNSw5LjEtLjUsMTQuOHMuMSwxMC4xLjQsMTQuMmMuMyw0LjEuOSw3LjYsMS43LDEwLjYuOSwzLDIuMiw1LjQsMy45LDcuMywxLjgsMS45LDQuMSwzLjMsNyw0LjIsMi45LjksNi41LDEuNCwxMC44LDEuNHM1LjYtLjIsOC4yLS41YzIuNi0uMyw1LjItLjgsNy43LTEuNXYtMTFjLTEuOC40LTMuOC43LTUuOC45LTIuMS4yLTQuMi40LTYuNS40Wk0xMzc4LjMsMjYyLjl2NDUuNmgtMTNsLS42LTkuNWgtMWMtMSwyLjgtMi4yLDQuOS0zLjksNi41LTEuNiwxLjUtMy41LDIuNi01LjcsMy4yLTIuMi42LTQuNi45LTcuMi45LTQuMiwwLTcuNi0uNy0xMC4zLTIuMi0yLjYtMS40LTQuNi0zLjctNS44LTYuOS0xLjItMy4yLTEuOS03LjQtMS45LTEyLjZzLjYtMTAuMiwxLjgtMTMuM2MxLjItMy4yLDMuMi01LjQsNS45LTYuNywyLjctMS4zLDYuNC0xLjksMTEtMS45aDMuM2MxLjIsMCwyLjYsMCwzLjksMCwxLjQsMCwyLjguMSw0LjQuMiwxLjUsMCwzLjIuMiw0LjkuM3YtNC4zYzAtMy44LS4yLTYuOS0uNi05LjEtLjQtMi4yLTEuMS0zLjktMi4yLTQuOS0xLjEtMS0yLjYtMS42LTQuNS0xLjktMi0uMy00LjUtLjQtNy41LS40cy0zLDAtNC43LjFjLTEuNywwLTMuNi4yLTUuNi40LTIsLjItNC4yLjQtNi42Ljd2LTEwLjljMy4zLS44LDYuOC0xLjMsMTAuMy0xLjYsMy41LS4zLDcuMS0uNSwxMC44LS41czcuOS4zLDEwLjguOWMyLjkuNiw1LjMsMS42LDcuMiwzLDEuOSwxLjQsMy4zLDMuMiw0LjMsNS40LDEsMi4yLDEuNyw0LjksMiw4LjEuMywzLjIuNSw2LjkuNSwxMS4yWk0xMzY0LjEsMjc1LjdoLTEyLjVjLTIuNiwwLTQuNS4zLTUuNy45LTEuMi42LTIsMS43LTIuNCwzLjQtLjMsMS42LS41LDMuOS0uNSw2LjlzLjIsNS4yLjYsNi44Yy40LDEuNiwxLjMsMi43LDIuNywzLjIsMS40LjYsMy40LjksNi4xLjlzMy4xLS4xLDQuMy0uNGMxLjItLjIsMi4zLS43LDMuMi0xLjQuOS0uNywxLjYtMS43LDIuMi0yLjkuNy0xLjQsMS4xLTMuMywxLjQtNS41LjMtMi4yLjQtNC44LjQtNy41di00LjNaTTE0MTIuNywyMTQuMmgtMTQuNXYyMS4yaC05Ljd2MTEuOGg5Ljd2NjEuNGgxNC41di02MS40aDExLjl2LTExLjhoLTExLjl2LTIxLjJaTTE0MzYsMzA4LjVoMTQuMnYtNzMuMWgtMTQuMnY3My4xWk0xNDM1LjcsMjE2LjVoMTQuNnYtMTQuNWgtMTQuNnYxNC41Wk0xNTE1LjcsMjcxLjljMCw2LjEtLjEsMTEuMy0uNCwxNS42LS4zLDQuMy0uOSw3LjktMS43LDEwLjgtLjksMi45LTIuMiw1LjEtNC4xLDYuOC0xLjksMS43LTQuNCwyLjgtNy41LDMuNS0zLjEuNy03LDEtMTEuNSwxcy04LjktLjMtMTItMWMtMy4yLS43LTUuNy0xLjgtNy41LTMuNS0xLjktMS43LTMuMy0zLjktNC4yLTYuOC0uOS0yLjktMS41LTYuNS0xLjgtMTAuOC0uMy00LjMtLjQtOS41LS40LTE1LjZzLjEtMTEuMy40LTE1LjZjLjMtNC4zLjktNy45LDEuOC0xMC44LjktMi45LDIuMy01LjEsNC4yLTYuOCwxLjktMS43LDQuNC0yLjgsNy41LTMuNSwzLjItLjcsNy4yLTEsMTItMXM4LjQuMywxMS41LDFjMy4xLjcsNS42LDEuOCw3LjUsMy41LDEuOSwxLjcsMy4yLDMuOSw0LjEsNi44czEuNCw2LjUsMS43LDEwLjhjLjMsNC4zLjQsOS41LjQsMTUuNlpNMTUwMS41LDI3MS45YzAtNS43LDAtMTAuMy0uMi0xMy44LS4xLTMuNC0uNi02LTEuMy03LjgtLjctMS44LTEuOC0yLjktMy40LTMuNS0xLjUtLjYtMy43LS45LTYuNi0uOXMtNC45LjMtNi41LjljLTEuNS42LTIuNywxLjctMy40LDMuNS0uNywxLjgtMS4xLDQuNC0xLjMsNy44cy0uMiw4LS4yLDEzLjgsMCwxMC4zLjIsMTMuOC42LDYsMS4zLDcuOGMuNywxLjgsMS44LDIuOSwzLjQsMy41LDEuNS42LDMuNy45LDYuNi45czQuOS0uMyw2LjUtLjljMS41LS42LDIuNy0xLjcsMy40LTMuNS43LTEuOCwxLjEtNC40LDEuMy03LjguMS0zLjQuMi04LC4yLTEzLjhaTTE1NzYuMywyNDAuOWMtMS4yLTIuMi0zLjEtMy45LTUuNC01LTIuNC0xLjEtNS41LTEuNi05LjMtMS42cy01LjcuNC04LDEuMmMtMi4yLjgtNC4xLDItNS42LDMuNS0xLjUsMS41LTIuNywzLjUtMy41LDZoLS45bC0uNi05LjZoLTEzdjczLjFoMTQuMnYtMzhjMC00LjEsMC03LjYuMy0xMC41LjItMi45LjYtNS40LDEuMy03LjMuNy0yLDEuNy0zLjQsMy4yLTQuNCwxLjUtMSwzLjUtMS40LDYuMS0xLjRzNC4xLjIsNS40LjdjMS4zLjUsMi4zLDEuNCwzLDIuNy43LDEuMywxLjEsMy4zLDEuMyw1LjkuMiwyLjYuMyw2LjIuMywxMC44djQxLjRoMTQuM3YtNDYuOWMwLTQuOC0uMi04LjktLjYtMTIuMy0uNC0zLjQtMS4zLTYuMi0yLjUtOC41Wk00MjIuOSwxNjEuMmMuNiwyLjEsMS41LDMuOCwyLjcsNSwxLjIsMS4yLDIuOCwyLjEsNC44LDIuNywyLC42LDQuNS45LDcuNC45czIuMSwwLDMuMy0uMmMxLjEtLjEsMi4yLS4yLDMuMy0uNCwxLjEtLjIsMS45LS40LDIuNy0uN3YtNy45Yy0xLC4yLTIuMS4zLTMuMy40LTEuMi4xLTIuNS4yLTMuOS4ycy0zLS4xLTQtLjNjLTEtLjItMS44LS43LTIuNC0xLjQtLjYtLjctMS0xLjctMS4zLTMuMS0uMy0xLjQtLjQtMy4yLS41LTUuNCwwLTIuMi0uMS01LjEtLjEtOC41czAtNi4yLjEtOC41YzAtMi4yLjItNC4xLjUtNS40LjMtMS40LjctMi40LDEuMy0zLjEuNi0uNywxLjQtMS4xLDIuNC0xLjRzMi4zLS4zLDMuOS0uMywxLjIsMCwxLjksMGMuNywwLDEuNSwwLDIuNC4yLjkuMSwxLjcuMiwyLjcuM3YtNy45Yy0uNi0uMy0xLjQtLjUtMi40LS43LTEtLjItMi4xLS4zLTMuMy0uNC0xLjItLjEtMi4zLS4yLTMuNC0uMi0yLjksMC01LjQuMy03LjQuOC0yLC41LTMuNiwxLjQtNC44LDIuNy0xLjIsMS4zLTIuMSwyLjktMi44LDUtLjYsMi4xLTEsNC43LTEuMiw3LjctLjIsMy4xLS4zLDYuNy0uMywxMXMuMSw3LjguMywxMC45Yy4yLDMuMS42LDUuNywxLjIsNy44Wk00ODAuNywxNDkuM2MwLDMuMywwLDYtLjIsOC40LS4yLDIuMy0uNSw0LjMtMSw1LjktLjUsMS42LTEuMywyLjgtMi4zLDMuNy0xLjEuOS0yLjUsMS41LTQuMiwxLjktMS43LjQtMy45LjUtNi41LjVzLTQuOS0uMi02LjctLjVjLTEuOC0uNC0zLjItMS00LjItMS45LTEuMS0uOS0xLjgtMi4xLTIuMy0zLjctLjUtMS42LS44LTMuNS0xLTUuOS0uMi0yLjMtLjMtNS4xLS4zLTguNHMwLTYuMS4zLTguNGMuMi0yLjMuNS00LjMsMS01LjguNS0xLjUsMS4zLTIuOCwyLjMtMy42LDEuMS0uOSwyLjUtMS41LDQuMi0xLjksMS44LS40LDQtLjYsNi43LS42czQuNy4yLDYuNS41YzEuNy40LDMuMSwxLDQuMiwxLjksMS4xLjksMS44LDIuMSwyLjMsMy43LjUsMS41LjgsMy41LDEsNS44LjIsMi4zLjIsNS4xLjIsOC40Wk00NzEuMiwxNDkuM2MwLTIuOCwwLTUuMS0uMS02LjgsMC0xLjctLjMtMy0uNi0zLjgtLjMtLjktLjgtMS40LTEuNC0xLjctLjYtLjMtMS42LS40LTIuOC0uNHMtMi4xLjEtMi44LjRjLS42LjMtMS4xLjgtMS40LDEuNy0uMy45LS41LDIuMS0uNSwzLjgsMCwxLjcsMCw0LDAsNi45czAsNS4xLDAsNi44YzAsMS43LjIsMywuNSwzLjguMy45LjgsMS40LDEuNCwxLjcuNy4zLDEuNi40LDIuOC40czIuMS0uMSwyLjgtLjRjLjYtLjMsMS4xLS44LDEuNC0xLjcuMy0uOS41LTIuMS42LTMuOCwwLTEuNy4xLTQsLjEtNi44Wk00OTYuNiwxMTEuNWgtOS41djU3LjZoOS41di01Ny42Wk01MTMuNiwxMTEuNWgtOS41djU3LjZoOS41di01Ny42Wk01NDcuOCwxNTJoLTE4LjNjMCwyLjMsMCw0LjEuMiw1LjQuMSwxLjMuNSwyLjQsMSwzLC41LjcsMS4zLDEuMSwyLjMsMS4zLDEsLjIsMi40LjMsNC4yLjNzMS44LDAsMi44LDBjMSwwLDItLjEsMy4yLS4yLDEuMi0uMSwyLjQtLjIsMy42LS4zdjcuMWMtLjguMi0xLjkuNC0zLjIuNi0xLjMuMi0yLjcuMy00LjEuNC0xLjQuMS0yLjkuMi00LjMuMi0yLjksMC01LjMtLjMtNy4xLS44LTEuOC0uNS0zLjMtMS4zLTQuNC0yLjMtMS4xLTEtMS45LTIuNC0yLjQtNC0uNS0xLjYtLjgtMy41LS45LTUuNy0uMS0yLjItLjItNC43LS4yLTcuNXMuMS02LjkuNC05LjVjLjMtMi42LjktNC43LDEuOC02LjMuOS0xLjYsMi4zLTIuOCw0LjMtMy41LDEuOS0uNyw0LjUtMS4xLDcuOS0xLjFzNC45LjIsNi41LjdjMS43LjUsMywxLjIsNCwyLjIsMSwxLDEuNiwyLjMsMiwzLjkuNCwxLjYuNiwzLjUuNyw1LjguMSwyLjIuMiw0LjguMiw3Ljd2Mi42Wk01MzguOCwxNDYuMmMwLTIuMiwwLTQtLjItNS4zLS4xLTEuMy0uMy0yLjMtLjYtMi45LS4zLS42LS43LTEuMS0xLjQtMS4zLS42LS4yLTEuNC0uMy0yLjQtLjNzLTIsLjEtMi42LjNjLS42LjItMS4xLjctMS41LDEuNC0uMy43LS41LDEuNy0uNiwyLjksMCwxLjMtLjEsMy0uMSw1LjFoOS4zWk01ODEuOCwxMjkuNnYzNC42YzAsMy41LS4xLDYuNS0uNCw5LjEtLjMsMi42LS45LDQuOC0xLjgsNi41LTEsMS43LTIuNSwzLTQuNSwzLjgtMi4xLjgtNC45LDEuMi04LjYsMS4ycy0yLjgsMC00LjEsMGMtMS4zLDAtMi42LS4xLTMuNy0uMy0xLjItLjEtMi4yLS4zLTMuMi0uNXYtN2MuOCwwLDEuNiwwLDIuNCwwczEuOCwwLDIuOCwwYzEsMCwyLjIsMCwzLjUsMCwyLDAsMy41LS4xLDQuNi0uNCwxLjEtLjMsMS45LS44LDIuNC0xLjUuNS0uOC44LTEuOC45LTMuMi4xLTEuNC4yLTMuMi4yLTUuNHYtMi42aC0uNmMtLjQsMS4xLTEsMi4xLTEuNywyLjgtLjguNy0xLjcsMS4zLTIuNywxLjYtMS4xLjMtMi4zLjUtMy44LjVzLTMuNi0uMy00LjktMWMtMS4zLS42LTIuNC0xLjctMy4xLTMuMy0uNy0xLjUtMS4zLTMuNi0xLjYtNi4xLS4zLTIuNi0uNS01LjgtLjUtOS42cy4yLTcuNC41LTEwLjFjLjQtMi42LjktNC43LDEuNy02LjEuOC0xLjQsMS44LTIuNSwzLjEtMywxLjMtLjYsMi45LS45LDQuOC0uOXMyLjUuMiwzLjYuNWMxLjEuMywyLjEuOSwyLjksMS43LjguOCwxLjQsMS45LDEuOSwzLjNoLjZsLjMtNC45aDlaTTU3Mi4zLDE0OWMwLTEuOCwwLTMuNC0uMS00LjgsMC0xLjQtLjItMi40LS4zLTMuMS0uMy0xLjUtLjctMi41LTEuNC0zLjEtLjYtLjYtMS42LS45LTMtLjlzLTEuOS4xLTIuNi4zYy0uNi4yLTEuMS43LTEuNCwxLjUtLjMuOC0uNSwyLS42LDMuNSwwLDEuNi0uMSwzLjctLjEsNi41czAsNSwuMSw2LjZjMCwxLjYuMywyLjguNiwzLjUuMy43LjgsMS4yLDEuNSwxLjQuNi4yLDEuNS4zLDIuNS4zczIuMi0uMiwyLjktLjdjLjYtLjUsMS4xLTEuMywxLjMtMi42LjItLjguMy0xLjkuNC0zLjMsMC0xLjQuMS0zLjIuMS01LjJaTTYxNS45LDE1MmgtMTguM2MwLDIuMywwLDQuMS4yLDUuNC4xLDEuMy41LDIuNCwxLDMsLjUuNywxLjMsMS4xLDIuMywxLjMsMSwuMiwyLjQuMyw0LjIuM3MxLjgsMCwyLjgsMGMxLDAsMi0uMSwzLjItLjIsMS4yLS4xLDIuNC0uMiwzLjYtLjN2Ny4xYy0uOC4yLTEuOS40LTMuMi42LTEuMy4yLTIuNy4zLTQuMS40LTEuNC4xLTIuOS4yLTQuMy4yLTIuOSwwLTUuMy0uMy03LjEtLjgtMS44LS41LTMuMy0xLjMtNC40LTIuMy0xLjEtMS0xLjktMi40LTIuNC00LS41LTEuNi0uOC0zLjUtLjktNS43LS4xLTIuMi0uMi00LjctLjItNy41cy4xLTYuOS40LTkuNWMuMy0yLjYuOS00LjcsMS44LTYuMy45LTEuNiwyLjMtMi44LDQuMy0zLjUsMS45LS43LDQuNS0xLjEsNy45LTEuMXM0LjkuMiw2LjUuN2MxLjcuNSwzLDEuMiw0LDIuMiwxLDEsMS42LDIuMywyLDMuOS40LDEuNi42LDMuNS43LDUuOC4xLDIuMi4yLDQuOC4yLDcuN3YyLjZaTTYwNi45LDE0Ni4yYzAtMi4yLDAtNC0uMi01LjMtLjEtMS4zLS4zLTIuMy0uNi0yLjktLjMtLjYtLjctMS4xLTEuNC0xLjMtLjYtLjItMS40LS4zLTIuNC0uM3MtMiwuMS0yLjYuM2MtLjYuMi0xLjEuNy0xLjUsMS40LS4zLjctLjUsMS43LS42LDIuOSwwLDEuMy0uMSwzLS4xLDUuMWg5LjNaTTY2NC42LDE0OS4zYzAsMy4zLDAsNi0uMiw4LjQtLjIsMi4zLS41LDQuMy0xLDUuOS0uNSwxLjYtMS4zLDIuOC0yLjMsMy43LTEuMS45LTIuNSwxLjUtNC4yLDEuOS0xLjcuNC0zLjkuNS02LjUuNXMtNC45LS4yLTYuNy0uNWMtMS44LS40LTMuMi0xLTQuMi0xLjktMS4xLS45LTEuOC0yLjEtMi4zLTMuNy0uNS0xLjYtLjgtMy41LTEtNS45LS4yLTIuMy0uMy01LjEtLjMtOC40czAtNi4xLjMtOC40Yy4yLTIuMy41LTQuMywxLTUuOC41LTEuNSwxLjMtMi44LDIuMy0zLjYsMS4xLS45LDIuNS0xLjUsNC4yLTEuOSwxLjgtLjQsNC0uNiw2LjctLjZzNC43LjIsNi41LjVjMS43LjQsMy4xLDEsNC4yLDEuOSwxLjEuOSwxLjgsMi4xLDIuMywzLjcuNSwxLjUuOCwzLjUsMSw1LjguMiwyLjMuMiw1LjEuMiw4LjRaTTY1NS4xLDE0OS4zYzAtMi44LDAtNS4xLS4xLTYuOCwwLTEuNy0uMy0zLS42LTMuOC0uMy0uOS0uOC0xLjQtMS40LTEuNy0uNi0uMy0xLjYtLjQtMi44LS40cy0yLjEuMS0yLjguNGMtLjYuMy0xLjEuOC0xLjQsMS43LS4zLjktLjUsMi4xLS41LDMuOCwwLDEuNywwLDQsMCw2LjlzMCw1LjEsMCw2LjhjMCwxLjcuMiwzLC41LDMuOC4zLjkuOCwxLjQsMS40LDEuNy43LjMsMS42LjQsMi44LjRzMi4xLS4xLDIuOC0uNGMuNi0uMywxLjEtLjgsMS40LTEuNy4zLS45LjUtMi4xLjYtMy44LDAtMS43LjEtNCwuMS02LjhaTTY3My42LDE2OS4xaDkuNnYtMzEuOWg2Ljd2LTcuN2gtNi43di01LjNjMC0xLjQsMC0yLjUuMy0zLjMuMi0uOC41LTEuNCwxLTEuNy41LS40LDEuMS0uNiwyLS43LjktLjEsMi0uMiwzLjQtLjJ2LTYuOWMtMi44LDAtNS4yLDAtNy4xLjItMS45LjItMy41LjUtNC43LDEuMS0xLjIuNi0yLjEsMS40LTIuOCwyLjQtLjYsMS4xLTEuMSwyLjUtMS4zLDQuMi0uMiwxLjgtLjMsNC0uMyw2Ljd2My40aC01djcuN2g1djMxLjlaIi8+Cjwvc3ZnPg==" alt="Stevens CPE" class="logo" />
+
+  <h1>Strategic Market<br>Blueprint</h1>
+  <p class="subtitle">Generated Market Analysis &amp; Portfolio Blueprint</p>
+  <p class="source">Data Source: BLS Employment Projections 2024&ndash;2034</p>
+  <p class="date-line">February 11, 2026</p>
+
+  <!-- Asterism gesture (brand Section 2.4) -->
+  <svg class="asterism-svg" viewBox="0 0 180 180" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="fadeH" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#7F7F7F" stop-opacity="1"/>
+        <stop offset="100%" stop-color="#7F7F7F" stop-opacity="0"/>
+      </linearGradient>
+      <linearGradient id="fadeD" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0%" stop-color="#363D45" stop-opacity="0.9"/>
+        <stop offset="100%" stop-color="#363D45" stop-opacity="0"/>
+      </linearGradient>
+    </defs>
+    <line x1="90" y1="90" x2="180" y2="90" stroke="url(#fadeH)" stroke-width="1"/>
+    <line x1="90" y1="90" x2="90"  y2="0"  stroke="#363D45" stroke-width="1"/>
+    <line x1="90" y1="90" x2="172" y2="52" stroke="#7F7F7F" stroke-width="1"/>
+    <line x1="90" y1="90" x2="172" y2="128" stroke="url(#fadeD)" stroke-width="1"/>
+  </svg>
+
+  <p class="footer-text">Stevens Institute of Technology &nbsp;|&nbsp; College of Professional Education</p>
+</div>
+
+<!-- ═══════════════ STRATEGY ═════════════════════════════════════════ -->
+<section class="section-page" style="padding-top:10px;">
+  <h2 class="section-title">Strategic Product Categorization</h2>
+  <p style="color:var(--dark-gray);max-width:600px;margin-bottom:8px;">
+    Creating tiered product categories suitable for the market based on high-signal domains.
+  </p>
+  <p style="color:var(--red);font-size:8pt;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;">
+    Data Source: Signals from BLS Employment Projections 2024&ndash;2034.
+  </p>
+  <p style="color:var(--dark-gray);font-size:9.5pt;margin-bottom:20px;max-width:620px;line-height:1.6;">
+    Tiered product strategy: launch fast, workforce-aligned <strong style="color:#000">PGCs</strong> to capture
+    high-signal skill demand, then enable stackable pathways into <strong style="color:#000">Master&rsquo;s</strong>
+    programs for depth and credential lift, and into a <strong style="color:#000">Professional Doctorate</strong>
+    for applied leadership and advanced practice within aligned domains.
+  </p>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+    <!-- AI & Data -->
+    <div class="glass" style="padding:16px;border-left:4px solid var(--ai);">
+      <span class="badge b-ai" style="margin-bottom:8px;">AI &amp; Data</span>
+      <div style="font-size:9.5pt;color:var(--dark-gray);margin-top:8px;">
+        <strong style="color:#000;display:block;margin-bottom:3px;">Packaging Cluster</strong>
+        Applied AI, MLOps, Data Science Foundations.
+        <div style="margin-top:8px;font-size:8.5pt;color:var(--gray);">
+          <strong style="color:#000;display:block;margin-bottom:2px;">Evidence Skills</strong>
+          Python, Machine Learning, SQL, Data Visualization.
+        </div>
+      </div>
+    </div>
+    <!-- FinTech -->
+    <div class="glass" style="padding:16px;border-left:4px solid var(--fin);">
+      <span class="badge b-fin" style="margin-bottom:8px;">FinTech</span>
+      <div style="font-size:9.5pt;color:var(--dark-gray);margin-top:8px;">
+        <strong style="color:#000;display:block;margin-bottom:3px;">Packaging Cluster</strong>
+        Quant Finance, AI in Finance, Market Infrastructure.
+        <div style="margin-top:8px;font-size:8.5pt;color:var(--gray);">
+          <strong style="color:#000;display:block;margin-bottom:2px;">Evidence Skills</strong>
+          Risk Management, Financial Modeling, Compliance, Algorithms.
+        </div>
+      </div>
+    </div>
+    <!-- Software -->
+    <div class="glass" style="padding:16px;border-left:4px solid var(--soft);">
+      <span class="badge b-soft" style="margin-bottom:8px;">Software</span>
+      <div style="font-size:9.5pt;color:var(--dark-gray);margin-top:8px;">
+        <strong style="color:#000;display:block;margin-bottom:3px;">Packaging Cluster</strong>
+        Cloud, SRE, Cybersecurity, Agentic Engineering.
+        <div style="margin-top:8px;font-size:8.5pt;color:var(--gray);">
+          <strong style="color:#000;display:block;margin-bottom:2px;">Evidence Skills</strong>
+          Java/Python, System Design, Cloud Security, DevOps.
+        </div>
+      </div>
+    </div>
+    <!-- Business -->
+    <div class="glass" style="padding:16px;border-left:4px solid var(--biz);">
+      <span class="badge b-biz" style="margin-bottom:8px;">Business &amp; Leadership</span>
+      <div style="font-size:9.5pt;color:var(--dark-gray);margin-top:8px;">
+        <strong style="color:#000;display:block;margin-bottom:3px;">Packaging Cluster</strong>
+        Tech Management, Digital Strategy, Leadership.
+        <div style="margin-top:8px;font-size:8.5pt;color:var(--gray);">
+          <strong style="color:#000;display:block;margin-bottom:2px;">Evidence Skills</strong>
+          Strategic Planning, Project Mgmt, Change Leadership.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ MARKET SIGNALS ═══════════════════════════════════ -->
+<section class="section-page" style="padding-top:10px;">
+  <h2 class="section-title">Market Signals: Volume &times; Growth</h2>
+  <p style="color:var(--gray);font-size:9pt;margin-bottom:14px;">
+    X&nbsp;=&nbsp;employment volume (2024). Y&nbsp;=&nbsp;projected growth (2024&ndash;2034).
+    Bubble size&nbsp;=&nbsp;opportunity score.
+  </p>
+  <div style="display:flex;gap:12px;margin-bottom:10px;flex-wrap:wrap;">
+    <span class="badge b-ai"><span class="dot" style="background:var(--ai)"></span>AI &amp; Data</span>
+    <span class="badge b-fin"><span class="dot" style="background:var(--fin)"></span>FinTech</span>
+    <span class="badge b-soft"><span class="dot" style="background:var(--soft)"></span>Software Eng</span>
+    <span class="badge b-biz"><span class="dot" style="background:var(--biz)"></span>Business</span>
+  </div>
+  <div style="position:relative;height:420px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px;">
+    <canvas id="signalsChart"></canvas>
+  </div>
+  <div style="margin-top:8px;font-size:8pt;color:var(--gray);" id="bubbleLegendInline"></div>
+</section>
+
+<!-- ═══════════════ TOP-RIGHT ROLES ══════════════════════════════════ -->
+<section class="section-page" style="padding-top:10px;">
+  <h3 class="section-title" style="font-size:16pt;">High Volume &times; High Growth Roles</h3>
+  <p style="color:var(--gray);font-size:9pt;margin-bottom:10px;">
+    Roles in the top-right quadrant, ranked by opportunity score.
+  </p>
+  <div class="glass" style="padding:14px;" id="topRightList"></div>
+</section>
+
+<!-- ═══════════════ OPPORTUNITY BLUEPRINT ════════════════════════════ -->
+<section class="section-page" style="padding-top:10px;">
+  <div style="text-align:center;margin-bottom:20px;">
+    <h2 class="section-title" style="display:inline-block;">The Opportunity Blueprint</h2>
+    <p style="color:var(--gray);font-size:9.5pt;margin-top:8px;">
+      A fully stackable ecosystem: PGC (9cr) &rarr; Master&rsquo;s (30cr) &rarr; Doctorate (60cr).
+    </p>
+  </div>
+
+  <!-- TIER 1: PGCs -->
+  <div style="margin-bottom:24px;">
+    <div class="tier-header">
+      Tier 1: Professional Graduate Certificates (9 Credits)
+      <span style="float:right;font-size:8pt;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">
+        *Certificates stack into aligned Masters and Doctorate programs.
+      </span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;" id="pgcGrid"></div>
+  </div>
+
+  <!-- TIER 2: MASTERS -->
+  <div style="margin-bottom:24px;">
+    <div class="tier-header">
+      Tier 2: Master&rsquo;s Degrees (30 Credits)
+      <span style="float:right;font-size:8pt;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">
+        *Eligible PGCs stack into this.
+      </span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;" id="mastersGrid"></div>
+  </div>
+
+  <!-- TIER 3: DOCTORATES -->
+  <div>
+    <div class="tier-header">Tier 3: Professional Doctorates</div>
+    <div class="glass" style="padding:16px;border-left:4px solid var(--red);display:flex;align-items:center;justify-content:space-between;gap:16px;">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="width:40px;height:40px;border-radius:50%;background:rgba(163,38,56,0.2);display:flex;align-items:center;justify-content:center;color:var(--red);font-weight:700;font-size:18px;border:1px solid rgba(163,38,56,0.4);">D</div>
+        <div>
+          <div style="font-weight:600;color:#000;font-size:12pt;">Professional Doctorate in [Management / Engineering]</div>
+          <div style="font-size:8.5pt;color:var(--gray);margin-top:2px;">Advanced applied research for executive leadership.</div>
+        </div>
+      </div>
+      <div style="text-align:right;">
+        <span class="badge" style="background:rgba(163,38,56,0.1);color:var(--red);border-color:rgba(163,38,56,0.3);margin-bottom:4px;display:block;">60 Credits</span>
+        <div style="font-size:7.5pt;color:var(--gray);">Up to 30 credits eligible to be stacked.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ JAVASCRIPT ═══════════════════════════════════════ -->
+<script>
+const DATA = {
+  market: [
+    {"domain":"Business & Leadership","soc_code":"11-1011","occupation_title":"Chief executives","employment_2024":309400,"employment_2034":322700,"growth_pct":4.3,"annual_openings":22200,"median_wage":206420,"opportunity_score":57.0,"sweet_spot":false},
+    {"domain":"Business & Leadership","soc_code":"11-1021","occupation_title":"General and operations managers","employment_2024":3712900,"employment_2034":3876800,"growth_pct":4.4,"annual_openings":308700,"median_wage":102950,"opportunity_score":55.6,"sweet_spot":false},
+    {"domain":"Business & Leadership","soc_code":"11-2021","occupation_title":"Marketing managers","employment_2024":407000,"employment_2034":433700,"growth_pct":6.6,"annual_openings":34300,"median_wage":161030,"opportunity_score":67.4,"sweet_spot":false},
+    {"domain":"Business & Leadership","soc_code":"11-3021","occupation_title":"Computer and information systems managers","employment_2024":667100,"employment_2034":768700,"growth_pct":15.2,"annual_openings":55600,"median_wage":171200,"opportunity_score":83.7,"sweet_spot":true},
+    {"domain":"FinTech","soc_code":"11-3031","occupation_title":"Financial managers","employment_2024":868600,"employment_2034":997400,"growth_pct":14.8,"annual_openings":74600,"median_wage":161700,"opportunity_score":83.0,"sweet_spot":true},
+    {"domain":"Business & Leadership","soc_code":"11-3121","occupation_title":"Human resources managers","employment_2024":221900,"employment_2034":233000,"growth_pct":5.0,"annual_openings":17900,"median_wage":140030,"opportunity_score":50.7,"sweet_spot":false},
+    {"domain":"Business & Leadership","soc_code":"11-3131","occupation_title":"Training and development managers","employment_2024":46400,"employment_2034":49200,"growth_pct":5.8,"annual_openings":3800,"median_wage":127090,"opportunity_score":34.8,"sweet_spot":false},
+    {"domain":"Business & Leadership","soc_code":"13-1082","occupation_title":"Project management specialists","employment_2024":1046300,"employment_2034":1105000,"growth_pct":5.6,"annual_openings":78200,"median_wage":100750,"opportunity_score":47.8,"sweet_spot":false},
+    {"domain":"Business & Leadership","soc_code":"13-1111","occupation_title":"Management analysts","employment_2024":1075100,"employment_2034":1169700,"growth_pct":8.8,"annual_openings":98100,"median_wage":101190,"opportunity_score":60.4,"sweet_spot":false},
+    {"domain":"FinTech","soc_code":"13-2051","occupation_title":"Financial and investment analysts","employment_2024":368500,"employment_2034":389600,"growth_pct":5.7,"annual_openings":25100,"median_wage":101350,"opportunity_score":43.7,"sweet_spot":false},
+    {"domain":"FinTech","soc_code":"13-2052","occupation_title":"Personal financial advisors","employment_2024":326000,"employment_2034":357200,"growth_pct":9.6,"annual_openings":24100,"median_wage":102140,"opportunity_score":51.9,"sweet_spot":false},
+    {"domain":"FinTech","soc_code":"13-2054","occupation_title":"Financial risk specialists","employment_2024":60500,"employment_2034":64400,"growth_pct":6.5,"annual_openings":4800,"median_wage":106000,"opportunity_score":33.0,"sweet_spot":false},
+    {"domain":"FinTech","soc_code":"13-2061","occupation_title":"Financial examiners","employment_2024":65100,"employment_2034":77200,"growth_pct":18.5,"annual_openings":5700,"median_wage":90400,"opportunity_score":34.4,"sweet_spot":false},
+    {"domain":"Software Engineering","soc_code":"15-1211","occupation_title":"Computer systems analysts","employment_2024":521100,"employment_2034":566500,"growth_pct":8.7,"annual_openings":34200,"median_wage":103790,"opportunity_score":59.4,"sweet_spot":false},
+    {"domain":"Software Engineering","soc_code":"15-1212","occupation_title":"Information security analysts","employment_2024":182800,"employment_2034":234900,"growth_pct":28.5,"annual_openings":16000,"median_wage":124910,"opportunity_score":64.4,"sweet_spot":false},
+    {"domain":"AI & Data","soc_code":"15-1221","occupation_title":"Computer and information research scientists","employment_2024":40300,"employment_2034":48300,"growth_pct":19.7,"annual_openings":3200,"median_wage":140910,"opportunity_score":55.6,"sweet_spot":false},
+    {"domain":"Software Engineering","soc_code":"15-1241","occupation_title":"Computer network architects","employment_2024":179200,"employment_2034":200600,"growth_pct":11.9,"annual_openings":11200,"median_wage":130390,"opportunity_score":57.4,"sweet_spot":false},
+    {"domain":"AI & Data","soc_code":"15-1242","occupation_title":"Database administrators","employment_2024":78000,"employment_2034":77500,"growth_pct":-0.7,"annual_openings":3800,"median_wage":104620,"opportunity_score":28.5,"sweet_spot":false},
+    {"domain":"AI & Data","soc_code":"15-1243","occupation_title":"Database architects","employment_2024":66900,"employment_2034":72700,"growth_pct":8.7,"annual_openings":4000,"median_wage":135980,"opportunity_score":48.7,"sweet_spot":false},
+    {"domain":"Software Engineering","soc_code":"15-1244","occupation_title":"Network and computer systems administrators","employment_2024":331500,"employment_2034":317700,"growth_pct":-4.2,"annual_openings":14300,"median_wage":96800,"opportunity_score":32.2,"sweet_spot":false},
+    {"domain":"Software Engineering","soc_code":"15-1252","occupation_title":"Software developers","employment_2024":1693800,"employment_2034":1961400,"growth_pct":15.8,"annual_openings":115200,"median_wage":133080,"opportunity_score":84.1,"sweet_spot":true},
+    {"domain":"Software Engineering","soc_code":"15-1253","occupation_title":"SQA analysts and testers","employment_2024":201700,"employment_2034":221900,"growth_pct":10.0,"annual_openings":14000,"median_wage":102610,"opportunity_score":48.1,"sweet_spot":false},
+    {"domain":"Software Engineering","soc_code":"15-1254","occupation_title":"Web developers","employment_2024":86000,"employment_2034":92500,"growth_pct":7.5,"annual_openings":5400,"median_wage":90930,"opportunity_score":27.8,"sweet_spot":false},
+    {"domain":"FinTech","soc_code":"15-2011","occupation_title":"Actuaries","employment_2024":33600,"employment_2034":40900,"growth_pct":21.8,"annual_openings":2400,"median_wage":125770,"opportunity_score":49.6,"sweet_spot":false},
+    {"domain":"AI & Data","soc_code":"15-2031","occupation_title":"Operations research analysts","employment_2024":112100,"employment_2034":136200,"growth_pct":21.5,"annual_openings":9600,"median_wage":91290,"opportunity_score":44.8,"sweet_spot":false},
+    {"domain":"AI & Data","soc_code":"15-2041","occupation_title":"Statisticians","employment_2024":32200,"employment_2034":34900,"growth_pct":8.5,"annual_openings":2000,"median_wage":103300,"opportunity_score":27.0,"sweet_spot":false},
+    {"domain":"AI & Data","soc_code":"15-2051","occupation_title":"Data scientists","employment_2024":245900,"employment_2034":328300,"growth_pct":33.5,"annual_openings":23400,"median_wage":112590,"opportunity_score":68.9,"sweet_spot":true}
+  ]
+};
+
+const BLUEPRINT = {
+  pgc:[
+    {name:"Enterprise AI",domain:"AI & Data",cluster:"ai",desc:"Enterprise-ready AI skills for building and deploying applied solutions."},
+    {name:"Applied Data Science Foundations",domain:"AI & Data",cluster:"ai",desc:"Core analytics and modeling foundations for working professionals."},
+    {name:"Agentic AI Engineering",domain:"Software",cluster:"ai",desc:"Production engineering patterns for agentic systems and workflows."},
+    {name:"AI for Engineering",domain:"Software",cluster:"soft",desc:"Apply AI to engineering systems, operations, and reliability use cases."},
+    {name:"Mini-MBA",domain:"Business",cluster:"biz",desc:"Business fundamentals and leadership toolkit for technical leaders."},
+    {name:"BI & Operational Excellence",domain:"AI & Data",cluster:"ai",desc:"Operational decision-making using BI, KPIs, and performance systems."},
+    {name:"Technology Management",domain:"Business",cluster:"biz",desc:"Lead teams, delivery, and transformation across technology organizations."},
+    {name:"AI & Market Infrastructure",domain:"FinTech",cluster:"fin",desc:"Modern finance systems + market infrastructure with AI-enabled analytics."}
+  ],
+  masters:[
+    {name:"MBA (Business Admin)",domain:"Business",cluster:"biz",desc:"Leadership and strategy depth for managerial impact at scale."},
+    {name:"MS Computer Science",domain:"Software",cluster:"soft",desc:"Advanced computing and systems depth for software engineering careers."},
+    {name:"MS AI",domain:"AI & Data",cluster:"ai",desc:"Advanced AI study with applied pathways for real-world deployment."},
+    {name:"MEng Applied Data Science",domain:"AI & Data",cluster:"ai",desc:"Engineering-grade applied data science and analytics depth."},
+    {name:"MEng Engineering Mgmt",domain:"Business",cluster:"biz",desc:"Lead engineering organizations and technology operations end-to-end."}
+  ]
+};
+
+/* ─── Chart helpers ──────────────────────────────────────────────── */
+const domainColors={"AI & Data":"#7E57C2","FinTech":"#00897B","Software Engineering":"#1E88E5","Business & Leadership":"#F57C00"};
+
+function fmtInt(n){return new Intl.NumberFormat('en-US').format(n);}
+function median(arr){const a=[...arr].sort((x,y)=>x-y);const m=Math.floor(a.length/2);return a.length%2?a[m]:(a[m-1]+a[m])/2;}
+function percentile(arr,p){const a=[...arr].sort((x,y)=>x-y);const idx=(p/100)*(a.length-1);const lo=Math.floor(idx),hi=Math.ceil(idx);if(lo===hi)return a[lo];return a[lo]+(a[hi]-a[lo])*(idx-lo);}
+
+function radiusFor(row,minV,maxV){
+  const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+  const v=row.opportunity_score;
+  const sMin=Math.sqrt(minV),sMax=Math.sqrt(maxV),s=Math.sqrt(Math.max(v,0));
+  const t=(s-sMin)/(sMax-sMin||1);
+  return clamp(6+t*16,6,22);
+}
+function toRgba(c,a){
+  if(!c)return'rgba(0,0,0,'+a+')';
+  if(c.startsWith('#')){const hex=c.replace('#','');const v=hex.length===3?hex.split('').map(x=>x+x).join(''):hex;const r=parseInt(v.substring(0,2),16),g=parseInt(v.substring(2,4),16),b=parseInt(v.substring(4,6),16);return'rgba('+r+','+g+','+b+','+a+')';}
+  return c;
+}
+
+/* ─── Chart Plugins ──────────────────────────────────────────────── */
+const quadrantsPlugin={
+  id:'quadrantsPlugin',
+  afterDraw(chart,args,opts){
+    const{ctx,chartArea,scales}=chart;if(!chartArea)return;
+    const x=scales.x.getPixelForValue(opts.xMid),y=scales.y.getPixelForValue(opts.yMid);
+    ctx.save();
+    ctx.fillStyle='rgba(163,38,56,0.08)';
+    ctx.fillRect(x,chartArea.top,chartArea.right-x,y-chartArea.top);
+    ctx.strokeStyle='rgba(0,0,0,0.15)';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(x,chartArea.top);ctx.lineTo(x,chartArea.bottom);
+    ctx.moveTo(chartArea.left,y);ctx.lineTo(chartArea.right,y);ctx.stroke();
+    ctx.fillStyle='rgba(0,0,0,0.5)';ctx.font="700 11px 'IBM Plex Sans',Arial";
+    const pad=10;
+    ctx.fillText('Low volume · High growth',chartArea.left+pad,chartArea.top+pad+12);
+    ctx.fillText('High volume · High growth',x+pad,chartArea.top+pad+12);
+    ctx.fillText('Low volume · Low growth',chartArea.left+pad,y+pad+12);
+    ctx.fillText('High volume · Low growth',x+pad,y+pad+12);
+    ctx.fillStyle='rgba(163,38,56,0.85)';ctx.font="800 11px 'IBM Plex Sans',Arial";
+    ctx.fillText('Target zone',x+pad,chartArea.top+34);
+    ctx.restore();
+  }
+};
+
+const labelTopPlugin={
+  id:'labelTopPlugin',
+  afterDatasetsDraw(chart,args,opts){
+    const{ctx}=chart;const rows=opts.rows||[];
+    const top=[...rows].sort((a,b)=>b.opportunity_score-a.opportunity_score).slice(0,6);
+    const findEl=(row)=>{
+      const dsIndex=chart.data.datasets.findIndex(ds=>ds.label===row.domain);
+      if(dsIndex<0)return null;
+      const idx=chart.data.datasets[dsIndex].data.findIndex(p=>p.__soc===row.soc_code);
+      if(idx<0)return null;
+      return chart.getDatasetMeta(dsIndex).data[idx];
+    };
+    ctx.save();ctx.font="700 10px 'IBM Plex Sans',Arial";
+    ctx.fillStyle='rgba(0,0,0,0.82)';ctx.strokeStyle='rgba(255,255,255,0.7)';ctx.lineWidth=3;
+    top.forEach(r=>{
+      const el=findEl(r);if(!el)return;
+      const x=el.x+10,y=el.y-10;
+      const txt=r.occupation_title.length>26?r.occupation_title.slice(0,26)+'\u2026':r.occupation_title;
+      ctx.strokeText(txt,x,y);ctx.fillText(txt,x,y);
+    });
+    ctx.restore();
+  }
+};
+
+/* ─── Build Chart ────────────────────────────────────────────────── */
+function buildSignalsChart(){
+  const rows=DATA.market;if(!rows.length)return;
+  const xMid=median(rows.map(r=>r.employment_2024));
+  const yMid=median(rows.map(r=>r.growth_pct));
+  const vals=rows.map(r=>r.opportunity_score);
+  const minV=Math.min(...vals),maxV=Math.max(...vals);
+  const domains=Object.keys(domainColors);
+  const datasets=domains.map(dom=>{
+    const color=domainColors[dom]||'#fff';
+    const pts=rows.filter(r=>r.domain===dom).map(r=>({
+      x:r.employment_2024,y:r.growth_pct,r:radiusFor(r,minV,maxV),
+      __soc:r.soc_code,__score:r.opportunity_score,__title:r.occupation_title
+    }));
+    return{label:dom,data:pts,backgroundColor:toRgba(color,0.45),borderColor:toRgba(color,0.95),borderWidth:1.6};
+  });
+
+  const ctx=document.getElementById('signalsChart').getContext('2d');
+  new Chart(ctx,{
+    type:'bubble',data:{datasets},
+    options:{
+      responsive:true,maintainAspectRatio:false,animation:false,
+      plugins:{
+        legend:{position:'top',labels:{color:'rgba(0,0,0,0.75)',usePointStyle:true,pointStyle:'circle',padding:14,font:{weight:'700',family:"'IBM Plex Sans',Arial"}}},
+        tooltip:{enabled:false},
+        quadrantsPlugin:{xMid:xMid,yMid:yMid},
+        labelTopPlugin:{rows:rows}
+      },
+      scales:{
+        x:{type:'logarithmic',
+          title:{display:true,text:'Employment volume (2024) — jobs',color:'rgba(0,0,0,0.65)',font:{weight:'700',family:"'IBM Plex Sans',Arial"}},
+          grid:{color:'rgba(0,0,0,0.08)'},
+          ticks:{color:'rgba(0,0,0,0.55)',callback:function(val){const n=Number(val);if(!isFinite(n)||n<=0)return'';if(n>=1e6)return(n/1e6).toFixed(n>=1e7?0:1)+'M';if(n>=1e3)return(n/1e3).toFixed(0)+'K';return String(n);}},
+          min:Math.max(1,Math.min(...rows.map(r=>r.employment_2024))*0.8),
+          max:Math.max(...rows.map(r=>r.employment_2024))*1.15
+        },
+        y:{
+          title:{display:true,text:'Projected growth (2024–2034) — %',color:'rgba(0,0,0,0.65)',font:{weight:'700',family:"'IBM Plex Sans',Arial"}},
+          grid:{color:'rgba(0,0,0,0.08)'},
+          ticks:{color:'rgba(0,0,0,0.55)',callback:function(v){return v+'%';}},
+          suggestedMin:Math.min(...rows.map(r=>r.growth_pct))-2,
+          suggestedMax:Math.max(...rows.map(r=>r.growth_pct))+2
+        }
+      }
+    },
+    plugins:[quadrantsPlugin,labelTopPlugin]
+  });
+
+  const p25=percentile(vals,25),p50=percentile(vals,50),p75=percentile(vals,75);
+  document.getElementById('bubbleLegendInline').innerHTML=
+    'Bubble size = <b style="color:rgba(0,0,0,0.8)">opportunity score</b> (P25: <span style="font-family:monospace">'+p25.toFixed(1)+'</span> \u00b7 P50: <span style="font-family:monospace">'+p50.toFixed(1)+'</span> \u00b7 P75: <span style="font-family:monospace">'+p75.toFixed(1)+'</span>).';
+}
+
+/* ─── Render helpers ─────────────────────────────────────────────── */
+function renderTopRight(){
+  const rows=DATA.market;
+  const xMid=median(rows.map(r=>r.employment_2024));
+  const yMid=median(rows.map(r=>r.growth_pct));
+  const tr=rows.filter(r=>r.employment_2024>=xMid&&r.growth_pct>=yMid).sort((a,b)=>b.opportunity_score-a.opportunity_score);
+  document.getElementById('topRightList').innerHTML=tr.length?tr.slice(0,12).map(r=>
+    '<div style="display:flex;justify-content:space-between;align-items:start;gap:8px;padding:6px 0;border-bottom:1px solid rgba(0,0,0,0.08);">'+
+    '<div><div style="font-weight:600;color:#000;font-size:10pt;">'+r.occupation_title+'</div>'+
+    '<div style="font-size:8pt;color:#7F7F7F;">'+r.domain+' \u00b7 Employment '+fmtInt(r.employment_2024)+' \u00b7 Growth '+r.growth_pct.toFixed(1)+'%</div></div>'+
+    '<div style="text-align:right;"><div style="font-size:10pt;font-weight:700;color:#000;">'+r.opportunity_score.toFixed(1)+'</div>'+
+    '<div style="font-size:7pt;color:#7F7F7F;">Score</div></div></div>'
+  ).join(''):'<div style="color:#7F7F7F;font-size:9pt;">No roles found.</div>';
+}
+
+function renderBlueprint(){
+  document.getElementById('pgcGrid').innerHTML=BLUEPRINT.pgc.map(function(p){return(
+    '<div class="glass card-item" style="padding:12px;border-left:4px solid var(--'+p.cluster+');">'+
+    '<div style="font-size:7.5pt;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#7F7F7F;margin-bottom:3px;">'+p.domain+'</div>'+
+    '<div style="font-weight:600;color:#000;font-size:11pt;margin-bottom:4px;">'+p.name+'</div>'+
+    '<div style="font-size:8.5pt;color:#7F7F7F;line-height:1.4;">'+p.desc+'</div></div>'
+  );}).join('');
+
+  document.getElementById('mastersGrid').innerHTML=BLUEPRINT.masters.map(function(m){return(
+    '<div class="glass card-item" style="padding:14px;border-top:4px solid var(--'+m.cluster+');">'+
+    '<div style="display:flex;justify-content:space-between;margin-bottom:6px;"><span class="badge b-'+m.cluster+'">'+m.domain+'</span>'+
+    '<span style="font-size:8pt;font-family:monospace;color:#7F7F7F;">30 CR</span></div>'+
+    '<div style="font-weight:600;color:#000;font-size:13pt;margin-bottom:4px;">'+m.name+'</div>'+
+    '<div style="font-size:8.5pt;color:#7F7F7F;line-height:1.4;">'+m.desc+'</div></div>'
+  );}).join('');
+}
+
+/* ─── Init ───────────────────────────────────────────────────────── */
+window.onload=function(){
+  renderBlueprint();
+  setTimeout(function(){
+    buildSignalsChart();
+    renderTopRight();
+  },200);
+};
+</script>
+</body>
+</html>
